@@ -289,7 +289,7 @@ where
 				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from);
 				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
 					dest: MultiAddress::Id(to),
@@ -573,7 +573,7 @@ fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
 	match &tc.call {
 		TrustedCall::balance_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
 		TrustedCall::balance_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
-		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(&call),
+		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(call),
 		_ => Balance::from(0u32),
 	}
 }
