@@ -62,6 +62,27 @@ pub struct RpcResponse {
 	pub id: Id,
 }
 
+#[derive(Clone, Encode, Decode, Debug, Serialize, Deserialize)]
+pub struct RpcSubscriptionUpdate {
+	pub jsonrpc: String,
+	pub id: Id,
+	pub method: String,
+	pub params: SubscriptionParams,
+}
+
+#[derive(Clone, Encode, Decode, Debug, Serialize, Deserialize)]
+pub struct SubscriptionParams {
+	pub error: Option<String>,
+	pub result: String,
+	pub subscription: String,
+}
+
+impl RpcSubscriptionUpdate {
+	pub fn new(method: String, params: SubscriptionParams) -> Self {
+		Self { jsonrpc: "2.0".to_owned(), id: Id::Number(1), method, params }
+	}
+}
+
 #[derive(Clone, Encode, Decode, Serialize, Deserialize)]
 pub struct RpcRequest {
 	pub jsonrpc: String,

@@ -21,6 +21,7 @@ use codec::Decode;
 use itp_rpc::{RpcResponse, RpcReturnValue};
 use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
+use log::info;
 use std::marker::PhantomData;
 
 pub struct RpcWatchExtractor<Hash>
@@ -55,8 +56,19 @@ where
 	type Hash = Hash;
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>> {
-		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
-			.map_err(|e| DirectRpcError::Other(format!("{:?}", e).into()))?;
+		let rpc_return_value = match RpcReturnValue::from_hex(&rpc_response.result) {
+			Ok(return_value) => return_value,
+			Err(e) => {
+				// if the return value is a hash
+				if let Ok(hash) = Self::Hash::from_hex(&rpc_response.result) {
+					// fixme: hack to support json rpc 2.0 spec without rpc-server refactor.
+					info!("Returning hash as connection token");
+					return Ok(Some(hash))
+				}
+
+				return Err(DirectRpcError::Other(format!("{:?}", e).into())).into()
+			},
+		};
 
 		if !rpc_return_value.do_watch {
 			return Ok(None)

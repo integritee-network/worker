@@ -19,8 +19,8 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
-use alloc::format;
-use itp_rpc::{RpcResponse, RpcReturnValue};
+use alloc::{format, string::ToString};
+use itp_rpc::{RpcResponse, RpcReturnValue, RpcSubscriptionUpdate, SubscriptionParams};
 use itp_types::{DirectRequestStatus, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
@@ -59,6 +59,17 @@ where
 
 		self.response_channel.respond(connection, string_response).map_err(|e| e.into())
 	}
+
+	fn encode_and_send_subscription_update(
+		&self,
+		connection: Registry::Connection,
+		rpc_response: &RpcSubscriptionUpdate,
+	) -> DirectRpcResult<()> {
+		let string_response =
+			serde_json::to_string(&rpc_response).map_err(DirectRpcError::SerializationError)?;
+
+		self.response_channel.respond(connection, string_response).map_err(|e| e.into())
+	}
 }
 
 impl<Registry, Hash, ResponseChannelType> SendRpcResponse
@@ -83,22 +94,21 @@ where
 			.withdraw(&hash)
 			.ok_or(DirectRpcError::InvalidConnectionHash)?;
 
-		let mut new_response = rpc_response.clone();
-
-		let mut result = RpcReturnValue::from_hex(&rpc_response.result)
-			.map_err(|e| DirectRpcError::Other(format!("{:?}", e).into()))?;
-
 		let do_watch = continue_watching(&status_update);
 
-		// update response
-		result.do_watch = do_watch;
-		result.status = DirectRequestStatus::TrustedOperationStatus(status_update);
-		new_response.result = result.to_hex();
+		let sub = RpcSubscriptionUpdate::new(
+			"author_submitAndWatchExtrinsic".to_string(),
+			SubscriptionParams {
+				error: None,
+				result: DirectRequestStatus::TrustedOperationStatus(status_update).to_hex(),
+				subscription: hash.to_hex(),
+			},
+		);
 
-		self.encode_and_send_response(connection_token, &new_response)?;
+		self.encode_and_send_subscription_update(connection_token, &sub)?;
 
 		if do_watch {
-			self.connection_registry.store(hash, connection_token, new_response);
+			self.connection_registry.store(hash, connection_token, rpc_response);
 		}
 
 		debug!("updating status event successful");
