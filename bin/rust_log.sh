@@ -1,0 +1,1 @@
+export RUST_LOG=trace,substrate_api_client=warn,ws=warn,mio=warn,its_consensus_common=info,sidechain=info,integritee_service=trace,enclave_runtime=trace,ac_node_api=warn,sp_io=warn,itc_parentchain_indirect_calls_executor=trace,itp_stf_executor=trace,itc_parentchain_light_client=trace,itc_parentchain_block_importer=trace

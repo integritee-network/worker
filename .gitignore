@@ -59,7 +59,10 @@ bin/shards
 bin/*.der
 bin/enclave-shielding-pubkey.json
 bin/sidechain_db
-bin/my_trusted_keystore
+bin/*_lcdb
+bin/*_keystore
+bin/log-extrinsics-to*
+bin/worker2
 
 # client
 cli/my_keystore
