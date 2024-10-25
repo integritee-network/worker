@@ -1,0 +1,17 @@
+[package]
+name = "ita-parentchain-specs"
+version = "0.1.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2021"
+
+[dependencies]
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+itp-types = { path = "../../core-primitives/types", default-features = false }
+log = { version = "0.4", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "hex/std",
+    "log/std",
+]
