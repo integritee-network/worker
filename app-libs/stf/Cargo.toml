@@ -16,6 +16,7 @@ sgx_tstd = { branch = "master", features = ["untrusted_fs", "net", "backtrace"],
 
 # local crates
 ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
+ita-parentchain-specs = { default-features = false, path = "../parentchain-specs" }
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
@@ -61,6 +62,7 @@ std = [
     "rlp/std",
     # local
     "ita-sgx-runtime/std",
+    "ita-parentchain-specs/std",
     "itp-hashing/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",

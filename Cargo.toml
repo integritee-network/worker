@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "app-libs/oracle",
     "app-libs/parentchain-interface",
+    "app-libs/parentchain-specs",
     "app-libs/sgx-runtime",
     "app-libs/sgx-runtime/pallets/parentchain",
     "app-libs/sgx-runtime/pallets/guess-the-number",

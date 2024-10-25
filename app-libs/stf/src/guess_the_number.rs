@@ -1,15 +1,22 @@
-use crate::helpers::enclave_signer_account;
+use crate::helpers::{enclave_signer_account, shielding_target, shielding_target_genesis_hash};
 #[cfg(not(feature = "std"))]
 use alloc::format;
 use codec::{Decode, Encode};
 use frame_support::dispatch::UnfilteredDispatchable;
-use ita_sgx_runtime::{GuessTheNumber, GuessType, Runtime, System};
+use ita_parentchain_specs::MinimalChainSpec;
+use ita_sgx_runtime::{
+	GuessTheNumber, GuessType, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB,
+	Runtime, System,
+};
 use itp_node_api::metadata::provider::AccessNodeMetadata;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_sgx_runtime_primitives::types::{Balance, Moment};
 use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_stf_primitives::error::StfError;
-use itp_types::{parentchain::ParentchainCall, AccountId};
+use itp_types::{
+	parentchain::{ParentchainCall, ParentchainId},
+	AccountId,
+};
 use itp_utils::stringify::account_id_to_string;
 use log::{debug, info, trace};
 use sp_runtime::MultiAddress;
@@ -66,6 +73,7 @@ where
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
+		let fee = get_fee_for(&self);
 		match self {
 			Self::set_winnings(sender, winnings) => {
 				// authorization happens in pallet itself, we just pass authentication
@@ -101,7 +109,6 @@ where
 				// endow fee to enclave (self)
 				let fee_recipient: itp_stf_primitives::types::AccountId = enclave_signer_account();
 				// fixme: apply fees through standard frame process and tune it
-				let fee = crate::STF_GUESS_FEE;
 				info!("guess fee {}", fee);
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
 					dest: MultiAddress::Id(fee_recipient),
@@ -126,6 +133,14 @@ where
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		debug!("No storage updates needed...");
 		Vec::new()
+	}
+}
+
+fn get_fee_for(tc: &GuessTheNumberTrustedCall) -> Balance {
+	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
+	match tc {
+		GuessTheNumberTrustedCall::guess(..) => one / crate::STF_GUESS_FEE_DIVIDER,
+		_ => Balance::from(0u32),
 	}
 }
 

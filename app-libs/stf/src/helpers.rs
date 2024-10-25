@@ -23,7 +23,7 @@ use itp_stf_primitives::{
 	types::AccountId,
 };
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
-use itp_types::parentchain::ParentchainId;
+use itp_types::parentchain::{Hash, ParentchainId};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use std::prelude::v1::*;
@@ -114,6 +114,20 @@ pub fn set_block_number(block_number: u32) {
 /// We assume it has been ensured elsewhere that there can't be multiple shard vaults on multiple parentchains
 pub fn shard_vault() -> Option<(AccountId, ParentchainId)> {
 	get_shard_vaults().into_iter().next()
+}
+
+/// get shielding target from parentchain pallets
+pub fn shielding_target() -> ParentchainId {
+	shard_vault().map(|v| v.1).unwrap_or(ParentchainId::Integritee)
+}
+
+/// get genesis hash of shielding target parentchain, if available
+pub fn shielding_target_genesis_hash() -> Option<Hash> {
+	match shielding_target() {
+		ParentchainId::Integritee => ParentchainIntegritee::parentchain_genesis_hash(),
+		ParentchainId::TargetA => ParentchainTargetA::parentchain_genesis_hash(),
+		ParentchainId::TargetB => ParentchainTargetB::parentchain_genesis_hash(),
+	}
 }
 
 /// We assume it has been ensured elsewhere that there can't be multiple shard vaults on multiple parentchains
