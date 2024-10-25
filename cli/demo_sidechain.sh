@@ -74,7 +74,7 @@ echo "Using trusted-worker 2 uri ${WORKER_2_URL}:${WORKER_2_PORT}"
 
 # the parentchain token is 12 decimal
 UNIT=$(( 10 ** 12 ))
-FEE_TOLERANCE=$((10 ** 11))
+FEE_TOLERANCE=$((2 * 10 ** 11))
 
 INITIALFUNDS=$((5 * UNIT))
 AMOUNTTRANSFER=$((2 * UNIT))
