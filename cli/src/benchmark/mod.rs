@@ -25,7 +25,9 @@ use crate::{
 };
 use codec::Decode;
 use hdrhistogram::Histogram;
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned, TrustedGetter, STF_TX_FEE};
+use ita_stf::{
+	Getter, Index, TrustedCall, TrustedCallSigned, TrustedGetter, STF_TX_FEE_UNIT_DIVIDER,
+};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
@@ -136,7 +138,8 @@ impl BenchmarkCommand {
 		println!("Nonce for account {}: {}", self.funding_account, nonce_start);
 
 		let mut accounts = Vec::new();
-		let initial_balance = (self.number_iterations + 1) * (STF_TX_FEE + EXISTENTIAL_DEPOSIT);
+		let initial_balance = (self.number_iterations + 1)
+			* (1_000_000_000_000 / STF_TX_FEE_UNIT_DIVIDER + EXISTENTIAL_DEPOSIT);
 		// Setup new accounts and initialize them with money from Alice.
 		for i in 0..self.number_clients {
 			let nonce = i + nonce_start;
@@ -230,7 +233,7 @@ impl BenchmarkCommand {
 					output.push(result);
 
 					// FIXME: We probably should re-fund the account in this case.
-					if client.current_balance <= EXISTENTIAL_DEPOSIT + STF_TX_FEE {
+					if client.current_balance <= 1_000_000_000_000 / STF_TX_FEE_UNIT_DIVIDER + EXISTENTIAL_DEPOSIT {
 						error!("Account {:?} does not have enough balance anymore. Finishing benchmark early", client.account.public());
 						break;
 					}
