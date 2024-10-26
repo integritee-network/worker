@@ -19,7 +19,7 @@ use crate::{
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
+	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
 use ita_parentchain_interface::integritee::Balance;
@@ -31,6 +31,7 @@ use itp_stf_primitives::{
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
+
 #[derive(Parser)]
 pub struct UnshieldFundsCommand {
 	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
@@ -63,6 +64,6 @@ impl UnshieldFundsCommand {
 			TrustedCall::balance_unshield(from.public().into(), to, self.amount, shard)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
-		Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+		Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
 	}
 }

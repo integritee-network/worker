@@ -19,7 +19,7 @@ use crate::{
 	get_layer_two_evm_nonce, get_layer_two_nonce,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
+	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
 use ita_stf::{Index, TrustedCall, TrustedGetter};
@@ -31,6 +31,7 @@ use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
 use std::{boxed::Box, vec::Vec};
+
 #[derive(Parser)]
 pub struct EvmCallCommands {
 	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
@@ -81,7 +82,6 @@ impl EvmCallCommands {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(sender)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		Ok(perform_trusted_operation::<()>(cli, trusted_args, &function_call)
-			.map(|_| CliResultOk::None)?)
+		Ok(send_direct_request(cli, trusted_args, &function_call).map(|_| CliResultOk::None)?)
 	}
 }

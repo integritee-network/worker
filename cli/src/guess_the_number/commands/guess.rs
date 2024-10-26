@@ -23,6 +23,7 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 
+use crate::trusted_operation::send_direct_request;
 use ita_stf::{
 	guess_the_number::GuessTheNumberTrustedCall, Getter, Index, TrustedCall, TrustedCallSigned,
 };
@@ -55,6 +56,6 @@ impl GuessCommand {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		Ok(perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+		Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
 	}
 }

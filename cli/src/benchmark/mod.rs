@@ -33,8 +33,9 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	AccountInfo, Balance, ShardIdentifier, TrustedOperationStatus,
-	TrustedOperationStatus::{InSidechainBlock, Submitted},
+	TrustedOperationStatus::InSidechainBlock, H256,
 };
+use itp_utils::FromHexPrefixed;
 use log::*;
 use rand::Rng;
 use rayon::prelude::*;
@@ -334,7 +335,14 @@ fn wait_for_top_confirmation(
 ) -> BenchmarkTransaction {
 	let started = Instant::now();
 
-	let submitted = wait_until(&client.receiver, is_submitted);
+	// the first response of `submitAndWatch` is just the plain top hash
+	let submitted = match client.receiver.recv() {
+		Ok(hash) => Some((H256::from_hex(&hash).unwrap(), Instant::now())),
+		Err(e) => {
+			error!("recv error: {e:?}");
+			None
+		},
+	};
 
 	let confirmed = if wait_for_sidechain_block {
 		// We wait for the transaction hash that actually matches the submitted hash
@@ -359,10 +367,6 @@ fn wait_for_top_confirmation(
 		submitted: submitted.unwrap().1,
 		confirmed: confirmed.map(|v| v.1),
 	}
-}
-
-fn is_submitted(s: TrustedOperationStatus) -> bool {
-	matches!(s, Submitted)
 }
 
 fn is_sidechain_block(s: TrustedOperationStatus) -> bool {

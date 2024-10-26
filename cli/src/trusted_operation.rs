@@ -72,6 +72,10 @@ pub(crate) enum TrustedOperationError {
 	Default { msg: String },
 }
 
+pub(crate) fn into_default_trusted_op_err(err_msg: impl ToString) -> TrustedOperationError {
+	TrustedOperationError::Default { msg: err_msg.to_string() }
+}
+
 impl From<ApiClientError> for TrustedOperationError {
 	fn from(error: ApiClientError) -> Self {
 		Self::ApiClient(error)
@@ -87,9 +91,12 @@ pub(crate) fn perform_trusted_operation<T: Decode + Debug>(
 ) -> TrustedOpResult<T> {
 	match top {
 		TrustedOperation::indirect_call(_) => send_indirect_request::<T>(cli, trusted_args, top),
-		TrustedOperation::direct_call(_) => send_direct_request::<T>(cli, trusted_args, top),
 		TrustedOperation::get(getter) =>
 			execute_getter_from_cli_args::<T>(cli, trusted_args, getter),
+		TrustedOperation::direct_call(_) => Err(TrustedOperationError::Default {
+			msg: "Invalid call to `perform_trusted_operation`, use `send_direct_request` directly"
+				.into(),
+		}),
 	}
 }
 
@@ -268,11 +275,11 @@ pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec
 }
 
 /// sends a rpc watch request to the worker api server
-pub fn send_direct_request<T: Decode + Debug>(
+pub(crate) fn send_direct_request(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	operation_call: &TrustedOperation<TrustedCallSigned, Getter>,
-) -> TrustedOpResult<T> {
+) -> TrustedOpResult<Hash> {
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
@@ -288,13 +295,19 @@ pub fn send_direct_request<T: Decode + Debug>(
 	direct_api.watch(jsonrpc_call, sender);
 
 	// the first response of `submitAndWatch` is just the plain top hash
-	let top_hash = receiver.recv().map_err(|e| {
+	let response_string = receiver.recv().map_err(|e| {
 		error!("failed to receive rpc response: {:?}", e);
 		direct_api.close().unwrap();
-		TrustedOperationError::Default { msg: "failed to receive rpc response".to_string() }
+		into_default_trusted_op_err("failed to receive rpc response")
 	})?;
 
-	debug!("subscribing to updates for top with hash: {top_hash}");
+	let response = RpcResponse::from_hex(&response_string)
+		.map_err(|e| into_default_trusted_op_err(format!("{e:?}")))?;
+
+	let top_hash = Hash::from_hex(&response.result)
+		.map_err(|e| into_default_trusted_op_err(format!("{e:?}")))?;
+
+	debug!("subscribing to updates for top with hash: {top_hash:?}");
 
 	loop {
 		debug!("waiting for update");
@@ -327,13 +340,13 @@ pub fn send_direct_request<T: Decode + Debug>(
 							}
 							if connection_can_be_closed(status) {
 								direct_api.close().unwrap();
-								return Ok(Default::default())
+								return Ok(top_hash)
 							}
 						},
 						DirectRequestStatus::Ok => {
 							debug!("request status is ignored");
 							direct_api.close().unwrap();
-							return Ok(Default::default())
+							return Ok(top_hash)
 						},
 					}
 				};
