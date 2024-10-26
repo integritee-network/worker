@@ -341,7 +341,6 @@ fn wait_for_top_confirmation(
 	let started = Instant::now();
 
 	// the first response of `submitAndWatch` is just the plain top hash
-
 	let submitted = match await_subscription_response(&client.receiver) {
 		Ok(hash) => Some((hash, Instant::now())),
 		Err(e) => {
