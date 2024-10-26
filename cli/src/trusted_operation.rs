@@ -295,18 +295,11 @@ pub(crate) fn send_direct_request(
 	direct_api.watch(jsonrpc_call, sender);
 
 	// the first response of `submitAndWatch` is just the plain top hash
-	let response_string = receiver.recv().map_err(|e| {
-		error!("failed to receive rpc response: {:?}", e);
+	let top_hash = await_subscription_response(&receiver).map_err(|e| {
+		error!("Error getting subscription response: {:?}", e);
 		direct_api.close().unwrap();
-		into_default_trusted_op_err("failed to receive rpc response")
+		e
 	})?;
-
-	let response: RpcResponse = serde_json::from_str(&response_string).map_err(|e| {
-		into_default_trusted_op_err(format!("Error deserializing RpcResponse: {e:?}"))
-	})?;
-
-	let top_hash = Hash::from_hex(&response.result)
-		.map_err(|e| into_default_trusted_op_err(format!("Error decoding top hash: {e:?}")))?;
 
 	debug!("subscribing to updates for top with hash: {top_hash:?}");
 
@@ -348,7 +341,22 @@ pub(crate) fn send_direct_request(
 	}
 }
 
-fn await_status_update(
+pub(crate) fn await_subscription_response(receiver: &Receiver<String>) -> TrustedOpResult<H256> {
+	let response_string = receiver.recv().map_err(|e| {
+		into_default_trusted_op_err(format!("failed to receive rpc response: {e:?}"))
+	})?;
+
+	let response: RpcResponse = serde_json::from_str(&response_string).map_err(|e| {
+		into_default_trusted_op_err(format!("Error deserializing RpcResponse: {e:?}"))
+	})?;
+
+	let top_hash = Hash::from_hex(&response.result)
+		.map_err(|e| into_default_trusted_op_err(format!("Error decoding top hash: {e:?}")))?;
+
+	Ok(top_hash)
+}
+
+pub(crate) fn await_status_update(
 	receiver: &Receiver<String>,
 ) -> TrustedOpResult<(RpcSubscriptionUpdate, DirectRequestStatus)> {
 	let response = receiver.recv().map_err(|e| {

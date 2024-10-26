@@ -20,7 +20,10 @@ use crate::{
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_keystore_path, get_pair_from_str},
-	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
+	trusted_operation::{
+		await_subscription_response, get_json_request, get_state, perform_trusted_operation,
+		wait_until,
+	},
 	Cli, CliResult, CliResultOk, SR25519_KEY_TYPE,
 };
 use codec::Decode;
@@ -33,9 +36,8 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	AccountInfo, Balance, ShardIdentifier, TrustedOperationStatus,
-	TrustedOperationStatus::InSidechainBlock, H256,
+	TrustedOperationStatus::InSidechainBlock,
 };
-use itp_utils::FromHexPrefixed;
 use log::*;
 use rand::Rng;
 use rayon::prelude::*;
@@ -336,8 +338,9 @@ fn wait_for_top_confirmation(
 	let started = Instant::now();
 
 	// the first response of `submitAndWatch` is just the plain top hash
-	let submitted = match client.receiver.recv() {
-		Ok(hash) => Some((H256::from_hex(&hash).unwrap(), Instant::now())),
+
+	let submitted = match await_subscription_response(&client.receiver) {
+		Ok(hash) => Some((hash, Instant::now())),
 		Err(e) => {
 			error!("recv error: {e:?}");
 			None
