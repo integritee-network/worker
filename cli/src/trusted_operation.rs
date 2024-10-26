@@ -301,11 +301,12 @@ pub(crate) fn send_direct_request(
 		into_default_trusted_op_err("failed to receive rpc response")
 	})?;
 
-	let response = RpcResponse::from_hex(&response_string)
-		.map_err(|e| into_default_trusted_op_err(format!("{e:?}")))?;
+	let response: RpcResponse = serde_json::from_str(&response_string).map_err(|e| {
+		into_default_trusted_op_err(format!("Error deserializing RpcResponse: {e:?}"))
+	})?;
 
 	let top_hash = Hash::from_hex(&response.result)
-		.map_err(|e| into_default_trusted_op_err(format!("{e:?}")))?;
+		.map_err(|e| into_default_trusted_op_err(format!("Error decoding top hash: {e:?}")))?;
 
 	debug!("subscribing to updates for top with hash: {top_hash:?}");
 
