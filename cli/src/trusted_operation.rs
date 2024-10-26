@@ -280,6 +280,11 @@ pub(crate) fn send_direct_request(
 	trusted_args: &TrustedCli,
 	operation_call: &TrustedOperation<TrustedCallSigned, Getter>,
 ) -> TrustedOpResult<Hash> {
+	if !matches!(operation_call, TrustedOperation::direct_call(_)) {
+		return Err(TrustedOperationError::Default {
+			msg: "can only use direct_calls in this function".into(),
+		})
+	}
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
