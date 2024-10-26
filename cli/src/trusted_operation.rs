@@ -312,54 +312,53 @@ pub(crate) fn send_direct_request(
 
 	loop {
 		debug!("waiting for update");
+		let response = receiver.recv().map_err(|e| {
+			error!("failed to receive rpc response: {:?}", e);
+			direct_api.close().unwrap();
+			into_default_trusted_op_err("failed to receive rpc response")
+		})?;
+		debug!("received response");
 
-		match receiver.recv() {
-			Ok(response) => {
-				debug!("received response");
-				let subscription_update: RpcSubscriptionUpdate =
-					serde_json::from_str(&response).unwrap();
-				trace!("successfully decoded rpc response: {:?}", subscription_update);
-				if let Ok(direct_request_status) =
-					DirectRequestStatus::from_hex(&subscription_update.params.result)
-				{
-					debug!("successfully decoded request status: {:?}", direct_request_status);
-					match direct_request_status {
-						DirectRequestStatus::Error => {
-							let err = subscription_update.params.error.unwrap_or("{}".into());
-							debug!("request status is error");
-							direct_api.close().unwrap();
-							return Err(TrustedOperationError::Default {
-								msg: format!("[Error] DirectRequestStatus::Error: {err}"),
-							})
-						},
-						DirectRequestStatus::TrustedOperationStatus(status) => {
-							debug!("request status is: {:?}", status);
-							if let Ok(value) =
-								Hash::from_hex(&subscription_update.params.subscription)
-							{
-								println!("Trusted call {:?} is {:?}", value, status);
-							}
-							if connection_can_be_closed(status) {
-								direct_api.close().unwrap();
-								return Ok(top_hash)
-							}
-						},
-						DirectRequestStatus::Ok => {
-							debug!("request status is ignored");
-							direct_api.close().unwrap();
-							return Ok(top_hash)
-						},
-					}
-				};
-			},
-			Err(e) => {
-				error!("failed to receive rpc response: {:?}", e);
+		let subscription_update: RpcSubscriptionUpdate =
+			serde_json::from_str(&response).map_err(|e| {
+				into_default_trusted_op_err(format!(
+					"Error deserializing subscription update: {e:?}"
+				))
+			})?;
+
+		trace!("successfully decoded rpc response: {:?}", subscription_update);
+
+		let direct_request_status =
+			DirectRequestStatus::from_hex(&subscription_update.params.result).map_err(|e| {
+				into_default_trusted_op_err(format!("Error decoding direct_request_status: {e:?}"))
+			})?;
+
+		debug!("successfully decoded request status: {:?}", direct_request_status);
+		match direct_request_status {
+			DirectRequestStatus::Error => {
+				let err = subscription_update.params.error.unwrap_or("{}".into());
+				debug!("request status is error");
 				direct_api.close().unwrap();
 				return Err(TrustedOperationError::Default {
-					msg: "failed to receive rpc response".to_string(),
+					msg: format!("[Error] DirectRequestStatus::Error: {err}"),
 				})
 			},
-		};
+			DirectRequestStatus::TrustedOperationStatus(status) => {
+				debug!("request status is: {:?}", status);
+				if let Ok(value) = Hash::from_hex(&subscription_update.params.subscription) {
+					println!("Trusted call {:?} is {:?}", value, status);
+				}
+				if connection_can_be_closed(status) {
+					direct_api.close().unwrap();
+					return Ok(top_hash)
+				}
+			},
+			DirectRequestStatus::Ok => {
+				debug!("request status is ignored");
+				direct_api.close().unwrap();
+				return Ok(top_hash)
+			},
+		}
 	}
 }
 
