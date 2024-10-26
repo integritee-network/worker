@@ -19,10 +19,10 @@ use crate::{
 	response_channel::ResponseChannel, DirectRpcError, DirectRpcResult, RpcConnectionRegistry,
 	RpcHash, SendRpcResponse,
 };
-use alloc::{format, string::ToString};
+use alloc::string::ToString;
 use itp_rpc::{RpcResponse, RpcReturnValue, RpcSubscriptionUpdate, SubscriptionParams};
 use itp_types::{DirectRequestStatus, TrustedOperationStatus};
-use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use itp_utils::ToHexPrefixed;
 use log::*;
 use std::{sync::Arc, vec::Vec};
 
