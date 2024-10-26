@@ -116,7 +116,7 @@ echo ""
 # They only work if you're running from fresh genesis.
 case $TEST in
     first)
-        if [ "4000000000000" = "$RESULT" ]; then
+        if [ "$AMOUNTTRANSFER" = "$RESULT" ]; then
             echo "test passed (1st time)"
             echo ""
             exit 0
@@ -126,7 +126,7 @@ case $TEST in
         fi
         ;;
     second)
-        if [ "8000000000000" = "$RESULT" ]; then
+        if [ $((2 * AMOUNTTRANSFER)) -eq "$RESULT" ]; then
             echo "test passed (2nd time)"
             echo ""
             exit 0
