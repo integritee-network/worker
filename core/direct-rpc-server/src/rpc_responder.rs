@@ -109,10 +109,12 @@ where
 
 		if do_watch {
 			// We just store back the initial response, which is the top hash.
-			// This was implemented before we added the `RpcSubscriptionUpdate`
-			// and should probably be refactored in the future, see #1624.
+			// This was implemented before we added the `RpcSubscriptionUpdate`,
+			// which can't be stored due to type incompatibilities.
+			// This should probably be refactored in the future, see #1624.
 			//
-			// But for now this is fine, as we only use it to track ongoing connections.
+			// But for now this is fine, as we only use the connection token
+			// to track ongoing connections, the response is ignored.
 			self.connection_registry.store(hash, connection_token, rpc_response);
 		}
 
