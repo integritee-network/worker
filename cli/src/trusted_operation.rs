@@ -26,7 +26,7 @@ use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ApiClientError, ENCLAVE_BRIDGE};
-use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue, RpcSubscriptionUpdate};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation};
 use itp_types::{
@@ -268,7 +268,7 @@ pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec
 }
 
 /// sends a rpc watch request to the worker api server
-fn send_direct_request<T: Decode + Debug>(
+pub fn send_direct_request<T: Decode + Debug>(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	operation_call: &TrustedOperation<TrustedCallSigned, Getter>,
@@ -287,49 +287,54 @@ fn send_direct_request<T: Decode + Debug>(
 	let (sender, receiver) = channel();
 	direct_api.watch(jsonrpc_call, sender);
 
-	debug!("waiting for rpc response");
+	// the first response of `submitAndWatch` is just the plain top hash
+	let top_hash = receiver.recv().map_err(|e| {
+		error!("failed to receive rpc response: {:?}", e);
+		direct_api.close().unwrap();
+		TrustedOperationError::Default { msg: "failed to receive rpc response".to_string() }
+	})?;
+
+	debug!("subscribing to updates for top with hash: {top_hash}");
+
 	loop {
+		debug!("waiting for update");
+
 		match receiver.recv() {
 			Ok(response) => {
 				debug!("received response");
-				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-					debug!("successfully decoded rpc response: {:?}", return_value);
-					match return_value.status {
+				let subscription_update: RpcSubscriptionUpdate =
+					serde_json::from_str(&response).unwrap();
+				trace!("successfully decoded rpc response: {:?}", subscription_update);
+				if let Ok(direct_request_status) =
+					DirectRequestStatus::from_hex(&subscription_update.params.result)
+				{
+					debug!("successfully decoded request status: {:?}", direct_request_status);
+					match direct_request_status {
 						DirectRequestStatus::Error => {
+							let err = subscription_update.params.error.unwrap_or("{}".into());
 							debug!("request status is error");
-							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
-								error!("{}", value);
-							}
 							direct_api.close().unwrap();
 							return Err(TrustedOperationError::Default {
-								msg: "[Error] DirectRequestStatus::Error".to_string(),
+								msg: format!("[Error] DirectRequestStatus::Error: {err}"),
 							})
 						},
 						DirectRequestStatus::TrustedOperationStatus(status) => {
 							debug!("request status is: {:?}", status);
-							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
+							if let Ok(value) =
+								Hash::from_hex(&subscription_update.params.subscription)
+							{
 								println!("Trusted call {:?} is {:?}", value, status);
 							}
 							if connection_can_be_closed(status) {
 								direct_api.close().unwrap();
-								let value =
-									decode_response_value(&mut return_value.value.as_slice())?;
-								return Ok(value)
+								return Ok(Default::default())
 							}
 						},
 						DirectRequestStatus::Ok => {
 							debug!("request status is ignored");
 							direct_api.close().unwrap();
-							let value = decode_response_value(&mut return_value.value.as_slice())?;
-							return Ok(value)
+							return Ok(Default::default())
 						},
-					}
-					if !return_value.do_watch {
-						debug!("do watch is false, closing connection");
-						direct_api.close().unwrap();
-						let value = decode_response_value(&mut return_value.value.as_slice())?;
-						return Ok(value)
 					}
 				};
 			},
