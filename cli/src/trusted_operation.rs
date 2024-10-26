@@ -312,25 +312,11 @@ pub(crate) fn send_direct_request(
 
 	loop {
 		debug!("waiting for update");
-		let response = receiver.recv().map_err(|e| {
-			error!("failed to receive rpc response: {:?}", e);
-			direct_api.close().unwrap();
-			into_default_trusted_op_err("failed to receive rpc response")
-		})?;
-		debug!("received response");
-
-		let subscription_update: RpcSubscriptionUpdate =
-			serde_json::from_str(&response).map_err(|e| {
-				into_default_trusted_op_err(format!(
-					"Error deserializing subscription update: {e:?}"
-				))
-			})?;
-
-		trace!("successfully decoded rpc response: {:?}", subscription_update);
-
-		let direct_request_status =
-			DirectRequestStatus::from_hex(&subscription_update.params.result).map_err(|e| {
-				into_default_trusted_op_err(format!("Error decoding direct_request_status: {e:?}"))
+		let (subscription_update, direct_request_status) =
+			await_status_update(&receiver).map_err(|e| {
+				error!("Error getting status update: {:?}", e);
+				direct_api.close().unwrap();
+				e
 			})?;
 
 		debug!("successfully decoded request status: {:?}", direct_request_status);
@@ -360,6 +346,29 @@ pub(crate) fn send_direct_request(
 			},
 		}
 	}
+}
+
+fn await_status_update(
+	receiver: &Receiver<String>,
+) -> TrustedOpResult<(RpcSubscriptionUpdate, DirectRequestStatus)> {
+	let response = receiver.recv().map_err(|e| {
+		into_default_trusted_op_err(format!("failed to receive rpc response: {e:?}"))
+	})?;
+	debug!("received response");
+
+	let subscription_update: RpcSubscriptionUpdate =
+		serde_json::from_str(&response).map_err(|e| {
+			into_default_trusted_op_err(format!("Error deserializing subscription update: {e:?}"))
+		})?;
+
+	trace!("successfully decoded rpc response: {:?}", subscription_update);
+
+	let direct_request_status = DirectRequestStatus::from_hex(&subscription_update.params.result)
+		.map_err(|e| {
+		into_default_trusted_op_err(format!("Error decoding direct_request_status: {e:?}"))
+	})?;
+
+	Ok((subscription_update, direct_request_status))
 }
 
 fn decode_response_value<T: Decode, I: Input>(
