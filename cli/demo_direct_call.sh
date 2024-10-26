@@ -63,8 +63,8 @@ echo "Using trusted-worker uri ${WORKER_1_URL}:${WORKER_1_PORT}"
 echo ""
 
 
-AMOUNTSHIELD=50000000000
-AMOUNTTRANSFER=40000000000
+AMOUNTSHIELD=5000000000000
+AMOUNTTRANSFER=4000000000000
 
 CLIENT="${CLIENT_BIN} -p ${INTEGRITEE_RPC_PORT} -P ${WORKER_1_PORT} -u ${INTEGRITEE_RPC_URL} -U ${WORKER_1_URL}"
 # we simply believe the enclave here without verifying the teerex RA
@@ -116,7 +116,7 @@ echo ""
 # They only work if you're running from fresh genesis.
 case $TEST in
     first)
-        if [ "40000000000" = "$RESULT" ]; then
+        if [ "4000000000000" = "$RESULT" ]; then
             echo "test passed (1st time)"
             echo ""
             exit 0
@@ -126,7 +126,7 @@ case $TEST in
         fi
         ;;
     second)
-        if [ "80000000000" = "$RESULT" ]; then
+        if [ "8000000000000" = "$RESULT" ]; then
             echo "test passed (2nd time)"
             echo ""
             exit 0
