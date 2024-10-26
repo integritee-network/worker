@@ -66,7 +66,7 @@ where
 					return Ok(Some(hash))
 				}
 
-				return Err(DirectRpcError::Other(format!("{:?}", e).into())).into()
+				return Err(DirectRpcError::Other(format!("{:?}", e).into()))
 			},
 		};
 
