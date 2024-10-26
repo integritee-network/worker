@@ -365,16 +365,16 @@ pub(crate) fn await_status_update(
 	receiver: &Receiver<String>,
 ) -> TrustedOpResult<(RpcSubscriptionUpdate, DirectRequestStatus)> {
 	let response = receiver.recv().map_err(|e| {
-		into_default_trusted_op_err(format!("failed to receive rpc response: {e:?}"))
+		into_default_trusted_op_err(format!("error receiving subscription update: {e:?}"))
 	})?;
-	debug!("received response");
+	debug!("received subscription update");
 
 	let subscription_update: RpcSubscriptionUpdate =
 		serde_json::from_str(&response).map_err(|e| {
-			into_default_trusted_op_err(format!("Error deserializing subscription update: {e:?}"))
+			into_default_trusted_op_err(format!("error deserializing subscription update: {e:?}"))
 		})?;
 
-	trace!("successfully decoded rpc response: {:?}", subscription_update);
+	trace!("successfully decoded subscription update: {:?}", subscription_update);
 
 	let direct_request_status = DirectRequestStatus::from_hex(&subscription_update.params.result)
 		.map_err(|e| {
