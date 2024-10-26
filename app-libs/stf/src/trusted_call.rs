@@ -25,11 +25,15 @@ use std::vec::Vec;
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
 	guess_the_number::GuessTheNumberTrustedCall,
-	helpers::{enclave_signer_account, ensure_enclave_signer_account, shard_vault, wrap_bytes},
-	Getter,
+	helpers::{
+		enclave_signer_account, ensure_enclave_signer_account, shard_vault,
+		shielding_target_genesis_hash, wrap_bytes,
+	},
+	Getter, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
 };
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
+use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
@@ -244,6 +248,10 @@ where
 		let system_nonce = System::account_nonce(&sender);
 		ensure!(self.nonce == system_nonce, Self::Error::InvalidNonce(self.nonce, system_nonce));
 
+		// try to charge fee first and fail early
+		let fee = get_fee_for(&self);
+		charge_fee(fee, &sender)?;
+
 		// increment the nonce, no matter if the call succeeds or fails.
 		// The call must have entered the transaction pool already,
 		// so it should be considered as valid
@@ -281,27 +289,8 @@ where
 				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from);
 				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
-				// endow fee to enclave (self)
-				let fee_recipient: AccountId = enclave_signer_account();
-				// fixme: apply fees through standard frame process and tune it
-				let fee = crate::STF_TX_FEE;
-				info!(
-					"from {}, to {}, amount {}, fee {}",
-					account_id_to_string(&from),
-					account_id_to_string(&to),
-					value,
-					fee
-				);
-				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(fee_recipient),
-					value: fee,
-				}
-				.dispatch_bypass_filter(origin.clone())
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
-				})?;
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
 					dest: MultiAddress::Id(to),
 					value,
@@ -318,11 +307,6 @@ where
 					account_id_to_string(&beneficiary),
 					value
 				);
-				// endow fee to enclave (self)
-				let fee_recipient: AccountId = enclave_signer_account();
-				// fixme: apply fees through standard frame process and tune it. has to be at least two L1 transfer's fees
-				let fee = crate::STF_TX_FEE * 3;
-
 				info!(
 					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {}), shard {})",
 					account_id_to_string(&account_incognito),
@@ -332,15 +316,6 @@ where
 					shard
 				);
 
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(account_incognito.clone());
-				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(fee_recipient),
-					value: fee,
-				}
-				.dispatch_bypass_filter(origin)
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("Balance Unshielding error: {:?}", e.error))
-				})?;
 				burn_funds(account_incognito, value)?;
 
 				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
@@ -593,6 +568,29 @@ where
 	}
 }
 
+fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
+	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
+	match &tc.call {
+		TrustedCall::balance_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+		TrustedCall::balance_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
+		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(call),
+		_ => Balance::from(0u32),
+	}
+}
+
+fn charge_fee(fee: Balance, payer: &AccountId) -> Result<(), StfError> {
+	debug!("attempting to charge fee for TrustedCall");
+	let fee_recipient: AccountId = enclave_signer_account();
+	let origin = ita_sgx_runtime::RuntimeOrigin::signed(payer.clone());
+	ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+		dest: MultiAddress::Id(fee_recipient),
+		value: fee,
+	}
+	.dispatch_bypass_filter(origin)
+	.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))?;
+	Ok(())
+}
+
 fn burn_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	let account_info = System::account(&account);
 	if account_info.data.free < amount {
@@ -610,7 +608,7 @@ fn burn_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 
 fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	//fixme: make fee configurable and send fee to vault account on L2
-	let fee = amount / 571; // approx 0.175%
+	let fee = amount / STF_SHIELDING_FEE_AMOUNT_DIVIDER;
 
 	// endow fee to enclave (self)
 	let fee_recipient: AccountId = enclave_signer_account();
