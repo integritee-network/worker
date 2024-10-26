@@ -1,8 +1,28 @@
-use crate::helpers::enclave_signer_account;
+/*
+	Copyright 2021 Integritee AG and Supercomputing Systems AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+// TrustedCalls and Getters for the Guess-The-Number game
+
+use crate::helpers::shielding_target_genesis_hash;
 #[cfg(not(feature = "std"))]
 use alloc::format;
 use codec::{Decode, Encode};
 use frame_support::dispatch::UnfilteredDispatchable;
+use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{GuessTheNumber, GuessType, Runtime, System};
 use itp_node_api::metadata::provider::AccessNodeMetadata;
 use itp_node_api_metadata::NodeMetadataTrait;
@@ -11,8 +31,7 @@ use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_stf_primitives::error::StfError;
 use itp_types::{parentchain::ParentchainCall, AccountId};
 use itp_utils::stringify::account_id_to_string;
-use log::{debug, info, trace};
-use sp_runtime::MultiAddress;
+use log::*;
 use sp_std::{sync::Arc, vec::Vec};
 
 /// General public information about the status of the guess-the-number game
@@ -98,20 +117,6 @@ where
 			Self::guess(sender, guess) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
 				std::println!("⣿STF⣿ guess-the-number: someone is attempting a guess");
-				// endow fee to enclave (self)
-				let fee_recipient: itp_stf_primitives::types::AccountId = enclave_signer_account();
-				// fixme: apply fees through standard frame process and tune it
-				let fee = crate::STF_GUESS_FEE;
-				info!("guess fee {}", fee);
-				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(fee_recipient),
-					value: fee,
-				}
-				.dispatch_bypass_filter(origin.clone())
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("GuessTheNumber fee error: {:?}", e.error))
-				})?;
-
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::guess { guess }
 					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
@@ -126,6 +131,14 @@ where
 	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		debug!("No storage updates needed...");
 		Vec::new()
+	}
+}
+
+pub fn get_fee_for(tc: &GuessTheNumberTrustedCall) -> Balance {
+	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
+	match tc {
+		GuessTheNumberTrustedCall::guess(..) => one / crate::STF_GUESS_FEE_UNIT_DIVIDER,
+		_ => Balance::from(0u32),
 	}
 }
 

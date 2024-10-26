@@ -2795,6 +2795,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-parentchain-specs"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "itp-types",
+ "log 0.4.20",
+]
+
+[[package]]
 name = "ita-sgx-runtime"
 version = "0.9.0"
 dependencies = [
@@ -2826,6 +2835,7 @@ dependencies = [
  "base58",
  "frame-support",
  "frame-system",
+ "ita-parentchain-specs",
  "ita-sgx-runtime",
  "itp-hashing",
  "itp-node-api",

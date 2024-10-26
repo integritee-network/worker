@@ -53,7 +53,7 @@ echo ""
 
 # the parentchain token is 12 decimal
 UNIT=$(( 10 ** 12 ))
-FEE_TOLERANCE=$((10 ** 11))
+FEE_TOLERANCE=$((2 * 10 ** 11))
 
 # make these amounts greater than ED
 AMOUNT_SHIELD=$(( 6 * UNIT ))

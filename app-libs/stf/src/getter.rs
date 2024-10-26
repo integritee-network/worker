@@ -38,7 +38,7 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 
 use crate::{
 	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
-	helpers::{shard_vault, wrap_bytes},
+	helpers::{shielding_target, wrap_bytes},
 };
 use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_primitives::traits::PoolTransactionValidation;
@@ -272,9 +272,7 @@ impl ExecuteGetter for PublicGetter {
 					integritee,
 					target_a,
 					target_b,
-					shielding_target: shard_vault()
-						.map(|v| v.1)
-						.unwrap_or(ParentchainId::Integritee),
+					shielding_target: shielding_target(),
 				};
 				Some(parentchains_info.encode())
 			},
