@@ -60,6 +60,9 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 			])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
 		let json_value = match author_submit_extrinsic_inner(local_author.clone(), params) {
+			// Only return hash to support JSON RPC 2.0.
+			// Other methods will follow this pattern when
+			// we tackle #1624.
 			Ok(hash_value) => hash_value.to_hex(),
 			Err(error) => compute_hex_encoded_return_error(error.as_str()),
 		};
