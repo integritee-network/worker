@@ -182,7 +182,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 	});
 
 	let local_ocall_api = ocall_api.clone();
-	io_handler.add_sync_method("chain_subscribeAllHeads", move |_: Params| {
+	io_handler.add_sync_method("chain_getHeader", move |_: Params| {
 		debug!("worker_api_direct rpc was called: chain_subscribeAllHeads");
 		local_ocall_api
 			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
