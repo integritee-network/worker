@@ -19,7 +19,7 @@ use crate::{
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::send_direct_request,
+	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
 use ita_parentchain_interface::integritee::Balance;
@@ -59,6 +59,12 @@ impl SetBalanceCommand {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+
+		if trusted_args.direct {
+			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+		} else {
+			Ok(perform_trusted_operation::<()>(cli, trusted_args, &top)
+				.map(|_| CliResultOk::None)?)
+		}
 	}
 }

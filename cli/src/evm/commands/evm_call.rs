@@ -82,6 +82,12 @@ impl EvmCallCommands {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(sender)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		Ok(send_direct_request(cli, trusted_args, &function_call).map(|_| CliResultOk::None)?)
+
+		if trusted_args.direct {
+			Ok(send_direct_request(cli, trusted_args, &function_call).map(|_| CliResultOk::None)?)
+		} else {
+			Ok(perform_trusted_operation::<()>(cli, trusted_args, &function_call)
+				.map(|_| CliResultOk::None)?)
+		}
 	}
 }

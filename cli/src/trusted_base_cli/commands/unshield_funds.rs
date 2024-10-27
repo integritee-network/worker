@@ -64,6 +64,12 @@ impl UnshieldFundsCommand {
 			TrustedCall::balance_unshield(from.public().into(), to, self.amount, shard)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
-		Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+
+		if trusted_args.direct {
+			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+		} else {
+			Ok(perform_trusted_operation::<()>(cli, trusted_args, &top)
+				.map(|_| CliResultOk::None)?)
+		}
 	}
 }

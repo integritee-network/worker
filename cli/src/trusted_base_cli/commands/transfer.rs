@@ -65,7 +65,16 @@ impl TransferCommand {
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
-		let res = send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?;
+
+		let mut res;
+
+		if trusted_args.direct {
+			res = Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)?;
+		} else {
+			res = Ok(perform_trusted_operation::<()>(cli, trusted_args, &top)
+				.map(|_| CliResultOk::None)?)?;
+		}
+
 		info!("trusted call transfer executed");
 		Ok(res)
 	}

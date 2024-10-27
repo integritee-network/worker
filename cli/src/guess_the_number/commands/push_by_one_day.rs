@@ -54,6 +54,12 @@ impl PushByOneDayCommand {
 		)
 		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
-		Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+
+		if trusted_args.direct {
+			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+		} else {
+			Ok(perform_trusted_operation::<()>(cli, trusted_args, &top)
+				.map(|_| CliResultOk::None)?)
+		}
 	}
 }
