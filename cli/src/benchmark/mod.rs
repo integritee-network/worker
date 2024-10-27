@@ -50,7 +50,7 @@ use sp_keystore::Keystore;
 use std::{
 	boxed::Box,
 	string::ToString,
-	sync::mpsc::{channel, Receiver},
+	sync::mpsc::{channel, Receiver, Sender},
 	thread, time,
 	time::Instant,
 	vec::Vec,
@@ -92,6 +92,7 @@ struct BenchmarkClient {
 	account: sr25519_core::Pair,
 	current_balance: u128,
 	client_api: DirectClient,
+	sender: Sender<String>,
 	receiver: Receiver<String>,
 }
 
@@ -107,8 +108,8 @@ impl BenchmarkClient {
 
 		debug!("setup sender and receiver");
 		let (sender, receiver) = channel();
-		client_api.watch(initial_request, sender);
-		BenchmarkClient { account, current_balance: initial_balance, client_api, receiver }
+		client_api.watch(initial_request, sender.clone());
+		BenchmarkClient { account, current_balance: initial_balance, client_api, sender, receiver }
 	}
 }
 
@@ -164,7 +165,7 @@ impl BenchmarkCommand {
 				&mrenclave,
 				&shard,
 			)
-			.into_trusted_operation(trusted_args.direct);
+			.into_trusted_operation(true);
 
 			// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 			let wait_for_confirmation = i == self.number_clients - 1;
@@ -221,7 +222,8 @@ impl BenchmarkCommand {
 
 					let last_iteration = i == self.number_iterations - 1;
 					let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
-					client.client_api.send(&jsonrpc_call).unwrap();
+
+					client.client_api.watch(jsonrpc_call, client.sender.clone());
 					let result = wait_for_top_confirmation(
 						self.wait_for_confirmation || last_iteration,
 						&client,
