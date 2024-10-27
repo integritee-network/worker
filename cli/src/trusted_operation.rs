@@ -327,7 +327,7 @@ pub(crate) fn await_status(
 	loop {
 		debug!("waiting for update");
 		let (subscription_update, direct_request_status) =
-			await_status_update(&receiver).map_err(|e| {
+			await_status_update(receiver).map_err(|e| {
 				error!("Error getting status update: {:?}", e);
 				e
 			})?;
