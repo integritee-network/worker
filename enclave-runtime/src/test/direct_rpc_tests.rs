@@ -60,6 +60,7 @@ pub fn get_state_request_works() {
 		getter_executor,
 		Arc::new(rsa_repository),
 		ocall_api,
+		"0.0.0-test".into(),
 	);
 
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));

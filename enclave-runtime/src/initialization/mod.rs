@@ -80,6 +80,9 @@ use jsonrpc_core::IoHandler;
 use log::*;
 use sp_core::crypto::Pair;
 use std::{collections::HashMap, path::PathBuf, string::String, sync::Arc};
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub(crate) fn init_enclave(
 	mu_ra_url: String,
 	untrusted_worker_url: String,
@@ -182,6 +185,7 @@ pub(crate) fn init_enclave(
 		getter_executor,
 		shielding_key_repository,
 		ocall_api.clone(),
+		VERSION.into(),
 	);
 
 	#[cfg(feature = "sidechain")]

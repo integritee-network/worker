@@ -57,6 +57,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 	getter_executor: Arc<GetterExecutor>,
 	shielding_key: Arc<AccessShieldingKey>,
 	ocall_api: Arc<OCallApi>,
+	enclave_version: String,
 ) where
 	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
@@ -292,8 +293,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		local_ocall_api
 			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+		Ok(Value::String(format!("enclave-runtime: {}", enclave_version)))
 	});
 }
 
