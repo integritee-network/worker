@@ -19,7 +19,7 @@ use crate::{
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
+	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
 use base58::ToBase58;
@@ -65,9 +65,12 @@ impl TransferCommand {
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
-		let res =
-			perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?;
-		info!("trusted call transfer executed");
-		Ok(res)
+
+		if trusted_args.direct {
+			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
+		} else {
+			Ok(perform_trusted_operation::<()>(cli, trusted_args, &top)
+				.map(|_| CliResultOk::None)?)
+		}
 	}
 }

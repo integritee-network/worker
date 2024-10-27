@@ -21,6 +21,7 @@ use codec::Decode;
 use itp_rpc::{RpcResponse, RpcReturnValue};
 use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
+use log::debug;
 use std::marker::PhantomData;
 
 pub struct RpcWatchExtractor<Hash>
@@ -55,8 +56,23 @@ where
 	type Hash = Hash;
 
 	fn must_be_watched(&self, rpc_response: &RpcResponse) -> DirectRpcResult<Option<Self::Hash>> {
-		let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
-			.map_err(|e| DirectRpcError::Other(format!("{:?}", e).into()))?;
+		let rpc_return_value = match RpcReturnValue::from_hex(&rpc_response.result) {
+			Ok(return_value) => return_value,
+			Err(e) => {
+				// `author_submitAndWatchExtrinsic` does currently only return the top hash
+				// as the first subscription response in order to comply with JSON RPC 2.0.
+				//
+				// We support this for now with this hack here, but it should be properly
+				// refactored in #1624.
+				if let Ok(hash) = Self::Hash::from_hex(&rpc_response.result) {
+					// fixme: fix hack in #1624.
+					debug!("returning hash as connection token: {hash:?}");
+					return Ok(Some(hash))
+				}
+
+				return Err(DirectRpcError::Other(format!("{:?}", e).into()))
+			},
+		};
 
 		if !rpc_return_value.do_watch {
 			return Ok(None)

@@ -82,7 +82,7 @@ pub enum DirectRequestStatus {
 	Error,
 }
 
-#[derive(Debug, Clone, PartialEq, Encode, Decode)]
+#[derive(Debug, Clone, PartialEq, Encode, Decode, Copy)]
 pub enum TrustedOperationStatus {
 	/// TrustedOperation is submitted to the top pool.
 	Submitted,

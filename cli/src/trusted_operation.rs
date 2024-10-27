@@ -26,7 +26,7 @@ use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedCallSigned};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_node_api::api_client::{ApiClientError, ENCLAVE_BRIDGE};
-use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue, RpcSubscriptionUpdate};
 use itp_sgx_crypto::ShieldingCryptoEncrypt;
 use itp_stf_primitives::types::{ShardIdentifier, TrustedOperation};
 use itp_types::{
@@ -42,7 +42,6 @@ use std::{
 	fmt::Debug,
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
-	time::Instant,
 };
 use substrate_api_client::{
 	ac_compose_macros::compose_extrinsic, GetChainInfo, SubmitAndWatch, SubscribeEvents, XtStatus,
@@ -72,6 +71,10 @@ pub(crate) enum TrustedOperationError {
 	Default { msg: String },
 }
 
+pub(crate) fn into_default_trusted_op_err(err_msg: impl ToString) -> TrustedOperationError {
+	TrustedOperationError::Default { msg: err_msg.to_string() }
+}
+
 impl From<ApiClientError> for TrustedOperationError {
 	fn from(error: ApiClientError) -> Self {
 		Self::ApiClient(error)
@@ -87,9 +90,12 @@ pub(crate) fn perform_trusted_operation<T: Decode + Debug>(
 ) -> TrustedOpResult<T> {
 	match top {
 		TrustedOperation::indirect_call(_) => send_indirect_request::<T>(cli, trusted_args, top),
-		TrustedOperation::direct_call(_) => send_direct_request::<T>(cli, trusted_args, top),
 		TrustedOperation::get(getter) =>
 			execute_getter_from_cli_args::<T>(cli, trusted_args, getter),
+		TrustedOperation::direct_call(_) => Err(TrustedOperationError::Default {
+			msg: "Invalid call to `perform_trusted_operation`, use `send_direct_request` directly"
+				.into(),
+		}),
 	}
 }
 
@@ -268,11 +274,16 @@ pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec
 }
 
 /// sends a rpc watch request to the worker api server
-fn send_direct_request<T: Decode + Debug>(
+pub(crate) fn send_direct_request(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
 	operation_call: &TrustedOperation<TrustedCallSigned, Getter>,
-) -> TrustedOpResult<T> {
+) -> TrustedOpResult<Hash> {
+	if !matches!(operation_call, TrustedOperation::direct_call(_)) {
+		return Err(TrustedOperationError::Default {
+			msg: "can only use direct_calls in this function".into(),
+		})
+	}
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let shard = read_shard(trusted_args).unwrap();
 	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
@@ -287,61 +298,115 @@ fn send_direct_request<T: Decode + Debug>(
 	let (sender, receiver) = channel();
 	direct_api.watch(jsonrpc_call, sender);
 
-	debug!("waiting for rpc response");
-	loop {
-		match receiver.recv() {
-			Ok(response) => {
-				debug!("received response");
-				let response: RpcResponse = serde_json::from_str(&response).unwrap();
-				if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-					debug!("successfully decoded rpc response: {:?}", return_value);
-					match return_value.status {
-						DirectRequestStatus::Error => {
-							debug!("request status is error");
-							if let Ok(value) = String::decode(&mut return_value.value.as_slice()) {
-								error!("{}", value);
-							}
-							direct_api.close().unwrap();
-							return Err(TrustedOperationError::Default {
-								msg: "[Error] DirectRequestStatus::Error".to_string(),
-							})
-						},
-						DirectRequestStatus::TrustedOperationStatus(status) => {
-							debug!("request status is: {:?}", status);
-							if let Ok(value) = Hash::decode(&mut return_value.value.as_slice()) {
-								println!("Trusted call {:?} is {:?}", value, status);
-							}
-							if connection_can_be_closed(status) {
-								direct_api.close().unwrap();
-								let value =
-									decode_response_value(&mut return_value.value.as_slice())?;
-								return Ok(value)
-							}
-						},
-						DirectRequestStatus::Ok => {
-							debug!("request status is ignored");
-							direct_api.close().unwrap();
-							let value = decode_response_value(&mut return_value.value.as_slice())?;
-							return Ok(value)
-						},
-					}
-					if !return_value.do_watch {
-						debug!("do watch is false, closing connection");
-						direct_api.close().unwrap();
-						let value = decode_response_value(&mut return_value.value.as_slice())?;
-						return Ok(value)
-					}
-				};
-			},
-			Err(e) => {
-				error!("failed to receive rpc response: {:?}", e);
-				direct_api.close().unwrap();
-				return Err(TrustedOperationError::Default {
-					msg: "failed to receive rpc response".to_string(),
-				})
-			},
-		};
+	// the first response of `submitAndWatch` is just the plain top hash
+	let top_hash = await_subscription_response(&receiver).map_err(|e| {
+		error!("Error getting subscription response: {:?}", e);
+		direct_api.close().unwrap();
+		e
+	})?;
+
+	debug!("subscribing to updates for top with hash: {top_hash:?}");
+
+	match await_status(&receiver, connection_can_be_closed) {
+		Ok((_hash, status)) => {
+			debug!("Trusted operation reached status {status:?}");
+			direct_api.close().unwrap();
+			Ok(top_hash)
+		},
+		Err(e) => {
+			error!("Error submitting top: {e:?}");
+			direct_api.close().unwrap();
+			Err(e)
+		},
 	}
+}
+
+pub(crate) fn await_status(
+	receiver: &Receiver<String>,
+	wait_until: impl Fn(TrustedOperationStatus) -> bool,
+) -> TrustedOpResult<(Hash, TrustedOperationStatus)> {
+	loop {
+		debug!("waiting for update");
+		let (subscription_update, direct_request_status) =
+			await_status_update(receiver).map_err(|e| {
+				error!("Error getting status update: {:?}", e);
+				e
+			})?;
+
+		debug!("successfully decoded request status: {:?}", direct_request_status);
+		match direct_request_status {
+			DirectRequestStatus::Error => {
+				let err = subscription_update.params.error.unwrap_or("{}".into());
+				debug!("request status is error");
+				return Err(into_default_trusted_op_err(format!(
+					"[Error] DirectRequestStatus::Error: {err}"
+				)))
+			},
+			DirectRequestStatus::TrustedOperationStatus(status) => {
+				debug!("request status is: {:?}", status);
+				let hash =
+					Hash::from_hex(&subscription_update.params.subscription).map_err(|e| {
+						into_default_trusted_op_err(format!("Invalid subscription top hash: {e:?}"))
+					})?;
+
+				println!("Trusted call {:?} is {:?}", hash, status);
+
+				if is_cancelled(status) {
+					debug!("trusted call has been cancelled");
+					return Ok((hash, status))
+				}
+
+				if wait_until(status) {
+					return Ok((hash, status))
+				}
+			},
+			DirectRequestStatus::Ok => {
+				// Todo: #1625. When sending `author_submitAndWatchExtrinsic` this can never happen.
+				// our cli tries to do too much in one method, we should have better separation of
+				// concerns.
+				panic!("`DirectRequestStatus::Ok` should never occur with `author_submitAndWatchExtrinsic`.\
+				This is a bug in the usage of the cli.");
+			},
+		}
+	}
+}
+
+pub(crate) fn await_subscription_response(receiver: &Receiver<String>) -> TrustedOpResult<H256> {
+	let response_string = receiver.recv().map_err(|e| {
+		into_default_trusted_op_err(format!("failed to receive rpc response: {e:?}"))
+	})?;
+
+	let response: RpcResponse = serde_json::from_str(&response_string).map_err(|e| {
+		into_default_trusted_op_err(format!("Error deserializing RpcResponse: {e:?}"))
+	})?;
+
+	let top_hash = Hash::from_hex(&response.result)
+		.map_err(|e| into_default_trusted_op_err(format!("Error decoding top hash: {e:?}")))?;
+
+	Ok(top_hash)
+}
+
+pub(crate) fn await_status_update(
+	receiver: &Receiver<String>,
+) -> TrustedOpResult<(RpcSubscriptionUpdate, DirectRequestStatus)> {
+	let response = receiver.recv().map_err(|e| {
+		into_default_trusted_op_err(format!("error receiving subscription update: {e:?}"))
+	})?;
+	debug!("received subscription update");
+
+	let subscription_update: RpcSubscriptionUpdate =
+		serde_json::from_str(&response).map_err(|e| {
+			into_default_trusted_op_err(format!("error deserializing subscription update: {e:?}"))
+		})?;
+
+	trace!("successfully decoded subscription update: {:?}", subscription_update);
+
+	let direct_request_status = DirectRequestStatus::from_hex(&subscription_update.params.result)
+		.map_err(|e| {
+		into_default_trusted_op_err(format!("Error decoding direct_request_status: {e:?}"))
+	})?;
+
+	Ok((subscription_update, direct_request_status))
 }
 
 fn decode_response_value<T: Decode, I: Input>(
@@ -368,67 +433,12 @@ pub(crate) fn get_json_request(
 	.unwrap()
 }
 
-pub(crate) fn wait_until(
-	receiver: &Receiver<String>,
-	until: impl Fn(TrustedOperationStatus) -> bool,
-) -> Option<(H256, Instant)> {
-	debug!("waiting for rpc response");
-	loop {
-		match receiver.recv() {
-			Ok(response) => {
-				debug!("received response: {}", response);
-				let parse_result: StdResult<RpcResponse, _> = serde_json::from_str(&response);
-				if let Ok(response) = parse_result {
-					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-						debug!("successfully decoded rpc response: {:?}", return_value);
-						match return_value.status {
-							DirectRequestStatus::Error => {
-								debug!("request status is error");
-								if let Ok(value) =
-									String::decode(&mut return_value.value.as_slice())
-								{
-									error!("{}", value);
-								}
-								return None
-							},
-							DirectRequestStatus::TrustedOperationStatus(status) => {
-								debug!("request status is: {:?}", status);
-								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
-								{
-									println!("Trusted call {:?} is {:?}", value, status);
-									if until(status.clone()) {
-										return Some((value, Instant::now()))
-									} else if status == TrustedOperationStatus::Invalid {
-										error!("Invalid request");
-										return None
-									}
-								}
-							},
-							DirectRequestStatus::Ok => {
-								debug!("request status is ignored");
-								return None
-							},
-						}
-					};
-				} else {
-					error!("Could not parse response");
-				};
-			},
-			Err(e) => {
-				error!("failed to receive rpc response: {:?}", e);
-				return None
-			},
-		};
-	}
+fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
+	use TrustedOperationStatus::*;
+	!matches!(top_status, Submitted | Future | Ready | Broadcast)
 }
 
-fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
-	!matches!(
-		top_status,
-		TrustedOperationStatus::Submitted
-			| TrustedOperationStatus::Future
-			| TrustedOperationStatus::Ready
-			| TrustedOperationStatus::Broadcast
-			| TrustedOperationStatus::Invalid
-	)
+fn is_cancelled(top_status: TrustedOperationStatus) -> bool {
+	use TrustedOperationStatus::*;
+	matches!(top_status, Invalid | Usurped | Dropped | Retracted)
 }

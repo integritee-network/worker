@@ -63,8 +63,7 @@
       ],
       "subcommand_flags": [
         "--skip-ra",
-        "--dev",
-        "--request-state"
+        "--dev"
       ]
     }
   ]
