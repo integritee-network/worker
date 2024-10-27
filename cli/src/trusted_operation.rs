@@ -310,6 +310,7 @@ pub(crate) fn send_direct_request(
 	match await_status(&receiver, connection_can_be_closed) {
 		Ok((_hash, status)) => {
 			debug!("Trusted operation reached status {status:?}");
+			direct_api.close().unwrap();
 			Ok(top_hash)
 		},
 		Err(e) => {
@@ -349,6 +350,11 @@ pub(crate) fn await_status(
 					})?;
 
 				println!("Trusted call {:?} is {:?}", hash, status);
+
+				if is_cancelled(status) {
+					debug!("trusted call has been cancelled");
+					return Ok((hash, status))
+				}
 
 				if wait_until(status) {
 					return Ok((hash, status))
@@ -428,12 +434,11 @@ pub(crate) fn get_json_request(
 }
 
 fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {
-	!matches!(
-		top_status,
-		TrustedOperationStatus::Submitted
-			| TrustedOperationStatus::Future
-			| TrustedOperationStatus::Ready
-			| TrustedOperationStatus::Broadcast
-			| TrustedOperationStatus::Invalid
-	)
+	use TrustedOperationStatus::*;
+	!matches!(top_status, Submitted | Future | Ready | Broadcast)
+}
+
+fn is_cancelled(top_status: TrustedOperationStatus) -> bool {
+	use TrustedOperationStatus::*;
+	matches!(top_status, Invalid | Usurped | Dropped | Retracted)
 }
