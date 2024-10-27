@@ -42,7 +42,6 @@ use std::{
 	fmt::Debug,
 	result::Result as StdResult,
 	sync::mpsc::{channel, Receiver},
-	time::Instant,
 };
 use substrate_api_client::{
 	ac_compose_macros::compose_extrinsic, GetChainInfo, SubmitAndWatch, SubscribeEvents, XtStatus,
@@ -308,12 +307,28 @@ pub(crate) fn send_direct_request(
 
 	debug!("subscribing to updates for top with hash: {top_hash:?}");
 
+	match await_status(&receiver, connection_can_be_closed) {
+		Ok((_hash, status)) => {
+			debug!("Trusted operation reached status {status:?}");
+			Ok(top_hash)
+		},
+		Err(e) => {
+			error!("Error submitting top: {e:?}");
+			direct_api.close().unwrap();
+			Err(e)
+		},
+	}
+}
+
+pub(crate) fn await_status(
+	receiver: &Receiver<String>,
+	wait_until: impl Fn(TrustedOperationStatus) -> bool,
+) -> TrustedOpResult<(Hash, TrustedOperationStatus)> {
 	loop {
 		debug!("waiting for update");
 		let (subscription_update, direct_request_status) =
 			await_status_update(&receiver).map_err(|e| {
 				error!("Error getting status update: {:?}", e);
-				direct_api.close().unwrap();
 				e
 			})?;
 
@@ -322,25 +337,29 @@ pub(crate) fn send_direct_request(
 			DirectRequestStatus::Error => {
 				let err = subscription_update.params.error.unwrap_or("{}".into());
 				debug!("request status is error");
-				direct_api.close().unwrap();
-				return Err(TrustedOperationError::Default {
-					msg: format!("[Error] DirectRequestStatus::Error: {err}"),
-				})
+				return Err(into_default_trusted_op_err(format!(
+					"[Error] DirectRequestStatus::Error: {err}"
+				)))
 			},
 			DirectRequestStatus::TrustedOperationStatus(status) => {
 				debug!("request status is: {:?}", status);
-				if let Ok(value) = Hash::from_hex(&subscription_update.params.subscription) {
-					println!("Trusted call {:?} is {:?}", value, status);
-				}
-				if connection_can_be_closed(status) {
-					direct_api.close().unwrap();
-					return Ok(top_hash)
+				let hash =
+					Hash::from_hex(&subscription_update.params.subscription).map_err(|e| {
+						into_default_trusted_op_err(format!("Invalid subscription top hash: {e:?}"))
+					})?;
+
+				println!("Trusted call {:?} is {:?}", hash, status);
+
+				if wait_until(status) {
+					return Ok((hash, status))
 				}
 			},
 			DirectRequestStatus::Ok => {
-				debug!("request status is ignored");
-				direct_api.close().unwrap();
-				return Ok(top_hash)
+				// Todo: #1625. When sending `author_submitAndWatchExtrinsic` this can never happen.
+				// our cli tries to do too much in one method, we should have better separation of
+				// concerns.
+				panic!("`DirectRequestStatus::Ok` should never occur with `author_submitAndWatchExtrinsic`.\
+				This is a bug in the usage of the cli.");
 			},
 		}
 	}
@@ -406,60 +425,6 @@ pub(crate) fn get_json_request(
 		vec![request.to_hex()],
 	)
 	.unwrap()
-}
-
-pub(crate) fn wait_until(
-	receiver: &Receiver<String>,
-	until: impl Fn(TrustedOperationStatus) -> bool,
-) -> Option<(H256, Instant)> {
-	debug!("waiting for rpc response");
-	loop {
-		match receiver.recv() {
-			Ok(response) => {
-				debug!("received response: {}", response);
-				let parse_result: StdResult<RpcResponse, _> = serde_json::from_str(&response);
-				if let Ok(response) = parse_result {
-					if let Ok(return_value) = RpcReturnValue::from_hex(&response.result) {
-						debug!("successfully decoded rpc response: {:?}", return_value);
-						match return_value.status {
-							DirectRequestStatus::Error => {
-								debug!("request status is error");
-								if let Ok(value) =
-									String::decode(&mut return_value.value.as_slice())
-								{
-									error!("{}", value);
-								}
-								return None
-							},
-							DirectRequestStatus::TrustedOperationStatus(status) => {
-								debug!("request status is: {:?}", status);
-								if let Ok(value) = Hash::decode(&mut return_value.value.as_slice())
-								{
-									println!("Trusted call {:?} is {:?}", value, status);
-									if until(status.clone()) {
-										return Some((value, Instant::now()))
-									} else if status == TrustedOperationStatus::Invalid {
-										error!("Invalid request");
-										return None
-									}
-								}
-							},
-							DirectRequestStatus::Ok => {
-								debug!("request status is ignored");
-								return None
-							},
-						}
-					};
-				} else {
-					error!("Could not parse response");
-				};
-			},
-			Err(e) => {
-				error!("failed to receive rpc response: {:?}", e);
-				return None
-			},
-		};
-	}
 }
 
 fn connection_can_be_closed(top_status: TrustedOperationStatus) -> bool {

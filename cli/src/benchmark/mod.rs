@@ -21,8 +21,8 @@ use crate::{
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_keystore_path, get_pair_from_str},
 	trusted_operation::{
-		await_subscription_response, get_json_request, get_state, perform_trusted_operation,
-		wait_until,
+		await_status, await_subscription_response, get_json_request, get_state,
+		perform_trusted_operation,
 	},
 	Cli, CliResult, CliResultOk, SR25519_KEY_TYPE,
 };
@@ -352,10 +352,10 @@ fn wait_for_top_confirmation(
 	let confirmed = if wait_for_sidechain_block {
 		// We wait for the transaction hash that actually matches the submitted hash
 		loop {
-			let transaction_information = wait_until(&client.receiver, is_sidechain_block);
-			if let Some((hash, _)) = transaction_information {
+			let transaction_information = await_status(&client.receiver, is_sidechain_block).ok();
+			if let Some((hash, _status)) = transaction_information {
 				if hash == submitted.unwrap().0 {
-					break transaction_information
+					break Some((hash, Instant::now()))
 				}
 			}
 		}
