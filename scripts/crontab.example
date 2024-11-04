@@ -13,5 +13,5 @@
 # hourly, take shard snapshot
 0 * * * * /opt/sidechain-paseo/snapshot-shards.sh /opt/sidechain-paseo
 
-# every hour, rsync to peer node which might be able to hot-swap in emergencies. execute as user, not root
-30 * * * * su - ubuntu -c "rsync -avz --delete /opt/sidechain-paseo/ ubuntu@integritee-2:/opt/mirror-integritee-1/sidechain-paseo/"
+# every minute, rsync to peer node which might be able to hot-swap in emergencies. execute as user, not root
+* * * * * su - ubuntu -c "rsync -avz --delete /opt/sidechain-paseo/ ubuntu@integritee-2:/opt/mirror-integritee-1/sidechain-paseo/"
