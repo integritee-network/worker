@@ -360,7 +360,7 @@ where
 		});
 
 		let state_size_bytes = state.size();
-		let decimals = G::get_shielding_target_decimals();
+		let decimals = state.execute_with(|| G::get_shielding_target_decimals());
 		let runtime_metrics = gather_runtime_metrics(&state, decimals);
 		let successful_call_count =
 			executed_and_failed_calls.iter().filter(|call| call.is_success()).count();
