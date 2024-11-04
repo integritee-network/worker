@@ -25,7 +25,8 @@ use itp_stf_interface::{
 };
 use itp_stf_primitives::{
 	traits::{
-		GetterAuthorization, PoolTransactionValidation, TrustedCallSigning, TrustedCallVerification,
+		GetDecimals, GetterAuthorization, PoolTransactionValidation, TrustedCallSigning,
+		TrustedCallVerification,
 	},
 	types::{KeyPair, Nonce, TrustedOperation},
 };
@@ -235,6 +236,12 @@ impl GetterAuthorization for GetterMock {
 			Self::trusted(tgs) => tgs.signature,
 			Self::public(_) => true,
 		}
+	}
+}
+
+impl GetDecimals for GetterMock {
+	fn get_shielding_target_decimals() -> u8 {
+		12u8
 	}
 }
 

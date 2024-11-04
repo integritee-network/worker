@@ -30,7 +30,7 @@ use itp_stf_interface::{
 };
 use itp_stf_primitives::{
 	error::StfError,
-	traits::TrustedCallVerification,
+	traits::{GetDecimals, TrustedCallVerification},
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
@@ -302,7 +302,7 @@ where
 		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>>,
 	<Stf as StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>>::Error: Debug,
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
-	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + GetDecimals,
 {
 	type Externalities = StateHandler::StateT;
 
@@ -360,7 +360,8 @@ where
 		});
 
 		let state_size_bytes = state.size();
-		let runtime_metrics = gather_runtime_metrics(&state);
+		let decimals = G::get_shielding_target_decimals();
+		let runtime_metrics = gather_runtime_metrics(&state, decimals);
 		let successful_call_count =
 			executed_and_failed_calls.iter().filter(|call| call.is_success()).count();
 		let failed_call_count = executed_and_failed_calls.len() - successful_call_count;
@@ -414,14 +415,18 @@ pub fn shards_key_hash() -> Vec<u8> {
 /// assumes a common structure of sgx_runtime and extracts interesting metrics
 /// while this may not be the best abstraction, it avoids circular dependencies
 /// with app-libs and will be suitable in 99% of cases
-fn gather_runtime_metrics<State>(state: &State) -> RuntimeMetrics
+fn gather_runtime_metrics<State>(state: &State, decimals: u8) -> RuntimeMetrics
 where
 	State: SgxExternalitiesTrait + Encode,
 {
 	// prometheus has no support for NaN, therefore we fall back to -1
 	let total_issuance: f64 = state
 		.get(&storage_value_key("Balances", "TotalIssuance"))
-		.map(|v| Balance::decode(&mut v.as_slice()).map(|b| b as f64).unwrap_or(-1.0))
+		.map(|v| {
+			Balance::decode(&mut v.as_slice())
+				.map(|b| (b as f64) / 10f64.powi(decimals as i32))
+				.unwrap_or(-1.0)
+		})
 		.unwrap_or(-1.0);
 	// fallback to zero is fine here
 	let parentchain_integritee_processed_block_number: u32 = state
