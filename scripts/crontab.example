@@ -1,0 +1,17 @@
+# as root, execute
+# crontab -e
+# and make the following entries:
+
+# daily @2:00am, archive logs and clean up
+0 2 * * * /opt/sidechain-paseo/archive-yesterdays-logs.sh /opt/sidechain-paseo/log-extrinsics-to-Integritee
+0 2 * * * /opt/sidechain-paseo/archive-yesterdays-logs.sh /opt/sidechain-paseo/log-extrinsics-to-TargetA
+
+# daily @1:00am, snapshot light client dB's (syncing is fast enough for 24h intervals)
+0 1 * * * /opt/sidechain-paseo/snapshot-integritee-db.sh /opt/sidechain-paseo
+0 1 * * * /opt/sidechain-paseo/snapshot-target-a-db.sh /opt/sidechain-paseo
+
+# hourly, take shard snapshot
+0 * * * * /opt/sidechain-paseo/snapshot-shards.sh /opt/sidechain-paseo
+
+# every minute, rsync to peer node which might be able to hot-swap in emergencies. execute as user, not root
+* * * * * su - ubuntu -c "rsync -avz --delete /opt/sidechain-paseo/ ubuntu@integritee-2:/opt/mirror-integritee-1/sidechain-paseo/"
