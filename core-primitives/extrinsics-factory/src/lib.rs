@@ -179,7 +179,10 @@ pub mod tests {
 			node_metadata_repo,
 		);
 
-		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
+		let opaque_calls = [
+			(OpaqueCall(vec![3u8; 42]), GenericMortality::immortal()),
+			(OpaqueCall(vec![12u8, 78]), GenericMortality::immortal()),
+		];
 		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
 
 		assert_eq!(opaque_calls.len(), xts.len());
@@ -204,8 +207,10 @@ pub mod tests {
 			StaticExtrinsicSigner::<_, PairSignature>::new(test_account2()),
 			nonce_cache2.clone(),
 		);
-
-		let opaque_calls = [OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78])];
+		let opaque_calls = [
+			(OpaqueCall(vec![3u8; 42]), GenericMortality::immortal()),
+			(OpaqueCall(vec![12u8, 78]), GenericMortality::immortal()),
+		];
 		let xts = extrinsics_factory.create_extrinsics(&opaque_calls, None).unwrap();
 
 		assert_eq!(opaque_calls.len(), xts.len());
