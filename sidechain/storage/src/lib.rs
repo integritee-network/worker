@@ -64,9 +64,8 @@ pub fn start_sidechain_pruning_loop<D>(
 				interval_start = SystemTime::now();
 				storage.prune_blocks_except(purge_limit);
 			} else {
-				// sleep for the rest of the interval
-				let sleep_time = interval_time - elapsed;
-				thread::sleep(sleep_time);
+				// sleep only briefly so we can react to shutdown flag
+				thread::sleep(Duration::from_secs(1));
 			}
 		}
 	}

@@ -727,11 +727,15 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		ParentchainId::Integritee,
 		shutdown_flag.clone(),
 	);
+	println!(
+		"[!] waiting for {} sensitive threads to shut down gracefully",
+		sensitive_threads.len()
+	);
 	// Join each thread to ensure they have completed
 	for handle in sensitive_threads {
 		handle.join().expect("Thread panicked");
 	}
-	println!("All threads stopped.");
+	println!("[!] All threads stopped gracefully.");
 }
 
 fn init_provided_shard_vault<E: EnclaveBase>(

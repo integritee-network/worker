@@ -29,7 +29,7 @@ pub fn subscribe_to_parentchain_events(
 ) {
 	println!("[L1Event:{}] Subscribing to selected events", parentchain_id);
 	let mut subscription = api.subscribe_events().unwrap();
-	loop {
+	while !shutdown_flag.load(Ordering::Relaxed) {
 		let events = subscription.next_events_from_metadata().unwrap().unwrap();
 
 		for event in events.iter() {
@@ -57,8 +57,8 @@ pub fn subscribe_to_parentchain_events(
 							println!("[L1Event:{}] {:?}", parentchain_id, ev);
 						},
 					"CodeUpdated" => {
-						warn!(
-							"[L1Event:{}] CodeUpdated. Initiating service shutdown",
+						println!(
+							"[L1Event:{}] CodeUpdated. Initiating service shutdown to allow clean restart",
 							parentchain_id
 						);
 						shutdown_flag.store(true, Ordering::Relaxed);
@@ -105,4 +105,5 @@ pub fn subscribe_to_parentchain_events(
 			}
 		}
 	}
+	println!("[L1Event:{}] Subscription terminated", parentchain_id);
 }

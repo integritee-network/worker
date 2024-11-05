@@ -156,6 +156,7 @@ where
 				SIDECHAIN_PURGE_LIMIT,
 				local_shutdown_flag,
 			);
+			println!("[!] Sidechain block pruning loop has terminated");
 		})
 		.map_err(|e| Error::Custom(Box::new(e)))?;
 
