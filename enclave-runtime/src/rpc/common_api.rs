@@ -300,7 +300,13 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 		local_ocall_api
 			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
-		Ok(Value::String(format!("enclave-runtime: {}", enclave_version)))
+		let version = format!("enclave-runtime: {}", enclave_version);
+		let json_value = RpcReturnValue {
+			do_watch: false,
+			value: version.as_bytes().into(),
+			status: DirectRequestStatus::Ok,
+		};
+		Ok(json!(json_value.to_hex()))
 	});
 }
 

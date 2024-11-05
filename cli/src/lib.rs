@@ -120,6 +120,9 @@ pub enum CliResultOk {
 	ParentchainsInfo {
 		info: ParentchainsInfo,
 	},
+	String {
+		value: String,
+	},
 	GuessAttempts {
 		value: u8,
 	},
