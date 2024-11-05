@@ -146,7 +146,6 @@ where
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
-	let local_shutdown_flag = shutdown_flag.clone();
 	let pruning_handle = thread::Builder::new()
 		.name("sidechain_pruning_loop".to_owned())
 		.spawn(move || {
@@ -154,7 +153,7 @@ where
 				&sidechain_storage,
 				SIDECHAIN_PURGE_INTERVAL,
 				SIDECHAIN_PURGE_LIMIT,
-				local_shutdown_flag,
+				shutdown_flag,
 			);
 			println!("[!] Sidechain block pruning loop has terminated");
 		})
