@@ -38,9 +38,12 @@ use itp_node_api::{
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
-use itp_types::{parentchain::AccountId, OpaqueCall};
+use itp_types::{
+	parentchain::{AccountId, GenericMortality},
+	OpaqueCall,
+};
 use sp_core::H256;
-use sp_runtime::{generic::Era, OpaqueExtrinsic};
+use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
 use substrate_api_client::ac_compose_macros::compose_extrinsic_offline;
 
@@ -55,7 +58,7 @@ pub mod mock;
 pub trait CreateExtrinsics {
 	fn create_extrinsics(
 		&self,
-		calls: &[OpaqueCall],
+		calls: &[(OpaqueCall, GenericMortality)],
 		extrinsics_params: Option<ParentchainAdditionalParams>,
 	) -> Result<Vec<OpaqueExtrinsic>>;
 }
@@ -108,15 +111,11 @@ where
 {
 	fn create_extrinsics(
 		&self,
-		calls: &[OpaqueCall],
+		calls: &[(OpaqueCall, GenericMortality)],
 		extrinsics_params: Option<ParentchainAdditionalParams>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
-
-		let additional_extrinsic_params = extrinsics_params.unwrap_or_else(|| {
-			ParentchainAdditionalParams::new().era(Era::Immortal, self.genesis_hash).tip(0)
-		});
 
 		let (runtime_spec_version, runtime_transaction_version) =
 			self.node_metadata_repository.get_from_metadata(|m| {
@@ -125,7 +124,15 @@ where
 
 		let extrinsics_buffer: Vec<OpaqueExtrinsic> = calls
 			.iter()
-			.map(|call| {
+			.map(|(call, mortality)| {
+				let additional_extrinsic_params = extrinsics_params.unwrap_or_else(|| {
+					ParentchainAdditionalParams::new()
+						.era(
+							mortality.era,
+							mortality.mortality_checkpoint.unwrap_or(self.genesis_hash),
+						)
+						.tip(0)
+				});
 				let extrinsic_params = ParentchainExtrinsicParams::new(
 					runtime_spec_version,
 					runtime_transaction_version,

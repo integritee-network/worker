@@ -53,7 +53,7 @@ use itp_stf_primitives::{
 	types::{AccountId, KeyPair, ShardIdentifier, Signature, TrustedOperation},
 };
 use itp_types::{
-	parentchain::{ParentchainCall, ParentchainId, ProxyType},
+	parentchain::{GenericMortality, ParentchainCall, ParentchainId, ProxyType},
 	Address, Moment, OpaqueCall,
 };
 use itp_utils::stringify::account_id_to_string;
@@ -340,9 +340,18 @@ where
 					vault_transfer_call,
 				));
 				let parentchain_call = match parentchain_id {
-					ParentchainId::Integritee => ParentchainCall::Integritee(proxy_call),
-					ParentchainId::TargetA => ParentchainCall::TargetA(proxy_call),
-					ParentchainId::TargetB => ParentchainCall::TargetB(proxy_call),
+					ParentchainId::Integritee => ParentchainCall::Integritee {
+						call: proxy_call,
+						mortality: GenericMortality::immortal(),
+					},
+					ParentchainId::TargetA => ParentchainCall::TargetA {
+						call: proxy_call,
+						mortality: GenericMortality::immortal(),
+					},
+					ParentchainId::TargetB => ParentchainCall::TargetB {
+						call: proxy_call,
+						mortality: GenericMortality::immortal(),
+					},
 				};
 				calls.push(parentchain_call);
 				Ok(())
@@ -365,15 +374,18 @@ where
 				shield_funds(who, value)?;
 
 				// Send proof of execution on chain.
-				calls.push(ParentchainCall::Integritee(OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.publish_hash_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					call_hash,
-					Vec::<itp_types::H256>::new(),
-					b"shielded some funds!".to_vec(),
-				))));
+				calls.push(ParentchainCall::Integritee {
+					call: OpaqueCall::from_tuple(&(
+						node_metadata_repo
+							.get_from_metadata(|m| m.publish_hash_call_indexes())
+							.map_err(|_| StfError::InvalidMetadata)?
+							.map_err(|_| StfError::InvalidMetadata)?,
+						call_hash,
+						Vec::<itp_types::H256>::new(),
+						b"shielded some funds!".to_vec(),
+					)),
+					mortality: GenericMortality::immortal(),
+				});
 				Ok(())
 			},
 			TrustedCall::timestamp_set(enclave_account, now, parentchain_id) => {

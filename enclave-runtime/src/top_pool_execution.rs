@@ -56,7 +56,7 @@ use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
 use itp_types::{
-	parentchain::{ParentchainCall, ParentchainId, SidechainBlockConfirmation},
+	parentchain::{GenericMortality, ParentchainCall, ParentchainId, SidechainBlockConfirmation},
 	Block, OpaqueCall, H256,
 };
 use its_primitives::{
@@ -333,7 +333,7 @@ where
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let calls: Vec<OpaqueCall> = parentchain_calls
+	let calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_calls
 		.iter()
 		.filter_map(|parentchain_call| parentchain_call.as_integritee())
 		.collect();
@@ -344,7 +344,7 @@ where
 		let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
 		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 	}
-	let calls: Vec<OpaqueCall> = parentchain_calls
+	let calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_calls
 		.iter()
 		.filter_map(|parentchain_call| parentchain_call.as_target_a())
 		.collect();
@@ -355,7 +355,7 @@ where
 		let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
 		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 	}
-	let calls: Vec<OpaqueCall> = parentchain_calls
+	let calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_calls
 		.iter()
 		.filter_map(|parentchain_call| parentchain_call.as_target_b())
 		.collect();

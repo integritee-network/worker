@@ -27,7 +27,9 @@ use serde::{Deserialize, Serialize};
 pub use sidechain_primitives::SidechainBlockConfirmation;
 use sp_core::bounded::alloc;
 use sp_runtime::{
-	generic::Header as HeaderG, traits::BlakeTwo256, DispatchError, MultiAddress, MultiSignature,
+	generic::{Era, Header as HeaderG},
+	traits::BlakeTwo256,
+	DispatchError, MultiAddress, MultiSignature,
 };
 use substrate_api_client::{
 	ac_node_api::StaticEvent,
@@ -283,32 +285,45 @@ impl From<ParentchainError> for () {
 	fn from(_: ParentchainError) -> Self {}
 }
 
+// All info for additionalParam except tip whi
+#[derive(Encode, Debug, Clone, PartialEq, Eq)]
+pub struct GenericMortality {
+	pub era: Era,
+	pub mortality_checkpoint: Option<Hash>,
+}
+
+impl GenericMortality {
+	pub fn immortal() -> Self {
+		Self { era: Era::Immortal, mortality_checkpoint: None }
+	}
+}
+
 /// a wrapper to target calls to specific parentchains
 #[derive(Encode, Debug, Clone, PartialEq, Eq)]
 pub enum ParentchainCall {
-	Integritee(OpaqueCall),
-	TargetA(OpaqueCall),
-	TargetB(OpaqueCall),
+	Integritee { call: OpaqueCall, mortality: GenericMortality },
+	TargetA { call: OpaqueCall, mortality: GenericMortality },
+	TargetB { call: OpaqueCall, mortality: GenericMortality },
 }
 
 impl ParentchainCall {
-	pub fn as_integritee(&self) -> Option<OpaqueCall> {
-		if let Self::Integritee(call) = self {
-			Some(call.clone())
+	pub fn as_integritee(&self) -> Option<(OpaqueCall, GenericMortality)> {
+		if let Self::Integritee { call, mortality } = self {
+			Some((call.clone(), mortality.clone()))
 		} else {
 			None
 		}
 	}
-	pub fn as_target_a(&self) -> Option<OpaqueCall> {
-		if let Self::TargetA(call) = self {
-			Some(call.clone())
+	pub fn as_target_a(&self) -> Option<(OpaqueCall, GenericMortality)> {
+		if let Self::TargetA { call, mortality } = self {
+			Some((call.clone(), mortality.clone()))
 		} else {
 			None
 		}
 	}
-	pub fn as_target_b(&self) -> Option<OpaqueCall> {
-		if let Self::TargetB(call) = self {
-			Some(call.clone())
+	pub fn as_target_b(&self) -> Option<(OpaqueCall, GenericMortality)> {
+		if let Self::TargetB { call, mortality } = self {
+			Some((call.clone(), mortality.clone()))
 		} else {
 			None
 		}
@@ -316,19 +331,19 @@ impl ParentchainCall {
 	pub fn as_opaque_call_for(&self, parentchain_id: ParentchainId) -> Option<OpaqueCall> {
 		match parentchain_id {
 			ParentchainId::Integritee =>
-				if let Self::Integritee(call) = self {
+				if let Self::Integritee { call, mortality: _ } = self {
 					Some(call.clone())
 				} else {
 					None
 				},
 			ParentchainId::TargetA =>
-				if let Self::TargetA(call) = self {
+				if let Self::TargetA { call, mortality: _ } = self {
 					Some(call.clone())
 				} else {
 					None
 				},
 			ParentchainId::TargetB =>
-				if let Self::TargetB(call) = self {
+				if let Self::TargetB { call, mortality: _ } = self {
 					Some(call.clone())
 				} else {
 					None

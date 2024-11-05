@@ -46,7 +46,7 @@ use itp_node_api::metadata::{
 };
 use itp_node_api_metadata::NodeMetadata;
 use itp_settings::worker::MR_ENCLAVE_SIZE;
-use itp_types::OpaqueCall;
+use itp_types::{parentchain::GenericMortality, OpaqueCall};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::*;
@@ -390,7 +390,8 @@ pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
 
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+	let extrinsics =
+		extrinsics_factory.create_extrinsics(&[(call, GenericMortality::immortal())], None)?;
 
 	Ok(extrinsics[0].clone())
 }

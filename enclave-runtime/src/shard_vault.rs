@@ -43,7 +43,7 @@ use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_interface::{parentchain_pallet::ParentchainPalletInstancesInterface, ShardVaultQuery};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
+	parentchain::{AccountId, Address, Balance, GenericMortality, ParentchainId, ProxyType},
 	OpaqueCall, ShardIdentifier,
 };
 use log::*;
@@ -189,7 +189,8 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	));
 
 	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
+	let xts = enclave_extrinsics_factory
+		.create_extrinsics(&[(call, GenericMortality::immortal())], None)?;
 
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
 	ocall_api.send_to_parentchain(xts, &parentchain_id, true)?;
@@ -212,7 +213,8 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	));
 
 	info!("[{:?}] add proxy call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let xts = vault_extrinsics_factory.create_extrinsics(&[call], None)?;
+	let xts = vault_extrinsics_factory
+		.create_extrinsics(&[(call, GenericMortality::immortal())], None)?;
 
 	ocall_api.send_to_parentchain(xts, &parentchain_id, false)?;
 	Ok(())
@@ -266,7 +268,8 @@ pub(crate) fn add_shard_vault_proxy(
 	));
 
 	info!("proxied add proxy call: 0x{}", hex::encode(call.0.clone()));
-	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
+	let xts = enclave_extrinsics_factory
+		.create_extrinsics(&[(call, GenericMortality::immortal())], None)?;
 
 	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false)?;
 	Ok(())

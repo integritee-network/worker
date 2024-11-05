@@ -23,7 +23,10 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api_metadata::{pallet_sidechain::SidechainCallIndexes, NodeMetadataTrait};
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
-use itp_types::{parentchain::SidechainBlockConfirmation, OpaqueCall, ShardIdentifier};
+use itp_types::{
+	parentchain::{GenericMortality, SidechainBlockConfirmation},
+	OpaqueCall, ShardIdentifier,
+};
 use its_primitives::traits::Header as HeaderTrait;
 use log::*;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -130,7 +133,7 @@ impl<
 
 			let xts = self
 				.extrinsics_factory
-				.create_extrinsics(&[opaque_call], None)
+				.create_extrinsics(&[(opaque_call, GenericMortality::immortal())], None)
 				.map_err(|e| Error::Other(e.into()))?;
 
 			debug!("Sending sidechain block import confirmation extrinsic..");
