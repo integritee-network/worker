@@ -22,10 +22,10 @@ use std::boxed::Box;
 
 pub type Result<T> = core::result::Result<T, Error>;
 
-/// nonce cache error
+/// header cache error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error("Nonce lock is poisoned")]
+	#[error("SidechainBlockHeader lock is poisoned")]
 	LockPoisoning,
 	#[error(transparent)]
 	Other(#[from] Box<dyn std::error::Error + Sync + Send + 'static>),

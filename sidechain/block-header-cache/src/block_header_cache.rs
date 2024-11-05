@@ -27,12 +27,12 @@ use std::sync::RwLockWriteGuard;
 
 use crate::{
 	error::{Error, Result},
-	CachedSidechainBlockHeader, GetNonce, MutateNonce,
+	CachedSidechainBlockHeader, GetSidechainBlockHeader, MutateSidechainBlockHeader,
 };
 
-/// Local nonce cache
+/// Local header cache
 ///
-/// stores the nonce internally, protected by a RW lock for concurrent access
+/// stores the header internally, protected by a RW lock for concurrent access
 #[derive(Default)]
 pub struct SidechainBlockHeaderCache {
 	block_header_lock: RwLock<CachedSidechainBlockHeader>,
@@ -44,13 +44,13 @@ impl SidechainBlockHeaderCache {
 	}
 }
 
-impl MutateNonce for SidechainBlockHeaderCache {
+impl MutateSidechainBlockHeader for SidechainBlockHeaderCache {
 	fn load_for_mutation(&self) -> Result<RwLockWriteGuard<'_, CachedSidechainBlockHeader>> {
 		self.block_header_lock.write().map_err(|_| Error::LockPoisoning)
 	}
 }
 
-impl GetHeader for SidechainBlockHeaderCache {
+impl GetSidechainBlockHeader for SidechainBlockHeaderCache {
 	fn get_header(&self) -> Result<CachedSidechainBlockHeader> {
 		let header_lock = self.block_header_lock.read().map_err(|_| Error::LockPoisoning)?;
 		Ok(*header_lock)
@@ -60,21 +60,36 @@ impl GetHeader for SidechainBlockHeaderCache {
 #[cfg(test)]
 pub mod tests {
 	use super::*;
+	use its_primitives::{traits::Header, types::header::SidechainHeader};
 	use std::{sync::Arc, thread};
 
 	#[test]
-	pub fn nonce_defaults_to_zero() {
-		let nonce_cache = SidechainBlockHeaderCache::default();
-		assert_eq!(CachedSidechainBlockHeader(0), nonce_cache.get_nonce().unwrap());
+	pub fn cache_defaults_correctly() {
+		let cache = SidechainBlockHeaderCache::default();
+		assert_eq!(
+			CachedSidechainBlockHeader(SidechainHeader::default()),
+			cache.get_header().unwrap()
+		);
 	}
 
 	#[test]
 	pub fn set_block_header_works() {
 		let block_header_cache = SidechainBlockHeaderCache::default();
 		let mut block_header_lock = block_header_cache.load_for_mutation().unwrap();
-		let header = SidechainBlockHeader {} * block_header_lock = CachedSidechainBlockHeader(42);
+		let desired_header = SidechainHeader::new(
+			42,
+			Default::default(),
+			Default::default(),
+			Default::default(),
+			53,
+		);
+
+		*block_header_lock = CachedSidechainBlockHeader(desired_header);
 		std::mem::drop(block_header_lock);
-		assert_eq!(CachedSidechainBlockHeader(42), block_header_cache.get_nonce().unwrap());
+		assert_eq!(
+			CachedSidechainBlockHeader(desired_header),
+			block_header_cache.get_header().unwrap()
+		);
 	}
 
 	#[test]
@@ -83,17 +98,24 @@ pub mod tests {
 
 		let mut block_header_write_lock = block_header_cache.load_for_mutation().unwrap();
 
-		// spawn a new thread that reads the nonce
+		let desired_header = SidechainHeader::new(
+			42,
+			Default::default(),
+			Default::default(),
+			Default::default(),
+			53,
+		);
+		// spawn a new thread that reads the header
 		// this thread should be blocked until the write lock is released, i.e. until
-		// the new nonce is written. We can verify this, by trying to read that nonce variable
+		// the new header is written. We can verify this, by trying to read that header variable
 		// that will be inserted further down below
 		let new_thread_block_header_cache = block_header_cache.clone();
 		let join_handle = thread::spawn(move || {
-			let block_header_read = new_thread_block_header_cache.get_nonce().unwrap();
-			assert_eq!(CachedSidechainBlockHeader(3108), block_header_read);
+			let block_header_read = new_thread_block_header_cache.get_header().unwrap();
+			assert_eq!(CachedSidechainBlockHeader(desired_header), block_header_read);
 		});
 
-		*block_header_write_lock = CachedSidechainBlockHeader(3108);
+		*block_header_write_lock = CachedSidechainBlockHeader(desired_header);
 		std::mem::drop(block_header_write_lock);
 
 		join_handle.join().unwrap();

@@ -3711,6 +3711,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-block-header-cache"
+version = "0.1.0"
+dependencies = [
+ "its-primitives",
+ "sgx_tstd",
+ "thiserror 1.0.44",
+ "thiserror 1.0.9",
+]
+
+[[package]]
 name = "its-block-verification"
 version = "0.9.0"
 dependencies = [
