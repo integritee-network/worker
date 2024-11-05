@@ -187,6 +187,7 @@ pub(crate) fn init_enclave(
 		shielding_key_repository,
 		ocall_api.clone(),
 		VERSION.into(),
+		GLOBAL_SIDECHAIN_BLOCK_HEADER_CACHE.clone(),
 	);
 
 	#[cfg(feature = "sidechain")]

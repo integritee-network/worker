@@ -33,6 +33,8 @@ use itp_test::mock::onchain_mock::OnchainMock;
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{AccountId, DirectRequestStatus, Request, ShardIdentifier};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use its_block_header_cache::{CachedSidechainBlockHeader, SidechainBlockHeaderCache};
+use its_primitives::types::header::SidechainHeader;
 use jsonrpc_core::IoHandler;
 use sp_core::ed25519::Signature;
 use sp_runtime::MultiSignature;
@@ -61,6 +63,10 @@ pub fn get_state_request_works() {
 		Arc::new(rsa_repository),
 		ocall_api,
 		"0.0.0-test".into(),
+		SidechainBlockHeaderCache::new(
+			CachedSidechainBlockHeader(SidechainHeader::default()).into(),
+		)
+		.into(),
 	);
 
 	let rpc_handler = Arc::new(RpcWsHandler::new(io_handler, watch_extractor, connection_registry));

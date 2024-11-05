@@ -40,6 +40,8 @@ use itp_stf_executor::{getter_executor::ExecuteGetter, traits::StfShardVaultQuer
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, EnclaveFingerprint, Request, ShardIdentifier, H256};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use its_block_header_cache::{GetSidechainBlockHeader, SidechainBlockHeaderCache};
+use its_primitives::types::header::SidechainHeader;
 use its_rpc_handler::direct_top_pool_api::add_top_pool_direct_rpc_methods;
 use jsonrpc_core::{serde_json::json, IoHandler, Params, Value};
 use log::debug;
@@ -58,6 +60,7 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 	shielding_key: Arc<AccessShieldingKey>,
 	ocall_api: Arc<OCallApi>,
 	enclave_version: String,
+	sidechain_header_cache: Arc<SidechainBlockHeaderCache<SidechainHeader>>,
 ) where
 	Author: AuthorApi<H256, H256, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	GetterExecutor: ExecuteGetter + Send + Sync + 'static,
@@ -183,12 +186,16 @@ pub fn add_common_api<Author, GetterExecutor, AccessShieldingKey, OCallApi>(
 
 	let local_ocall_api = ocall_api.clone();
 	io_handler.add_sync_method("chain_getHeader", move |_: Params| {
-		debug!("worker_api_direct rpc was called: chain_subscribeAllHeads");
+		debug!("worker_api_direct rpc was called: chain_getHeader");
 		local_ocall_api
 			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
 			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
-		let parsed = "world";
-		Ok(Value::String(format!("hello, {}", parsed)))
+		let json_value = if let Ok(header) = sidechain_header_cache.get_header() {
+			RpcReturnValue::new(header.0.encode(), false, DirectRequestStatus::Ok)
+		} else {
+			RpcReturnValue::new(0u8.encode(), false, DirectRequestStatus::Error)
+		};
+		Ok(json!(json_value.to_hex()))
 	});
 
 	let local_ocall_api = ocall_api.clone();
