@@ -95,8 +95,7 @@ impl<
 		NodeMetadataRepository,
 		ExtrinsicsFactory,
 		ValidatorAccessor,
-	>
-where
+	> where
 	ParentchainBlock: ParentchainBlockTrait,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SidechainHeader: HeaderTrait,

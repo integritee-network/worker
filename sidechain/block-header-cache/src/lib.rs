@@ -35,8 +35,6 @@ use std::sync::RwLockWriteGuard;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::sync::SgxRwLockWriteGuard as RwLockWriteGuard;
 
-use its_primitives::types::header::SidechainHeader;
-
 use crate::error::Result;
 
 pub use block_header_cache::SidechainBlockHeaderCache;
@@ -46,19 +44,20 @@ pub mod error;
 
 /// Header type (newtype wrapper for BlockHeaderValue)
 #[derive(Default, Copy, Clone, Debug, Eq, PartialEq)]
-pub struct CachedSidechainBlockHeader(pub SidechainHeader);
+pub struct CachedSidechainBlockHeader<Header>(pub Header);
 /// Trait to mutate a BlockHeader.
 ///
 /// Used in a combination of loading a lock and then writing the updated
 /// value back, returning the lock again.
-pub trait MutateSidechainBlockHeader {
+pub trait MutateSidechainBlockHeader<Header> {
 	/// load a BlockHeader with the intention to mutate it. lock is released once it goes out of scope
-	fn load_for_mutation(&self) -> Result<RwLockWriteGuard<'_, CachedSidechainBlockHeader>>;
+	fn load_for_mutation(&self)
+		-> Result<RwLockWriteGuard<'_, CachedSidechainBlockHeader<Header>>>;
 }
 
 /// Trait to get a BlockHeader.
 ///
 ///
-pub trait GetSidechainBlockHeader {
-	fn get_header(&self) -> Result<CachedSidechainBlockHeader>;
+pub trait GetSidechainBlockHeader<Header> {
+	fn get_header(&self) -> Result<CachedSidechainBlockHeader<Header>>;
 }

@@ -23,6 +23,7 @@ itp-sgx-crypto = { path = "../../../core-primitives/sgx/crypto", default-feature
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
+its-block-header-cache = { path = "../../block-header-cache", default-features = false }
 its-primitives = { path = "../../primitives", default-features = false }
 its-state = { path = "../../state", default-features = false }
 
@@ -63,6 +64,7 @@ std = [
     "itp-types/std",
     "itp-utils/std",
     "its-primitives/std",
+    "its-block-header-cache/std",
     "its-block-verification/std",
     "its-state/std",
     "fork-tree/std",
@@ -79,6 +81,7 @@ sgx = [
     "itp-node-api-metadata-provider/sgx",
     "itp-sgx-crypto/sgx",
     "itp-sgx-externalities/sgx",
+    "its-block-header-cache/sgx",
     "its-state/sgx",
     "fork-tree/sgx",
     # scs

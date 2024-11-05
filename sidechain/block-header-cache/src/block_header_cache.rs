@@ -34,24 +34,26 @@ use crate::{
 ///
 /// stores the header internally, protected by a RW lock for concurrent access
 #[derive(Default)]
-pub struct SidechainBlockHeaderCache {
-	block_header_lock: RwLock<CachedSidechainBlockHeader>,
+pub struct SidechainBlockHeaderCache<Header> {
+	block_header_lock: RwLock<CachedSidechainBlockHeader<Header>>,
 }
 
-impl SidechainBlockHeaderCache {
-	pub fn new(block_header_lock: RwLock<CachedSidechainBlockHeader>) -> Self {
+impl<Header> SidechainBlockHeaderCache<Header> {
+	pub fn new(block_header_lock: RwLock<CachedSidechainBlockHeader<Header>>) -> Self {
 		SidechainBlockHeaderCache { block_header_lock }
 	}
 }
 
-impl MutateSidechainBlockHeader for SidechainBlockHeaderCache {
-	fn load_for_mutation(&self) -> Result<RwLockWriteGuard<'_, CachedSidechainBlockHeader>> {
+impl<Header> MutateSidechainBlockHeader<Header> for SidechainBlockHeaderCache<Header> {
+	fn load_for_mutation(
+		&self,
+	) -> Result<RwLockWriteGuard<'_, CachedSidechainBlockHeader<Header>>> {
 		self.block_header_lock.write().map_err(|_| Error::LockPoisoning)
 	}
 }
 
-impl GetSidechainBlockHeader for SidechainBlockHeaderCache {
-	fn get_header(&self) -> Result<CachedSidechainBlockHeader> {
+impl<Header: Copy> GetSidechainBlockHeader<Header> for SidechainBlockHeaderCache<Header> {
+	fn get_header(&self) -> Result<CachedSidechainBlockHeader<Header>> {
 		let header_lock = self.block_header_lock.read().map_err(|_| Error::LockPoisoning)?;
 		Ok(*header_lock)
 	}

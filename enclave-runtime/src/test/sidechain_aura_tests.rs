@@ -50,6 +50,7 @@ use itp_test::mock::handle_state_mock::HandleStateMock;
 use itp_time_utils::duration_now;
 use itp_top_pool_author::{top_filter::AllowAllTopsFilter, traits::AuthorApi};
 use itp_types::{AccountId, Block as ParentchainBlock, ShardIdentifier};
+use its_block_header_cache::SidechainBlockHeaderCache;
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_primitives::{traits::Block, types::SignedBlock as SignedSidechainBlock};
 use its_sidechain::{aura::proposer_factory::ProposerFactory, slots::SlotInfo};
@@ -112,6 +113,7 @@ pub fn produce_sidechain_block_and_import_it() {
 		top_pool_author.clone(),
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
+		SidechainBlockHeaderCache::default().into(),
 	));
 	let block_composer = Arc::new(TestBlockComposer::new(signer, state_key_repo));
 	let proposer_environment =
