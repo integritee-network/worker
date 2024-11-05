@@ -15,14 +15,12 @@
 
 */
 use crate::{
-	command_utils::get_worker_api_direct, trusted_cli::TrustedCli,
-	trusted_operation::perform_trusted_operation, Cli, CliError, CliResult, CliResultOk,
+	command_utils::get_worker_api_direct, trusted_cli::TrustedCli, Cli, CliError, CliResult,
+	CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
 use itc_rpc_client::direct_client::DirectApi;
 use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
-use itp_stf_primitives::types::TrustedOperation;
 use itp_types::DirectRequestStatus;
 use itp_utils::FromHexPrefixed;
 use its_primitives::types::header::SidechainHeader;
