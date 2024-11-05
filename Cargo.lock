@@ -2577,6 +2577,7 @@ dependencies = [
  "itp-time-utils",
  "itp-types",
  "itp-utils",
+ "its-primitives",
  "log 0.4.20",
  "pallet-balances",
  "pallet-enclave-bridge",

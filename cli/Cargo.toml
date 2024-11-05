@@ -58,6 +58,7 @@ itp-stf-primitives = { path = "../core-primitives/stf-primitives" }
 itp-time-utils = { path = "../core-primitives/time-utils" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
+its-primitives = { path = "../sidechain/primitives" }
 
 [features]
 default = []

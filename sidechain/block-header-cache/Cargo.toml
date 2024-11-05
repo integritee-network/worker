@@ -20,7 +20,7 @@ thiserror = { version = "1.0", optional = true }
 default = ["std"]
 std = [
     "thiserror",
-    "its-primitives/std"
+    "its-primitives/std",
 ]
 sgx = [
     "sgx_tstd",

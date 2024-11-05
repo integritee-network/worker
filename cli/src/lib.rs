@@ -48,6 +48,7 @@ use crate::commands::Commands;
 use clap::Parser;
 use ita_stf::{guess_the_number::GuessTheNumberInfo, ParentchainsInfo};
 use itp_node_api::api_client::Metadata;
+use its_primitives::types::header::SidechainHeader;
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use thiserror::Error;
@@ -112,6 +113,9 @@ pub enum CliResultOk {
 	},
 	U32 {
 		value: u32,
+	},
+	SidechainHeader {
+		header: SidechainHeader,
 	},
 	ParentchainsInfo {
 		info: ParentchainsInfo,
