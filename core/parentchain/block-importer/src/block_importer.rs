@@ -174,12 +174,10 @@ impl<
 				Ok(Some(confirm_processed_parentchain_block_call)) => {
 					let opaque_call = confirm_processed_parentchain_block_call;
 					// if we have significant downtime, this mortality means we will not confirm all imported blocks
-					/*
 					let mortality = GenericMortality {
-						era: Era::Mortal(300, 0),
+						era: Era::mortal(512, (*block.header().number()).into()),
 						mortality_checkpoint: Some(block.hash()),
-					};*/
-					let mortality = GenericMortality::immortal();
+					};
 					calls.push((opaque_call, mortality));
 				},
 				Ok(None) => trace!("omitting confirmation call to non-integritee parentchain"),
