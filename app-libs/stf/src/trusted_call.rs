@@ -26,7 +26,7 @@ use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_addre
 use crate::{
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
-		enclave_signer_account, ensure_enclave_signer_account, shard_vault,
+		enclave_signer_account, ensure_enclave_signer_account, get_mortality, shard_vault,
 		shielding_target_genesis_hash, wrap_bytes,
 	},
 	Getter, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
@@ -330,7 +330,7 @@ where
 					Address::from(beneficiary),
 					Compact(value),
 				));
-				let proxy_call = OpaqueCall::from_tuple(&(
+				let call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
 						.get_from_metadata(|m| m.proxy_call_indexes())
 						.map_err(|_| StfError::InvalidMetadata)?
@@ -339,19 +339,13 @@ where
 					None::<ProxyType>,
 					vault_transfer_call,
 				));
+				let mortality =
+					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
+
 				let parentchain_call = match parentchain_id {
-					ParentchainId::Integritee => ParentchainCall::Integritee {
-						call: proxy_call,
-						mortality: GenericMortality::immortal(),
-					},
-					ParentchainId::TargetA => ParentchainCall::TargetA {
-						call: proxy_call,
-						mortality: GenericMortality::immortal(),
-					},
-					ParentchainId::TargetB => ParentchainCall::TargetB {
-						call: proxy_call,
-						mortality: GenericMortality::immortal(),
-					},
+					ParentchainId::Integritee => ParentchainCall::Integritee { call, mortality },
+					ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
+					ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
 				};
 				calls.push(parentchain_call);
 				Ok(())
