@@ -241,7 +241,7 @@ impl<
 			.header_cache
 			.load_for_mutation()
 			.map_err(|_| ConsensusError::LockPoisoning)?;
-		*header_lock = CachedSidechainBlockHeader(head.clone());
+		*header_lock = CachedSidechainBlockHeader(*head);
 		Ok(())
 	}
 
