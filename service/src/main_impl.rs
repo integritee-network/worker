@@ -77,9 +77,20 @@ use itp_types::parentchain::{AccountId, Balance};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
-use std::{fmt::Debug, path::PathBuf, str, str::Utf8Error, sync::Arc, thread, time::Duration};
+use std::{
+	fmt::Debug,
+	path::PathBuf,
+	str,
+	str::Utf8Error,
+	sync::{
+		atomic::{AtomicBool, Ordering},
+		Arc,
+	},
+	thread,
+	time::Duration,
+};
 use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
-use tokio::runtime::Handle;
+use tokio::{runtime::Handle, task::JoinHandle};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -563,6 +574,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			(integritee_parentchain_handler, integritee_last_synced_header_at_last_run)
 		};
 
+	// some of the following threads need to be shut down gracefully.
+	let shutdown_flag = Arc::new(AtomicBool::new(false));
+	let mut sensitive_threads: Vec<thread::JoinHandle<()>> = Vec::new();
+
 	match WorkerModeProvider::worker_mode() {
 		WorkerMode::Teeracle => {
 			// ------------------------------------------------------------------------
@@ -593,11 +608,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				)
 				.unwrap();
 
-			start_parentchain_header_subscription_thread(
+			let handle = start_parentchain_header_subscription_thread(
+				shutdown_flag.clone(),
 				integritee_parentchain_handler,
 				last_synced_header,
 				*shard,
 			);
+			sensitive_threads.push(handle);
 
 			info!("skipping shard vault check because not yet supported for offchain worker");
 		},
@@ -617,11 +634,13 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 				integritee_last_synced_header_at_last_run
 			};
 
-			start_parentchain_header_subscription_thread(
+			let handle = start_parentchain_header_subscription_thread(
+				shutdown_flag.clone(),
 				integritee_parentchain_handler,
 				last_synced_header,
 				*shard,
 			);
+			sensitive_threads.push(handle);
 
 			spawn_worker_for_shard_polling(
 				shard,
@@ -632,27 +651,33 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	let maybe_target_a_rpc_api = if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
-		Some(init_target_parentchain(
+		let (api, mut handles) = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
 			url,
 			shard,
 			ParentchainId::TargetA,
 			is_development_mode,
-		))
+			shutdown_flag.clone(),
+		);
+		sensitive_threads.append(&mut handles);
+		Some(api)
 	} else {
 		None
 	};
 
 	let maybe_target_b_rpc_api = if let Some(url) = config.target_b_parentchain_rpc_endpoint() {
-		Some(init_target_parentchain(
+		let (api, mut handles) = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
 			url,
 			shard,
 			ParentchainId::TargetB,
 			is_development_mode,
-		))
+			shutdown_flag.clone(),
+		);
+		sensitive_threads.append(&mut handles);
+		Some(api)
 	} else {
 		None
 	};
@@ -688,14 +713,25 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
 		println!("[Integritee:SCV] starting block production");
-		let last_synced_header =
-			sidechain_init_block_production(enclave.clone(), sidechain_storage).unwrap();
+		let mut handles = sidechain_init_block_production(
+			enclave.clone(),
+			sidechain_storage,
+			shutdown_flag.clone(),
+		)
+		.unwrap();
+		sensitive_threads.append(&mut handles);
 	}
 
 	ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
 		&integritee_rpc_api,
 		ParentchainId::Integritee,
+		shutdown_flag.clone(),
 	);
+	// Join each thread to ensure they have completed
+	for handle in sensitive_threads {
+		handle.join().expect("Thread panicked");
+	}
+	println!("All threads stopped.");
 }
 
 fn init_provided_shard_vault<E: EnclaveBase>(
@@ -754,7 +790,8 @@ fn init_target_parentchain<E>(
 	shard: &ShardIdentifier,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
-) -> ParentchainApi
+	shutdown_flag: Arc<AtomicBool>,
+) -> (ParentchainApi, Vec<thread::JoinHandle<()>>)
 where
 	E: EnclaveBase + Sidechain,
 {
@@ -785,6 +822,8 @@ where
 	// we ignore failure
 	let _ = enclave.init_shard_creation_parentchain_header(shard, &parentchain_id, &head);
 
+	let mut handles = Vec::new();
+
 	if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
 		println!(
 			"[{:?}] Finished initializing light client, syncing parentchain...",
@@ -796,11 +835,13 @@ where
 			.sync_parentchain_until_latest_finalized(last_synched_header, *shard, true)
 			.unwrap();
 
-		start_parentchain_header_subscription_thread(
+		let handle = start_parentchain_header_subscription_thread(
+			shutdown_flag.clone(),
 			parentchain_handler.clone(),
 			last_synched_header,
 			*shard,
-		)
+		);
+		handles.push(handle);
 	}
 
 	let parentchain_init_params = parentchain_handler.parentchain_init_params.clone();
@@ -812,10 +853,11 @@ where
 			ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
 				&node_api_clone,
 				parentchain_id,
+				shutdown_flag,
 			)
 		})
 		.unwrap();
-	node_api
+	(node_api, handles)
 }
 
 fn init_parentchain<E>(
@@ -1018,17 +1060,21 @@ fn send_integritee_extrinsic(
 }
 
 fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
+	shutdown_flag: Arc<AtomicBool>,
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	last_synced_header: Header,
 	shard: ShardIdentifier,
-) {
+) -> thread::JoinHandle<()> {
 	let parentchain_id = *parentchain_handler.parentchain_id();
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
 		.spawn(move || {
-			if let Err(e) =
-				subscribe_to_parentchain_new_headers(parentchain_handler, last_synced_header, shard)
-			{
+			if let Err(e) = subscribe_to_parentchain_new_headers(
+				shutdown_flag,
+				parentchain_handler,
+				last_synced_header,
+				shard,
+			) {
 				error!(
 					"[{:?}] parentchain block syncing terminated with a failure: {:?}",
 					parentchain_id, e
@@ -1036,12 +1082,13 @@ fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
 			}
 			println!("[!] [{:?}] parentchain block syncing has terminated", parentchain_id);
 		})
-		.unwrap();
+		.unwrap()
 }
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
 fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
+	shutdown_flag: Arc<AtomicBool>,
 	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
 	mut last_synced_header: Header,
 	shard: ShardIdentifier,
@@ -1053,7 +1100,7 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 		.subscribe_finalized_heads()
 		.map_err(Error::ApiClient)?;
 	let parentchain_id = parentchain_handler.parentchain_id();
-	loop {
+	while !shutdown_flag.load(Ordering::Relaxed) {
 		let new_header = subscription
 			.next()
 			.ok_or(Error::ApiSubscriptionDisconnected)?
@@ -1070,6 +1117,8 @@ fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
 			false,
 		)?;
 	}
+	warn!("[{:?}] parent chain block syncing has terminated", parentchain_id);
+	Ok(())
 }
 
 /// Get the public signing key of the TEE.

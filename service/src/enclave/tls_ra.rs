@@ -25,6 +25,7 @@ use sgx_types::*;
 use std::{
 	net::{TcpListener, TcpStream},
 	os::unix::io::AsRawFd,
+	sync::{atomic::AtomicBool, Arc},
 };
 
 pub fn enclave_run_state_provisioning_server<E: TlsRemoteAttestation>(

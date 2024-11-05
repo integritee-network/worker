@@ -19,7 +19,10 @@
 
 use its_primitives::types::BlockNumber;
 use std::{
-	sync::Arc,
+	sync::{
+		atomic::{AtomicBool, Ordering},
+		Arc,
+	},
 	thread,
 	time::{Duration, SystemTime},
 };
@@ -48,12 +51,13 @@ pub fn start_sidechain_pruning_loop<D>(
 	storage: &Arc<D>,
 	purge_interval: u64,
 	purge_limit: BlockNumber,
+	shutdown_flag: Arc<AtomicBool>,
 ) where
 	D: BlockPruner,
 {
 	let interval_time = Duration::from_secs(purge_interval);
 	let mut interval_start = SystemTime::now();
-	loop {
+	while !shutdown_flag.load(Ordering::Relaxed) {
 		if let Ok(elapsed) = interval_start.elapsed() {
 			if elapsed >= interval_time {
 				// update interval time

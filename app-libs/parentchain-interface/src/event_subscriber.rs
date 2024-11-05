@@ -14,12 +14,19 @@
 	limitations under the License.
 
 */
+use alloc::sync::Arc;
+use core::sync::atomic::{AtomicBool, Ordering};
 use itp_api_client_types::ParentchainApi;
 use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer, ExtrinsicFailed, ParentchainId};
+use log::warn;
 use sp_runtime::DispatchError;
 use substrate_api_client::SubscribeEvents;
 
-pub fn subscribe_to_parentchain_events(api: &ParentchainApi, parentchain_id: ParentchainId) {
+pub fn subscribe_to_parentchain_events(
+	api: &ParentchainApi,
+	parentchain_id: ParentchainId,
+	shutdown_flag: Arc<AtomicBool>,
+) {
 	println!("[L1Event:{}] Subscribing to selected events", parentchain_id);
 	let mut subscription = api.subscribe_events().unwrap();
 	loop {
@@ -49,6 +56,14 @@ pub fn subscribe_to_parentchain_events(api: &ParentchainApi, parentchain_id: Par
 							}
 							println!("[L1Event:{}] {:?}", parentchain_id, ev);
 						},
+					"CodeUpdated" => {
+						warn!(
+							"[L1Event:{}] CodeUpdated. Initiating service shutdown",
+							parentchain_id
+						);
+						shutdown_flag.store(true, Ordering::Relaxed);
+					},
+					"UpdateAuthorized" => warn!("[L1Event:{}] UpdateAuthorized", parentchain_id),
 					_ => continue,
 				},
 				"ParaInclusion" => continue,

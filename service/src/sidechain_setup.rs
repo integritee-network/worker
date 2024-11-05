@@ -38,7 +38,10 @@ use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::{interface::FetchBlocks, start_sidechain_pruning_loop, BlockPruner};
 use log::*;
 use sp_runtime::{traits::IdentifyAccount, MultiSigner};
-use std::{sync::Arc, thread};
+use std::{
+	sync::{atomic::AtomicBool, Arc},
+	thread,
+};
 use teerex_primitives::AnySigner;
 use tokio::runtime::Handle;
 
@@ -113,7 +116,8 @@ pub(crate) fn sidechain_start_untrusted_rpc_server<SidechainStorage>(
 pub(crate) fn sidechain_init_block_production<Enclave, SidechainStorage>(
 	enclave: Arc<Enclave>,
 	sidechain_storage: Arc<SidechainStorage>,
-) -> ServiceResult<()>
+	shutdown_flag: Arc<AtomicBool>,
+) -> ServiceResult<Vec<thread::JoinHandle<()>>>
 where
 	Enclave: EnclaveBase + Sidechain,
 	SidechainStorage: BlockPruner + FetchBlocks<SignedSidechainBlock> + Sync + Send + 'static,
@@ -126,12 +130,14 @@ where
 	// Start interval sidechain block production (execution of trusted calls, sidechain block production).
 	let sidechain_enclave_api = enclave;
 	println!("[+] Spawning thread for sidechain block production");
-	thread::Builder::new()
+	let local_shutdown_flag = shutdown_flag.clone();
+	let block_production_handle = thread::Builder::new()
 		.name("interval_block_production_timer".to_owned())
 		.spawn(move || {
 			let future = start_slot_worker(
 				|| execute_trusted_calls(sidechain_enclave_api.as_ref()),
 				SLOT_DURATION,
+				local_shutdown_flag,
 			);
 			block_on(future);
 			println!("[!] Sidechain block production loop has terminated");
@@ -140,18 +146,20 @@ where
 
 	// ------------------------------------------------------------------------
 	// start sidechain pruning loop
-	thread::Builder::new()
+	let local_shutdown_flag = shutdown_flag.clone();
+	let pruning_handle = thread::Builder::new()
 		.name("sidechain_pruning_loop".to_owned())
 		.spawn(move || {
 			start_sidechain_pruning_loop(
 				&sidechain_storage,
 				SIDECHAIN_PURGE_INTERVAL,
 				SIDECHAIN_PURGE_LIMIT,
+				local_shutdown_flag,
 			);
 		})
 		.map_err(|e| Error::Custom(Box::new(e)))?;
 
-	Ok(())
+	Ok([block_production_handle, pruning_handle].into())
 }
 
 /// Execute trusted operations in the enclave.
