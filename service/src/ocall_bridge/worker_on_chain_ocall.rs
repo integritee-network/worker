@@ -125,16 +125,8 @@ where
 				),
 				WorkerRequest::LatestParentchainHeaderUnverified => {
 					WorkerResponse::LatestParentchainHeaderUnverified(
-						// todo: fix this dirty and incomplete type hack
-						ParentchainHeader {
-							parent_hash: header.parent_hash,
-							number: header.number,
-							state_root: header.state_root,
-							extrinsics_root: header.extrinsics_root,
-							digest: Digest {
-								logs: header.digest.logs.iter().map(|di| itp_types::DigestItem {}),
-							},
-						},
+						// todo: fix this dirty type hack
+						ParentchainHeader::decode(&mut header.encode().as_slice()).unwrap(),
 					)
 				},
 			})

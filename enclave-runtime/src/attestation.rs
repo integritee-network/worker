@@ -412,7 +412,7 @@ fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 			info!("mortality checkpoint: {} {}", header.number, header.hash());
 			GenericMortality {
 				era: Era::mortal(64, header.number.into()),
-				mortality_checkpoint: Some(header.hash),
+				mortality_checkpoint: Some(header.hash()),
 			}
 		} else {
 			GenericMortality::immortal()
