@@ -81,3 +81,7 @@ where
 		shard: &ShardIdentifier,
 	) -> Result<TCS, Error>;
 }
+
+pub trait GetDecimals {
+	fn get_shielding_target_decimals() -> u8;
+}
