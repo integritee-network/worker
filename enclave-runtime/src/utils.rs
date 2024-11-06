@@ -27,10 +27,20 @@ use crate::{
 		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT,
 		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 	},
+	ocall::OcallApi,
 };
+use alloc::vec::Vec;
 use codec::{Decode, Input};
+use ita_stf::ParentchainHeader;
 use itc_parentchain_block_import_dispatcher::BlockImportDispatcher;
 use itp_component_container::ComponentGetter;
+use itp_ocall_api::EnclaveOnChainOCallApi;
+use itp_types::{
+	parentchain::{GenericMortality, ParentchainId},
+	WorkerRequest, WorkerResponse,
+};
+use log::*;
+use sp_runtime::generic::Era;
 use std::{result::Result as StdResult, slice, sync::Arc};
 
 /// Helper trait to transform the sgx-ffi pointers to any type that implements
@@ -294,4 +304,25 @@ pub(crate) fn get_stf_enclave_signer_from_solo_or_parachain() -> Result<Arc<Encl
 			return Err(Error::NoIntegriteeParentchainAssigned)
 		};
 	Ok(stf_enclave_signer)
+}
+
+pub(crate) fn try_mortality(blocks_to_live: u64, ocall_api: &OcallApi) -> GenericMortality {
+	let response: Option<WorkerResponse<ParentchainHeader, Vec<u8>>> = ocall_api
+		.worker_request(
+			[WorkerRequest::LatestParentchainHeaderUnverified].into(),
+			&ParentchainId::Integritee,
+		)
+		.ok()
+		.iter()
+		.filter_map(|r| r.first().cloned())
+		.next();
+	if let Some(WorkerResponse::LatestParentchainHeaderUnverified(header)) = response {
+		trace!("extrinsic mortality checkpoint: {} {}", header.number, header.hash());
+		GenericMortality {
+			era: Era::mortal(blocks_to_live, header.number.into()),
+			mortality_checkpoint: Some(header.hash()),
+		}
+	} else {
+		GenericMortality::immortal()
+	}
 }

@@ -14,6 +14,7 @@
 	limitations under the License.
 
 */
+extern crate alloc;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
 use itp_api_client_types::ParentchainApi;

@@ -141,17 +141,17 @@ where
 
 		for call in extrinsic_call_backs.clone() {
 			match call {
-				ParentchainCall::Integritee(opaque_call) => trace!(
-					"trusted_call wants to send encoded call to [Integritee] parentchain: 0x{}",
-					hex::encode(opaque_call.encode())
+				ParentchainCall::Integritee { call, mortality } => trace!(
+					"trusted_call wants to send encoded call to [Integritee] parentchain: 0x{} with mortality {:?}",
+					hex::encode(call.encode()), mortality
 				),
-				ParentchainCall::TargetA(opaque_call) => trace!(
-					"trusted_call wants to send encoded call to [TargetA] parentchain: 0x{}",
-					hex::encode(opaque_call.encode())
+				ParentchainCall::TargetA { call, mortality } => trace!(
+					"trusted_call wants to send encoded call to [TargetA] parentchain: 0x{} with mortality {:?}",
+					hex::encode(call.encode()), mortality
 				),
-				ParentchainCall::TargetB(opaque_call) => trace!(
-					"trusted_call wants to send encoded call to [TargetB] parentchain: 0x{}",
-					hex::encode(opaque_call.encode())
+				ParentchainCall::TargetB { call, mortality } => trace!(
+					"trusted_call wants to send encoded call to [TargetB] parentchain: 0x{} with mortality {:?}",
+					hex::encode(call.encode()), mortality
 				),
 			}
 		}

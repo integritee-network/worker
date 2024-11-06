@@ -145,6 +145,8 @@ pub enum OCallBridgeError {
 	TargetAParentchainNotInitialized,
 	#[error("Target B parentchain not initialized")]
 	TargetBParentchainNotInitialized,
+	#[error("An error with the substrate node api")]
+	NodeApiError,
 }
 
 impl From<OCallBridgeError> for sgx_status_t {

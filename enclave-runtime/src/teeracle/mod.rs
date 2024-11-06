@@ -20,7 +20,7 @@ use crate::{
 	initialization::global_components::GLOBAL_OCALL_API_COMPONENT,
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
-		get_node_metadata_repository_from_integritee_solo_or_parachain,
+		get_node_metadata_repository_from_integritee_solo_or_parachain, try_mortality,
 	},
 };
 use codec::{Decode, Encode};
@@ -38,7 +38,7 @@ use ita_oracle::{
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{pallet_teeracle::TeeracleCallIndexes, provider::AccessNodeMetadata};
-use itp_types::OpaqueCall;
+use itp_types::{parentchain::GenericMortality, OpaqueCall};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
@@ -49,12 +49,12 @@ fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueE
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
-	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
-
+	let mut extrinsic_calls: Vec<(OpaqueCall, GenericMortality)> = Vec::new();
+	let mortality = try_mortality(16, &ocall_api);
 	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api);
 
 	match get_longitude(weather_info, open_meteo_weather_oracle) {
-		Ok(opaque_call) => extrinsic_calls.push(opaque_call),
+		Ok(opaque_call) => extrinsic_calls.push((opaque_call, mortality)),
 		Err(e) => {
 			error!("[-] Failed to get the newest longitude from OpenMeteo. {:?}", e);
 		},
@@ -211,15 +211,15 @@ fn update_market_data_internal(
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
-	let mut extrinsic_calls: Vec<OpaqueCall> = Vec::new();
-
+	let mut extrinsic_calls: Vec<(OpaqueCall, GenericMortality)> = Vec::new();
+	let mortality = try_mortality(16, &ocall_api);
 	// Get the exchange rate
 	let trading_pair = TradingPair { crypto_currency, fiat_currency };
 
 	let coin_gecko_oracle = create_coin_gecko_oracle(ocall_api.clone());
 
 	match get_exchange_rate(trading_pair.clone(), coin_gecko_oracle) {
-		Ok(opaque_call) => extrinsic_calls.push(opaque_call),
+		Ok(opaque_call) => extrinsic_calls.push((opaque_call, mortality.clone())),
 		Err(e) => {
 			error!("[-] Failed to get the newest exchange rate from CoinGecko. {:?}", e);
 		},
@@ -227,7 +227,7 @@ fn update_market_data_internal(
 
 	let coin_market_cap_oracle = create_coin_market_cap_oracle(ocall_api);
 	match get_exchange_rate(trading_pair, coin_market_cap_oracle) {
-		Ok(oc) => extrinsic_calls.push(oc),
+		Ok(oc) => extrinsic_calls.push((oc, mortality)),
 		Err(e) => {
 			error!("[-] Failed to get the newest exchange rate from CoinMarketCap. {:?}", e);
 		},

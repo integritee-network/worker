@@ -19,6 +19,7 @@
 use crate::ocall::{ffi, OcallApi};
 use codec::{Decode, Encode};
 use frame_support::ensure;
+use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
@@ -56,11 +57,11 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		Ok(())
 	}
 
-	fn worker_request<V: Encode + Decode>(
+	fn worker_request<H: Header<Hash = H256>, V: Encode + Decode>(
 		&self,
 		req: Vec<WorkerRequest>,
 		parentchain_id: &ParentchainId,
-	) -> SgxResult<Vec<WorkerResponse<V>>> {
+	) -> SgxResult<Vec<WorkerResponse<H, V>>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let mut resp: Vec<u8> = vec![0; 4196 * 4];
 		let request_encoded = req.encode();
@@ -81,7 +82,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 
-		let decoded_response: Vec<WorkerResponse<V>> = Decode::decode(&mut resp.as_slice())
+		let decoded_response: Vec<WorkerResponse<H, V>> = Decode::decode(&mut resp.as_slice())
 			.map_err(|e| {
 				error!("Failed to decode WorkerResponse: {}", e);
 				sgx_status_t::SGX_ERROR_UNEXPECTED
@@ -117,7 +118,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.collect();
 
 		let storage_entries = self
-			.worker_request::<Vec<u8>>(requests, parentchain_id)
+			.worker_request::<ParentchainHeader, Vec<u8>>(requests, parentchain_id)
 			.map(|storages| verify_storage_entries(storages, header))??;
 
 		Ok(storage_entries)

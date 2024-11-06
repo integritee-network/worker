@@ -28,10 +28,12 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+	initialization::global_components::{
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+	},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
-		get_node_metadata_repository_from_integritee_solo_or_parachain,
+		get_node_metadata_repository_from_integritee_solo_or_parachain, try_mortality,
 	},
 	Error as EnclaveError, Result as EnclaveResult,
 };
@@ -390,7 +392,9 @@ pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
 
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let extrinsics = extrinsics_factory.create_extrinsics(&[call], None)?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let mortality = try_mortality(64, &ocall_api);
+	let extrinsics = extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	Ok(extrinsics[0].clone())
 }

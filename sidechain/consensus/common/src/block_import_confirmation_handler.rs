@@ -23,19 +23,26 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api_metadata::{pallet_sidechain::SidechainCallIndexes, NodeMetadataTrait};
 use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_settings::worker::BLOCK_NUMBER_FINALIZATION_DIFF;
-use itp_types::{parentchain::SidechainBlockConfirmation, OpaqueCall, ShardIdentifier};
+use itp_types::{
+	parentchain::{GenericMortality, SidechainBlockConfirmation},
+	OpaqueCall, ShardIdentifier, H256,
+};
 use its_primitives::traits::Header as HeaderTrait;
 use log::*;
-use sp_runtime::traits::Block as ParentchainBlockTrait;
+use sp_runtime::{
+	generic::Era,
+	traits::{Block as ParentchainBlockTrait, Header},
+};
 use std::{marker::PhantomData, sync::Arc};
 
 /// Trait to confirm a sidechain block import.
-pub trait ConfirmBlockImport<SidechainHeader> {
+pub trait ConfirmBlockImport<SidechainHeader, ParentchainBlock: ParentchainBlockTrait> {
 	fn confirm_import(
 		&self,
 		header: &SidechainHeader,
 		shard: &ShardIdentifier,
 		maybe_last_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
+		latest_parentchain_header: &<ParentchainBlock as ParentchainBlockTrait>::Header,
 	) -> Result<()>;
 }
 
@@ -88,7 +95,7 @@ impl<
 		NodeMetadataRepository,
 		ExtrinsicsFactory,
 		ValidatorAccessor,
-	> ConfirmBlockImport<SidechainHeader>
+	> ConfirmBlockImport<SidechainHeader, ParentchainBlock>
 	for BlockImportConfirmationHandler<
 		ParentchainBlock,
 		SidechainHeader,
@@ -103,12 +110,15 @@ impl<
 	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
 	ExtrinsicsFactory: CreateExtrinsics,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + Send + Sync + 'static,
+	H256: From<<ParentchainBlock as sp_runtime::traits::Block>::Hash>,
+	u64: From<<<ParentchainBlock as sp_runtime::traits::Block>::Header as Header>::Number>,
 {
 	fn confirm_import(
 		&self,
 		header: &SidechainHeader,
 		shard: &ShardIdentifier,
 		maybe_last_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
+		latest_parentchain_block: &<ParentchainBlock as ParentchainBlockTrait>::Header,
 	) -> Result<()> {
 		// todo: cache last sidechain block header for use with direct rpc api
 		if header.block_number() == header.next_finalization_block_number() {
@@ -129,9 +139,13 @@ impl<
 				},
 			));
 
+			let mortality = GenericMortality {
+				era: Era::mortal(16, (*latest_parentchain_block.number()).into()),
+				mortality_checkpoint: Some(latest_parentchain_block.hash().into()),
+			};
 			let xts = self
 				.extrinsics_factory
-				.create_extrinsics(&[opaque_call], None)
+				.create_extrinsics(&[(opaque_call, mortality)], None)
 				.map_err(|e| Error::Other(e.into()))?;
 
 			debug!("Sending sidechain block import confirmation extrinsic..");

@@ -27,7 +27,10 @@ use itp_types::{
 use its_primitives::types::block::SignedBlock as SignedSidechainBlockType;
 use its_sidechain::consensus_common::BlockImport;
 use sgx_types::SgxResult;
-use sp_runtime::{traits::Header as ParentchainHeaderTrait, OpaqueExtrinsic};
+use sp_runtime::{
+	traits::{Header as ParentchainHeaderTrait, Header},
+	OpaqueExtrinsic,
+};
 use std::{sync::Arc, vec::Vec};
 
 /// OCallApi mock that routes the proposed sidechain blocks directly to the importer,
@@ -57,11 +60,11 @@ impl EnclaveOnChainOCallApi for ProposeToImportOCallApi {
 		Ok(())
 	}
 
-	fn worker_request<V: Encode + Decode>(
+	fn worker_request<H: Header, V: Encode + Decode>(
 		&self,
 		_req: Vec<WorkerRequest>,
 		_: &ParentchainId,
-	) -> SgxResult<Vec<WorkerResponse<V>>> {
+	) -> SgxResult<Vec<WorkerResponse<H, V>>> {
 		todo!()
 	}
 

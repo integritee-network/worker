@@ -26,7 +26,7 @@ use crate::{
 		get_extrinsic_factory_from_target_b_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_target_a_solo_or_parachain,
-		get_node_metadata_repository_from_target_b_solo_or_parachain, DecodeRaw,
+		get_node_metadata_repository_from_target_b_solo_or_parachain, try_mortality, DecodeRaw,
 	},
 };
 use codec::{Compact, Decode, Encode};
@@ -189,7 +189,8 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	));
 
 	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
+	let mortality = try_mortality(64, &ocall_api);
+	let xts = enclave_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
 	ocall_api.send_to_parentchain(xts, &parentchain_id, true)?;
@@ -212,7 +213,8 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	));
 
 	info!("[{:?}] add proxy call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let xts = vault_extrinsics_factory.create_extrinsics(&[call], None)?;
+	let mortality = try_mortality(64, &ocall_api);
+	let xts = vault_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	ocall_api.send_to_parentchain(xts, &parentchain_id, false)?;
 	Ok(())
@@ -266,7 +268,8 @@ pub(crate) fn add_shard_vault_proxy(
 	));
 
 	info!("proxied add proxy call: 0x{}", hex::encode(call.0.clone()));
-	let xts = enclave_extrinsics_factory.create_extrinsics(&[call], None)?;
+	let mortality = try_mortality(64, &ocall_api);
+	let xts = enclave_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false)?;
 	Ok(())

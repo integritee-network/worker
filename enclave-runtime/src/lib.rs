@@ -28,6 +28,7 @@
 #[cfg(not(target_env = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
+extern crate alloc;
 
 use crate::{
 	error::{Error, Result},

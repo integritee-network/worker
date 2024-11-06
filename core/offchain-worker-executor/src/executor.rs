@@ -28,7 +28,10 @@ use itp_stf_interface::system_pallet::SystemPalletEventInterface;
 use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperationOrHash};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::{parentchain::ParentchainCall, OpaqueCall, ShardIdentifier, H256};
+use itp_types::{
+	parentchain::{GenericMortality, ParentchainCall},
+	OpaqueCall, ShardIdentifier, H256,
+};
 use log::*;
 use sp_runtime::traits::Block;
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
@@ -185,15 +188,15 @@ impl<
 	}
 
 	fn send_parentchain_effects(&self, parentchain_effects: Vec<ParentchainCall>) -> Result<()> {
-		let integritee_calls: Vec<OpaqueCall> = parentchain_effects
+		let integritee_calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_effects
 			.iter()
 			.filter_map(|parentchain_call| parentchain_call.as_integritee())
 			.collect();
-		let target_a_calls: Vec<OpaqueCall> = parentchain_effects
+		let target_a_calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_effects
 			.iter()
 			.filter_map(|parentchain_call| parentchain_call.as_target_a())
 			.collect();
-		let target_b_calls: Vec<OpaqueCall> = parentchain_effects
+		let target_b_calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_effects
 			.iter()
 			.filter_map(|parentchain_call| parentchain_call.as_target_b())
 			.collect();
@@ -204,10 +207,10 @@ impl<
 			target_b_calls.len()
 		);
 		if !target_a_calls.is_empty() {
-			warn!("sending extrinsics to target A unimplemented")
+			warn!("sending extrinsics to target A unimplemented for OCW")
 		};
 		if !target_b_calls.is_empty() {
-			warn!("sending extrinsics to target B unimplemented")
+			warn!("sending extrinsics to target B unimplemented for OCW")
 		};
 
 		let extrinsics =

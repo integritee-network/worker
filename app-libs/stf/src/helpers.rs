@@ -23,9 +23,10 @@ use itp_stf_primitives::{
 	types::AccountId,
 };
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
-use itp_types::parentchain::{Hash, ParentchainId};
+use itp_types::parentchain::{BlockNumber, GenericMortality, Hash, ParentchainId};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use sp_runtime::generic::Era;
 use std::prelude::v1::*;
 
 pub fn get_storage_value<V: Decode>(
@@ -192,4 +193,27 @@ pub fn wrap_bytes(data: &[u8]) -> Vec<u8> {
 	bytes_wrapped.extend_from_slice(POSTFIX);
 
 	bytes_wrapped
+}
+
+pub fn get_mortality(
+	parentchain_id: ParentchainId,
+	blocks_to_live: BlockNumber,
+) -> Option<GenericMortality> {
+	let (maybe_number, maybe_hash) = match parentchain_id {
+		ParentchainId::Integritee =>
+			(ParentchainIntegritee::block_number(), ParentchainIntegritee::block_hash()),
+		ParentchainId::TargetA =>
+			(ParentchainTargetA::block_number(), ParentchainTargetA::block_hash()),
+		ParentchainId::TargetB =>
+			(ParentchainTargetB::block_number(), ParentchainTargetB::block_hash()),
+	};
+	if let Some(number) = maybe_number {
+		if let Some(hash) = maybe_hash {
+			return Some(GenericMortality {
+				era: Era::mortal(blocks_to_live.into(), number.into()),
+				mortality_checkpoint: Some(hash),
+			})
+		}
+	}
+	None
 }

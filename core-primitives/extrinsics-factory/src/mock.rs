@@ -17,7 +17,7 @@
 
 use crate::{error::Result, CreateExtrinsics};
 use itp_node_api::api_client::ParentchainAdditionalParams;
-use itp_types::OpaqueCall;
+use itp_types::{parentchain::GenericMortality, OpaqueCall};
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
@@ -30,7 +30,7 @@ pub struct ExtrinsicsFactoryMock;
 impl CreateExtrinsics for ExtrinsicsFactoryMock {
 	fn create_extrinsics(
 		&self,
-		_calls: &[OpaqueCall],
+		_calls: &[(OpaqueCall, GenericMortality)],
 		_additional_params: Option<ParentchainAdditionalParams>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		// Intention was to map an OpaqueCall to some dummy OpaqueExtrinsic,

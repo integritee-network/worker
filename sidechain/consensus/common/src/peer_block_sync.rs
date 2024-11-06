@@ -91,6 +91,7 @@ impl<
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 	ImportConfirmationHandler: ConfirmBlockImport<
 		<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType,
+		ParentchainBlock,
 	>,
 {
 	pub fn new(
@@ -165,7 +166,7 @@ where
 	<<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::BlockDataType as BlockData>::Public: Encode + Debug,
 	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
-	ImportConfirmationHandler: ConfirmBlockImport<<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType>,
+	ImportConfirmationHandler: ConfirmBlockImport<<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType, ParentchainBlock>,
 {
 	fn import_or_sync_block(
 		&self,
@@ -220,7 +221,7 @@ where
 
 				// We confirm the successful block import. Only in this case, not when we're in
 				// on-boarding and importing blocks that were fetched from a peer.
-				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier, maybe_latest_sidechain_block_confirmation) {
+				if let Err(e) = self.import_confirmation_handler.confirm_import(sidechain_block.block().header(), &shard_identifier, maybe_latest_sidechain_block_confirmation, &latest_parentchain_header) {
 					error!("Failed to confirm sidechain block import: {:?}", e);
 				}
 

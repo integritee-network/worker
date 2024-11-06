@@ -21,6 +21,7 @@
 //! time during which certain events can and/or must occur.  This crate
 //! provides generic functionality for slots.
 
+extern crate alloc;
 use crate::time_until_next_slot;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};

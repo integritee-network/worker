@@ -28,12 +28,12 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_stf_executor::traits::StfUpdateState;
 use itp_stf_interface::ShardCreationInfo;
 use itp_types::{
-	parentchain::{IdentifyParentchain, ParentchainId},
+	parentchain::{GenericMortality, IdentifyParentchain, ParentchainId},
 	OpaqueCall, H256,
 };
 use log::*;
 use sp_runtime::{
-	generic::SignedBlock as SignedBlockG,
+	generic::{Era, SignedBlock as SignedBlockG},
 	traits::{Block as ParentchainBlockTrait, Header as HeaderT, NumberFor},
 };
 use std::{marker::PhantomData, sync::Arc, vec, vec::Vec};
@@ -118,7 +118,7 @@ impl<
 		blocks_to_import: Vec<Self::SignedBlockType>,
 		events_to_import: Vec<Vec<u8>>,
 	) -> Result<()> {
-		let mut calls = Vec::<OpaqueCall>::new();
+		let mut calls = Vec::<(OpaqueCall, GenericMortality)>::new();
 		let id = self.validator_accessor.parentchain_id();
 
 		debug!(
@@ -172,7 +172,13 @@ impl<
 				.execute_indirect_calls_in_extrinsics(&block, &raw_events)
 			{
 				Ok(Some(confirm_processed_parentchain_block_call)) => {
-					calls.push(confirm_processed_parentchain_block_call);
+					let opaque_call = confirm_processed_parentchain_block_call;
+					// if we have significant downtime, this mortality means we will not confirm all imported blocks
+					let mortality = GenericMortality {
+						era: Era::mortal(512, (*block.header().number()).into()),
+						mortality_checkpoint: Some(block.hash()),
+					};
+					calls.push((opaque_call, mortality));
 				},
 				Ok(None) => trace!("omitting confirmation call to non-integritee parentchain"),
 				Err(e) => error!("[{:?}] Error executing relevant extrinsics: {:?}", id, e),
@@ -186,7 +192,7 @@ impl<
 			);
 		}
 
-		// Create extrinsics for all `unshielding` and `block processed` calls we've gathered.
+		// Create extrinsics for all `block processed` calls we've gathered.
 		let parentchain_extrinsics =
 			self.extrinsics_factory.create_extrinsics(calls.as_slice(), None)?;
 
