@@ -314,7 +314,7 @@ pub(crate) fn try_mortality(blocks_to_live: u64, ocall_api: &OcallApi) -> Generi
 		)
 		.ok()
 		.iter()
-		.filter_map(|r| r.first().map(|v| v.clone()))
+		.filter_map(|r| r.first().cloned())
 		.next();
 	if let Some(WorkerResponse::LatestParentchainHeaderUnverified(header)) = response {
 		trace!("extrinsic mortality checkpoint: {} {}", header.number, header.hash());
