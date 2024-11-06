@@ -31,10 +31,13 @@ use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperatio
 use itp_stf_state_handler::handle_state::HandleState;
 use itp_top_pool_author::traits::{AuthorApi, OnBlockImported};
 use itp_types::H256;
+use its_block_header_cache::{
+	CachedSidechainBlockHeader, MutateSidechainBlockHeader, SidechainBlockHeaderCache,
+};
 pub use its_consensus_common::BlockImport;
 use its_consensus_common::Error as ConsensusError;
 use its_primitives::traits::{
-	BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
+	Block, BlockData, Header as HeaderTrait, ShardIdentifierFor, SignedBlock as SignedBlockTrait,
 };
 use its_validateer_fetch::ValidateerFetch;
 use log::*;
@@ -50,7 +53,7 @@ use std::{marker::PhantomData, sync::Arc};
 pub struct BlockImporter<
 	Authority,
 	ParentchainBlock,
-	SignedSidechainBlock,
+	SignedSidechainBlock: SignedBlockTrait,
 	OCallApi,
 	StateHandler,
 	StateKeyRepository,
@@ -64,6 +67,11 @@ pub struct BlockImporter<
 	top_pool_author: Arc<TopPoolAuthor>,
 	parentchain_block_importer: Arc<ParentchainBlockImporter>,
 	ocall_api: Arc<OCallApi>,
+	header_cache: Arc<
+		SidechainBlockHeaderCache<
+			<<SignedSidechainBlock as SignedBlockTrait>::Block as Block>::HeaderType,
+		>,
+	>,
 	_phantom: PhantomData<(Authority, ParentchainBlock, SignedSidechainBlock, TCS, G)>,
 }
 
@@ -119,6 +127,11 @@ impl<
 		top_pool_author: Arc<TopPoolAuthor>,
 		parentchain_block_importer: Arc<ParentchainBlockImporter>,
 		ocall_api: Arc<OCallApi>,
+		header_cache: Arc<
+			SidechainBlockHeaderCache<
+				<<SignedSidechainBlock as SignedBlockTrait>::Block as Block>::HeaderType,
+			>,
+		>,
 	) -> Self {
 		Self {
 			state_handler,
@@ -126,6 +139,7 @@ impl<
 			top_pool_author,
 			parentchain_block_importer,
 			ocall_api,
+			header_cache,
 			_phantom: Default::default(),
 		}
 	}
@@ -187,7 +201,7 @@ impl<
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
 	SignedSidechainBlock: SignedBlockTrait<Public = Authority::Public> + 'static,
 	<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
-		HeaderTrait<ShardIdentifier = H256>,
+		HeaderTrait<ShardIdentifier = H256> + Copy,
 	OCallApi: EnclaveSidechainOCallApi
 		+ ValidateerFetch
 		+ EnclaveOnChainOCallApi
@@ -217,6 +231,18 @@ impl<
 			SLOT_DURATION,
 			maybe_last_sidechain_block,
 		)
+	}
+
+	fn update_latest_sidechain_header(
+		&self,
+		head: &<<SignedSidechainBlock as SignedBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
+	) -> Result<(), ConsensusError> {
+		let mut header_lock = self
+			.header_cache
+			.load_for_mutation()
+			.map_err(|_| ConsensusError::LockPoisoning)?;
+		*header_lock = CachedSidechainBlockHeader(*head);
+		Ok(())
 	}
 
 	fn apply_state_update<F>(

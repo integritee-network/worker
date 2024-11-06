@@ -21,7 +21,10 @@ use itp_sgx_crypto::aes::Aes;
 use itp_sgx_externalities::SgxExternalities;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::H256;
-use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
+use its_primitives::traits::{
+	Block, Block as SidechainBlockTrait, ShardIdentifierFor,
+	SignedBlock as SignedSidechainBlockTrait,
+};
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{collections::VecDeque, sync::RwLock};
@@ -111,6 +114,13 @@ where
 	where
 		F: FnOnce(Self::SidechainState) -> Result<Self::SidechainState>,
 	{
+		todo!()
+	}
+
+	fn update_latest_sidechain_header(
+		&self,
+		head: &<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
+	) -> core::result::Result<(), Error> {
 		todo!()
 	}
 
