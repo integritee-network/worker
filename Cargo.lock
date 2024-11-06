@@ -2557,7 +2557,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.14.4"
+version = "0.15.0"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2608,7 +2608,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.14.4"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "async-trait",

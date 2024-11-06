@@ -20,7 +20,10 @@ use crate::{
 	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_identifiers, get_keystore_path, get_pair_from_str},
-	trusted_operation::{get_json_request, get_state, perform_trusted_operation, wait_until},
+	trusted_operation::{
+		await_status, await_subscription_response, get_json_request, get_state,
+		perform_trusted_operation,
+	},
 	Cli, CliResult, CliResultOk, SR25519_KEY_TYPE,
 };
 use codec::Decode;
@@ -35,7 +38,7 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	AccountInfo, Balance, ShardIdentifier, TrustedOperationStatus,
-	TrustedOperationStatus::{InSidechainBlock, Submitted},
+	TrustedOperationStatus::InSidechainBlock,
 };
 use log::*;
 use rand::Rng;
@@ -47,7 +50,7 @@ use sp_keystore::Keystore;
 use std::{
 	boxed::Box,
 	string::ToString,
-	sync::mpsc::{channel, Receiver},
+	sync::mpsc::{channel, Receiver, Sender},
 	thread, time,
 	time::Instant,
 	vec::Vec,
@@ -89,6 +92,7 @@ struct BenchmarkClient {
 	account: sr25519_core::Pair,
 	current_balance: u128,
 	client_api: DirectClient,
+	sender: Sender<String>,
 	receiver: Receiver<String>,
 }
 
@@ -104,8 +108,8 @@ impl BenchmarkClient {
 
 		debug!("setup sender and receiver");
 		let (sender, receiver) = channel();
-		client_api.watch(initial_request, sender);
-		BenchmarkClient { account, current_balance: initial_balance, client_api, receiver }
+		client_api.watch(initial_request, sender.clone());
+		BenchmarkClient { account, current_balance: initial_balance, client_api, sender, receiver }
 	}
 }
 
@@ -161,7 +165,7 @@ impl BenchmarkCommand {
 				&mrenclave,
 				&shard,
 			)
-			.into_trusted_operation(trusted_args.direct);
+			.into_trusted_operation(true);
 
 			// For the last account we wait for confirmation in order to ensure all accounts were setup correctly
 			let wait_for_confirmation = i == self.number_clients - 1;
@@ -218,7 +222,8 @@ impl BenchmarkCommand {
 
 					let last_iteration = i == self.number_iterations - 1;
 					let jsonrpc_call = get_json_request(shard, &top, shielding_pubkey);
-					client.client_api.send(&jsonrpc_call).unwrap();
+
+					client.client_api.watch(jsonrpc_call, client.sender.clone());
 					let result = wait_for_top_confirmation(
 						self.wait_for_confirmation || last_iteration,
 						&client,
@@ -337,15 +342,22 @@ fn wait_for_top_confirmation(
 ) -> BenchmarkTransaction {
 	let started = Instant::now();
 
-	let submitted = wait_until(&client.receiver, is_submitted);
+	// the first response of `submitAndWatch` is just the plain top hash
+	let submitted = match await_subscription_response(&client.receiver) {
+		Ok(hash) => Some((hash, Instant::now())),
+		Err(e) => {
+			error!("recv error: {e:?}");
+			None
+		},
+	};
 
 	let confirmed = if wait_for_sidechain_block {
 		// We wait for the transaction hash that actually matches the submitted hash
 		loop {
-			let transaction_information = wait_until(&client.receiver, is_sidechain_block);
-			if let Some((hash, _)) = transaction_information {
+			let transaction_information = await_status(&client.receiver, is_sidechain_block).ok();
+			if let Some((hash, _status)) = transaction_information {
 				if hash == submitted.unwrap().0 {
-					break transaction_information
+					break Some((hash, Instant::now()))
 				}
 			}
 		}
@@ -362,10 +374,6 @@ fn wait_for_top_confirmation(
 		submitted: submitted.unwrap().1,
 		confirmed: confirmed.map(|v| v.1),
 	}
-}
-
-fn is_submitted(s: TrustedOperationStatus) -> bool {
-	matches!(s, Submitted)
 }
 
 fn is_sidechain_block(s: TrustedOperationStatus) -> bool {
