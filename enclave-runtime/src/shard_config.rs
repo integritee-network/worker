@@ -38,7 +38,8 @@ use itp_types::{
 use itp_utils::hex::hex_encode;
 use log::*;
 
-use itp_types::parentchain::GenericMortality;
+use crate::{initialization::global_components::GLOBAL_OCALL_API_COMPONENT, utils::try_mortality};
+use itp_component_container::ComponentGetter;
 use teerex_primitives::EnclaveFingerprint;
 
 pub(crate) fn init_shard_config(shard: ShardIdentifier) -> EnclaveResult<()> {
@@ -56,8 +57,10 @@ pub(crate) fn init_shard_config(shard: ShardIdentifier) -> EnclaveResult<()> {
 
 	let opaque_call = OpaqueCall::from_tuple(&(call, shard, shard_config, BlockNumber::from(0u8)));
 	debug!("encoded call: {}", hex_encode(opaque_call.encode().as_slice()));
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let mortality = try_mortality(64, &ocall_api);
 	let xts = extrinsics_factory
-		.create_extrinsics(&[(opaque_call, GenericMortality::immortal())], None)
+		.create_extrinsics(&[(opaque_call, mortality)], None)
 		.map_err(|e| Error::Other(e.into()))?;
 
 	info!("Initializing or touching shard config on integritee network. awaiting inclusion before continuing");
