@@ -21,10 +21,13 @@ use chrono::Local;
 use codec::{Decode, Encode};
 use itp_api_client_types::ParentchainApi;
 use itp_node_api::node_api_factory::CreateNodeApi;
-use itp_types::{parentchain::ParentchainId, WorkerRequest, WorkerResponse};
+use itp_types::{
+	parentchain::{Header as ParentchainHeader, ParentchainId},
+	DigestItem, WorkerRequest, WorkerResponse,
+};
 use log::*;
 use sp_core::blake2_256;
-use sp_runtime::OpaqueExtrinsic;
+use sp_runtime::{Digest, OpaqueExtrinsic};
 use std::{
 	fs::{create_dir_all, File},
 	io::{self, Write},
@@ -33,7 +36,9 @@ use std::{
 	vec::Vec,
 };
 use substrate_api_client::{
-	ac_primitives::serde_impls::StorageKey, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	ac_primitives,
+	ac_primitives::{serde_impls::StorageKey, SubstrateHeader},
+	GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
 pub struct WorkerOnChainOCall<F> {
@@ -97,8 +102,18 @@ where
 		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
 
 		let api = self.create_api(parentchain_id)?;
+		let last_finalized =
+			api.get_finalized_head().map_err(|_| OCallBridgeError::NodeApiError)?;
+		let header = if let Some(header) =
+			api.get_header(last_finalized).map_err(|_| OCallBridgeError::NodeApiError)?
+		{
+			header
+		} else {
+			warn!("failed to fetch parentchain header. can't answer WorkerRequest");
+			return Ok(Vec::<u8>::new().encode())
+		};
 
-		let resp: Vec<WorkerResponse<Vec<u8>>> = requests
+		let resp: Vec<WorkerResponse<ParentchainHeader, Vec<u8>>> = requests
 			.into_iter()
 			.map(|req| match req {
 				WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
@@ -108,6 +123,20 @@ where
 						|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect(),
 					),
 				),
+				WorkerRequest::LatestParentchainHeaderUnverified => {
+					WorkerResponse::LatestParentchainHeaderUnverified(
+						// todo: fix this dirty and incomplete type hack
+						ParentchainHeader {
+							parent_hash: header.parent_hash,
+							number: header.number,
+							state_root: header.state_root,
+							extrinsics_root: header.extrinsics_root,
+							digest: Digest {
+								logs: header.digest.logs.iter().map(|di| itp_types::DigestItem {}),
+							},
+						},
+					)
+				},
 			})
 			.collect();
 

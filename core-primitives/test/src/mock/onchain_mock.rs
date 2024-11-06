@@ -185,11 +185,11 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		Ok(())
 	}
 
-	fn worker_request<V: Encode + Decode>(
+	fn worker_request<Header: HeaderTrait<Hash = H256>, V: Encode + Decode>(
 		&self,
 		_req: Vec<WorkerRequest>,
 		_: &ParentchainId,
-	) -> SgxResult<Vec<WorkerResponse<V>>> {
+	) -> SgxResult<Vec<WorkerResponse<Header, V>>> {
 		Ok(Vec::new())
 	}
 

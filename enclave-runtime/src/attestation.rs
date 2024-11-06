@@ -28,7 +28,9 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use crate::{
-	initialization::global_components::GLOBAL_ATTESTATION_HANDLER_COMPONENT,
+	initialization::global_components::{
+		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+	},
 	utils::{
 		get_extrinsic_factory_from_integritee_solo_or_parachain,
 		get_node_metadata_repository_from_integritee_solo_or_parachain,
@@ -36,6 +38,7 @@ use crate::{
 	Error as EnclaveError, Result as EnclaveResult,
 };
 use codec::{Decode, Encode};
+use ita_stf::ParentchainHeader;
 use itp_attestation_handler::{AttestationHandler, RemoteAttestationType, SgxQlQveCollateral};
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
@@ -45,12 +48,16 @@ use itp_node_api::metadata::{
 	Error as MetadataError,
 };
 use itp_node_api_metadata::NodeMetadata;
+use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_settings::worker::MR_ENCLAVE_SIZE;
-use itp_types::{parentchain::GenericMortality, OpaqueCall};
+use itp_types::{
+	parentchain::{GenericMortality, ParentchainId},
+	OpaqueCall, WorkerRequest, WorkerResponse,
+};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::*;
-use sp_runtime::OpaqueExtrinsic;
+use sp_runtime::{generic::Era, OpaqueExtrinsic};
 use std::{prelude::v1::*, slice, vec::Vec};
 use teerex_primitives::SgxAttestationMethod;
 
@@ -390,8 +397,28 @@ pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
 
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
-	let extrinsics =
-		extrinsics_factory.create_extrinsics(&[(call, GenericMortality::immortal())], None)?;
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let response: Option<WorkerResponse<ParentchainHeader, Vec<u8>>> = ocall_api
+		.worker_request(
+			[WorkerRequest::LatestParentchainHeaderUnverified].into(),
+			&ParentchainId::Integritee,
+		)
+		.ok()
+		.iter()
+		.filter_map(|r| r.first().map(|v| v.clone()))
+		.next();
+	let mortality =
+		if let Some(WorkerResponse::LatestParentchainHeaderUnverified(header)) = response {
+			info!("mortality checkpoint: {} {}", header.number, header.hash());
+			GenericMortality {
+				era: Era::mortal(64, header.number.into()),
+				mortality_checkpoint: Some(header.hash),
+			}
+		} else {
+			GenericMortality::immortal()
+		};
+
+	let extrinsics = extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	Ok(extrinsics[0].clone())
 }

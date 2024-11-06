@@ -96,11 +96,11 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		await_each_inclusion: bool,
 	) -> SgxResult<()>;
 
-	fn worker_request<V: Encode + Decode>(
+	fn worker_request<H: Header<Hash = H256>, V: Encode + Decode>(
 		&self,
 		req: Vec<WorkerRequest>,
 		parentchain_id: &ParentchainId,
-	) -> SgxResult<Vec<WorkerResponse<V>>>;
+	) -> SgxResult<Vec<WorkerResponse<H, V>>>;
 
 	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
