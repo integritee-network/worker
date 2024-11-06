@@ -821,6 +821,7 @@ dependencies = [
  "itp-top-pool-author",
  "itp-types",
  "itp-utils",
+ "its-block-header-cache",
  "its-block-verification",
  "its-primitives",
  "its-rpc-handler",
@@ -2427,6 +2428,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "its-block-header-cache"
+version = "0.1.0"
+dependencies = [
+ "its-primitives",
+ "sgx_tstd",
+ "thiserror",
+]
+
+[[package]]
 name = "its-block-verification"
 version = "0.9.0"
 dependencies = [
@@ -2462,6 +2472,7 @@ dependencies = [
  "itp-types",
  "itp-utils",
  "its-block-composer",
+ "its-block-header-cache",
  "its-block-verification",
  "its-consensus-common",
  "its-consensus-slots",
@@ -2491,6 +2502,7 @@ dependencies = [
  "itp-sgx-crypto",
  "itp-types",
  "itp-utils",
+ "its-block-header-cache",
  "its-block-verification",
  "its-primitives",
  "its-state",

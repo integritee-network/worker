@@ -34,6 +34,7 @@ pub trait BlockImport<ParentchainBlock, SignedSidechainBlock>
 where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
+	SignedSidechainBlock::Block: SidechainBlockTrait,
 {
 	/// The verifier for of the respective consensus instance.
 	type Verifier: Verifier<
@@ -66,6 +67,12 @@ where
 	) -> Result<(), Error>
 	where
 		F: FnOnce(Self::SidechainState) -> Result<Self::SidechainState, Error>;
+
+	/// update sidechain header cache to last imported block
+	fn update_latest_sidechain_header(
+		&self,
+		head: &<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
+	) -> Result<(), Error>;
 
 	/// Verify a sidechain block that is to be imported.
 	fn verify_import<F>(
@@ -174,7 +181,10 @@ where
 		self.cleanup(&signed_sidechain_block)?;
 
 		// Store block in storage.
-		self.get_context().store_sidechain_blocks(vec![signed_sidechain_block])?;
+		self.get_context()
+			.store_sidechain_blocks(vec![signed_sidechain_block.clone()])?;
+
+		self.update_latest_sidechain_header(signed_sidechain_block.block().header())?;
 
 		info!("Importing block {} took {} ms", block_number, start_time.elapsed().as_millis());
 

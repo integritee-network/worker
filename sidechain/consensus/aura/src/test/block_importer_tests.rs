@@ -31,6 +31,7 @@ use itp_test::mock::{
 use itp_time_utils::{duration_now, now_as_millis};
 use itp_top_pool_author::mocks::AuthorApiMock;
 use itp_types::{Block as ParentchainBlock, Header as ParentchainHeader, H256};
+use its_block_header_cache::SidechainBlockHeaderCache;
 use its_consensus_common::{BlockImport, Error as ConsensusError};
 use its_primitives::{
 	traits::{SignBlock, SignedBlock},
@@ -95,6 +96,7 @@ fn test_fixtures(
 		top_pool_author.clone(),
 		parentchain_block_import_trigger,
 		ocall_api,
+		SidechainBlockHeaderCache::default().into(),
 	);
 
 	(block_importer, state_handler, top_pool_author)

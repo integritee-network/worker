@@ -41,6 +41,7 @@ use itp_stf_state_handler::handle_state::HandleState;
 use itp_time_utils::duration_now;
 use itp_top_pool_author::top_filter::AllowAllTopsFilter;
 use itp_types::Block as ParentchainBlock;
+use its_block_header_cache::SidechainBlockHeaderCache;
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
 use its_sidechain::{aura::proposer_factory::ProposerFactory, slots::SlotInfo};
@@ -99,6 +100,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 		top_pool_author.clone(),
 		parentchain_block_import_trigger.clone(),
 		ocall_api.clone(),
+		SidechainBlockHeaderCache::default().into(),
 	));
 	let block_composer = Arc::new(TestBlockComposer::new(signer, state_key_repo));
 	let proposer_environment = ProposerFactory::new(top_pool_author, stf_executor, block_composer);
