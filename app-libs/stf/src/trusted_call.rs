@@ -368,6 +368,8 @@ where
 				shield_funds(who, value)?;
 
 				// Send proof of execution on chain.
+				let mortality =
+					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
 				calls.push(ParentchainCall::Integritee {
 					call: OpaqueCall::from_tuple(&(
 						node_metadata_repo
@@ -378,7 +380,7 @@ where
 						Vec::<itp_types::H256>::new(),
 						b"shielded some funds!".to_vec(),
 					)),
-					mortality: GenericMortality::immortal(),
+					mortality,
 				});
 				Ok(())
 			},

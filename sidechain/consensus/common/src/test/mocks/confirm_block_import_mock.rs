@@ -14,20 +14,23 @@
 	limitations under the License.
 
 */
-
 use crate::{error::Result, ConfirmBlockImport};
 use itp_types::{parentchain::SidechainBlockConfirmation, ShardIdentifier};
 use its_primitives::types::header::SidechainHeader;
+use sp_runtime::traits::Block;
 
 /// Mock implementation of the `ConfirmBlockImport` trait.
 pub struct ConfirmBlockImportMock;
 
-impl ConfirmBlockImport<SidechainHeader> for ConfirmBlockImportMock {
+impl<ParentchainBlock: Block> ConfirmBlockImport<SidechainHeader, ParentchainBlock>
+	for ConfirmBlockImportMock
+{
 	fn confirm_import(
 		&self,
 		_header: &SidechainHeader,
 		_shard: &ShardIdentifier,
 		_maybe_confirmation: &Option<SidechainBlockConfirmation>,
+		_latest_parentchain_header: &<ParentchainBlock as Block>::Header,
 	) -> Result<()> {
 		Ok(())
 	}

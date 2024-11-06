@@ -174,6 +174,7 @@ mod tests {
 	use itp_sgx_externalities::SgxExternalities;
 	use itp_test::mock::stf_mock::{GetterMock, TrustedCallSignedMock};
 	use itp_types::{parentchain::GenericMortality, OpaqueCall};
+	use sp_runtime::generic::Era;
 
 	#[test]
 	fn is_success_works() {
@@ -236,7 +237,7 @@ mod tests {
 		let hash = H256::from([int; 32]);
 		let opaque_call: Vec<ParentchainCall> = vec![ParentchainCall::Integritee {
 			call: OpaqueCall(vec![int; 10]),
-			mortality: GenericMortality::immortal(),
+			mortality: GenericMortality { era: Era::mortal(0, 0), mortality_checkpoint: None },
 		}];
 		let operation =
 			ExecutedOperation::success(hash, TrustedOperationOrHash::Hash(hash), opaque_call);
