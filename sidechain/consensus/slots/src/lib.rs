@@ -30,7 +30,6 @@ compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the sam
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 #[macro_use]
 extern crate sgx_tstd as std;
-extern crate alloc;
 
 use codec::Encode;
 use derive_more::From;
