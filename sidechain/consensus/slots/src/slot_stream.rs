@@ -22,17 +22,19 @@
 //! provides generic functionality for slots.
 
 use crate::time_until_next_slot;
+use alloc::sync::Arc;
+use core::sync::atomic::{AtomicBool, Ordering};
 use futures_timer::Delay;
 use std::time::Duration;
 
 /// Executes given `task` repeatedly when the next slot becomes available.
-pub async fn start_slot_worker<F>(task: F, slot_duration: Duration)
+pub async fn start_slot_worker<F>(task: F, slot_duration: Duration, shutdown_flag: Arc<AtomicBool>)
 where
 	F: Fn(),
 {
 	let mut slot_stream = SlotStream::new(slot_duration);
 
-	loop {
+	while !shutdown_flag.load(Ordering::Relaxed) {
 		slot_stream.next_slot().await;
 		task();
 	}
