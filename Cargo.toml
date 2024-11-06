@@ -63,6 +63,7 @@ members = [
     "core-primitives/utils",
     "service",
     "sidechain/block-composer",
+    "sidechain/block-header-cache",
     "sidechain/block-verification",
     "sidechain/consensus/aura",
     "sidechain/consensus/common",

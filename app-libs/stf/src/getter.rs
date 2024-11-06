@@ -38,10 +38,11 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 
 use crate::{
 	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
-	helpers::{shielding_target, wrap_bytes},
+	helpers::{shielding_target, shielding_target_genesis_hash, wrap_bytes},
 };
+use ita_parentchain_specs::MinimalChainSpec;
 use itp_sgx_runtime_primitives::types::Moment;
-use itp_stf_primitives::traits::PoolTransactionValidation;
+use itp_stf_primitives::traits::{GetDecimals, PoolTransactionValidation};
 use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
@@ -79,6 +80,12 @@ impl GetterAuthorization for Getter {
 			Self::trusted(ref getter) => getter.verify_signature(),
 			Self::public(_) => true,
 		}
+	}
+}
+
+impl GetDecimals for Getter {
+	fn get_shielding_target_decimals() -> u8 {
+		MinimalChainSpec::decimals(shielding_target_genesis_hash().unwrap_or_default())
 	}
 }
 

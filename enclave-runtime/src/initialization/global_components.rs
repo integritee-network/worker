@@ -78,9 +78,10 @@ use itp_top_pool_author::{
 	author::{Author, AuthorTopFilter},
 };
 use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
+use its_block_header_cache::SidechainBlockHeaderCache;
 use its_primitives::{
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
-	types::block::SignedBlock as SignedSidechainBlock,
+	types::{block::SignedBlock as SignedSidechainBlock, header::SidechainHeader},
 };
 use its_sidechain::{
 	aura::block_importer::BlockImporter as SidechainBlockImporter,
@@ -421,6 +422,9 @@ lazy_static! {
 
 	/// Global nonce cache for the Target B parentchain..
 	pub static ref GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE: Arc<NonceCache> = Default::default();
+
+	/// Global sidechain header cache
+	pub static ref GLOBAL_SIDECHAIN_BLOCK_HEADER_CACHE: Arc<SidechainBlockHeaderCache<SidechainHeader>> = Default::default();
 }
 
 /// Solochain Handler.
