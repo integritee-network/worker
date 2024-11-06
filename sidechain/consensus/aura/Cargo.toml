@@ -32,6 +32,7 @@ itp-top-pool-author = { path = "../../../core-primitives/top-pool-author", defau
 itp-types = { path = "../../../core-primitives/types", default-features = false }
 itp-utils = { path = "../../../core-primitives/utils", default-features = false }
 its-block-composer = { path = "../../block-composer", default-features = false }
+its-block-header-cache = { path = "../../block-header-cache", default-features = false }
 its-block-verification = { path = "../../block-verification", optional = true, default-features = false }
 its-consensus-common = { path = "../common", default-features = false }
 its-consensus-slots = { path = "../slots", default-features = false }
@@ -73,6 +74,7 @@ std = [
     "itp-types/std",
     "itp-utils/std",
     "its-block-composer/std",
+    "its-block-header-cache/std",
     "its-block-verification/std",
     "its-consensus-common/std",
     "its-consensus-slots/std",
@@ -91,6 +93,7 @@ sgx = [
     "itp-stf-state-handler/sgx",
     "itp-time-utils/sgx",
     "its-block-composer/sgx",
+    "its-block-header-cache/sgx",
     "its-consensus-common/sgx",
     "its-consensus-slots/sgx",
     "its-state/sgx",

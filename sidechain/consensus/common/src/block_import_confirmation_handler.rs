@@ -120,6 +120,7 @@ impl<
 		maybe_last_sidechain_block_confirmation: &Option<SidechainBlockConfirmation>,
 		latest_parentchain_block: &<ParentchainBlock as ParentchainBlockTrait>::Header,
 	) -> Result<()> {
+		// todo: cache last sidechain block header for use with direct rpc api
 		if header.block_number() == header.next_finalization_block_number() {
 			let call = self
 				.metadata_repository
