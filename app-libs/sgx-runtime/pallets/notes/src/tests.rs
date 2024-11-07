@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, BalanceOf, Error, Event};
+use crate::{mock::*, BalanceOf, Error, Event, TrustedNote};
 use codec::Encode;
 use frame_support::{
 	assert_err, assert_ok,
@@ -87,6 +87,33 @@ fn note_trusted_call_works() {
 			[bob.clone(), alice.clone()].into(),
 			call.encode()
 		));
-		assert_eq!(Notes::notes_lookup(0, alice), vec![0])
+		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0]);
+		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
+		assert_eq!(Notes::notes(0, 0), Some(TrustedNote::TrustedCall(call.encode())));
+		let bucket = Notes::buckets(0).unwrap();
+		assert_eq!(bucket.bytes, call.encode().len() as u32);
+
+		let charlie = AccountKeyring::Charlie.to_account_id();
+		let call2 = TrustedCall::balance_transfer(charlie.clone(), alice.clone(), 42);
+		assert_ok!(Notes::note_trusted_call(
+			RuntimeOrigin::signed(charlie.clone()),
+			[charlie.clone(), alice.clone()].into(),
+			call2.encode()
+		));
+		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0, 1]);
+		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
+		assert_eq!(Notes::notes_lookup(0, charlie.clone()), vec![1]);
+		assert_eq!(Notes::notes(0, 1), Some(TrustedNote::TrustedCall(call2.encode())));
+
+		let call3 = TrustedCall::noop(charlie.clone());
+		assert_ok!(Notes::note_trusted_call(
+			RuntimeOrigin::signed(charlie.clone()),
+			[charlie.clone()].into(),
+			call3.encode()
+		));
+		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0, 1]);
+		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
+		assert_eq!(Notes::notes_lookup(0, charlie.clone()), vec![1, 2]);
+		assert_eq!(Notes::notes(0, 2), Some(TrustedNote::TrustedCall(call3.encode())));
 	})
 }

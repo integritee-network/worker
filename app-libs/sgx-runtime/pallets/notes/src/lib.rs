@@ -78,6 +78,8 @@ pub mod pallet {
 	pub enum Error<T> {
 		BucketPurged,
 		Overflow,
+		TooManyLinkedAccounts,
+		NoteTooLong,
 	}
 
 	#[pallet::storage]
@@ -87,7 +89,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn buckets)]
 	pub(super) type Buckets<T: Config> =
-		StorageMap<_, Blake2_128Concat, BucketIndex, Vec<BucketInfo>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, BucketIndex, BucketInfo, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn notes)]
@@ -127,13 +129,22 @@ pub mod pallet {
 			payload: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
+			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
+			ensure!(payload.len() <= T::MaxNoteSize::get() as usize, Error::<T>::NoteTooLong);
 			let bucket_index = 0; // todo
+			let mut bucket =
+				Self::buckets(bucket_index).unwrap_or(BucketInfo { index: 0, bytes: 0 });
+			bucket.bytes += payload.len() as u32;
 			let note_index = if let Some(index) = Self::last_note_index() {
 				index.checked_add(1).ok_or(Error::<T>::Overflow)?
 			} else {
 				0
 			};
 			<Notes<T>>::insert(bucket_index, note_index, TrustedNote::TrustedCall(payload));
+			for account in link_to {
+				<NotesLookup<T>>::mutate(bucket_index, account, |v| v.push(note_index));
+			}
+			<Buckets<T>>::insert(bucket_index, bucket);
 			<LastNoteIndex<T>>::put(note_index);
 			Ok(().into())
 		}
