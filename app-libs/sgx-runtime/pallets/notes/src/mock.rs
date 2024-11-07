@@ -65,7 +65,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		GuessTheNumber: dut::{Pallet, Call, Event<T>},
+		Notes: dut::{Pallet, Call, Event<T>},
 	}
 );
 
@@ -74,20 +74,12 @@ ord_parameter_types! {
 }
 parameter_types! {
 	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
-	pub const RoundDuration: u64 = 86_400_000; // [ms/d]
-	pub const GtnPalletId: PalletId = PalletId(*b"gsstnmbr");
 }
 impl dut::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type GameMaster = EitherOfDiverse<EnsureSignedBy<Alice, AccountId32>, EnsureRoot<AccountId32>>;
 	type MomentsPerDay = MomentsPerDay;
 	type WeightInfo = ();
-	type RoundDuration = RoundDuration;
-	type Randomness = MockRandomness;
 	type Currency = Balances;
-	type PalletId = GtnPalletId;
-	type MaxAttempts = ConstU8<10>;
-	type MaxWinners = ConstU8<12>;
 }
 
 parameter_types! {

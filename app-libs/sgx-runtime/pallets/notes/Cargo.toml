@@ -1,7 +1,7 @@
 [package]
-name = "pallet-guess-the-number"
-description = "a little game that only works with confidentiality"
-version = "0.11.0"
+name = "pallet-notes"
+description = "a messaging FIFO buffer with limited retention"
+version = "0.1.0"
 authors = ["Integritee AG <hello@integritee.network>"]
 homepage = "https://integritee.network/"
 repository = "https://github.com/integritee-network/pallets/"
@@ -29,6 +29,7 @@ itp-randomness = { path = "../../../../core-primitives/randomness" }
 [dev-dependencies]
 env_logger = "0.9.0"
 sp-keyring = { git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+ita-stf = { path = "../../../stf" }
 
 [features]
 default = ["std"]

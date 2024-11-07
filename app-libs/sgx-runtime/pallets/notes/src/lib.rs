@@ -5,11 +5,10 @@ use frame_support::{
 	dispatch::DispatchResult,
 	pallet_prelude::Get,
 	traits::{Currency, ExistenceRequirement, OnTimestampSet},
-	PalletId,
+	BoundedVec, PalletId,
 };
 use itp_randomness::Randomness;
 use log::*;
-use sp_core::H256;
 use sp_runtime::{
 	traits::{CheckedDiv, Hash, Saturating, Zero},
 	SaturatedConversion,
@@ -21,13 +20,28 @@ pub use pallet::*;
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-pub type GuessType = u32;
-pub type RoundIndexType = u32;
+pub type BucketIndex = u32;
+pub type NoteIndex = u64;
+
+pub struct BucketInfo<T> {
+	index: BucketIndex,
+	bytes: u32,
+	start_at: <T as pallet_timestamp::Config>::Moment,
+	end_at: <T as pallet_timestamp::Config>::Moment,
+}
+
+/// opaque payloads are fine as it will never be necessary to act on the content within the runtime
+pub enum TrustedNote<T> {
+	/// opaque trusted call. it's up to the client to care about decoding potentially
+	/// different versions
+	TrustedCall(BoundedVec<u8, <T as Config>::MaxNoteSize>),
+	/// opaque because we may persist the event log across runtime upgrades without storage migration
+	SgxRuntimeEvent(BoundedVec<u8, <T as Config>::MaxNoteSize>),
+}
 
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use crate::weights::WeightInfo;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::Zero;
@@ -42,250 +56,83 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		type WeightInfo: WeightInfo;
 
 		#[pallet::constant]
 		type MomentsPerDay: Get<Self::Moment>;
 
-		#[pallet::constant]
-		type RoundDuration: Get<Self::Moment>;
-
-		/// Required origin to interfere with the scheduling (though can always be Root)
-		type GameMaster: EnsureOrigin<Self::RuntimeOrigin>;
-
-		/// random source and tooling
-		type Randomness: Randomness;
-
 		type Currency: Currency<Self::AccountId>;
-		/// The pallet id, used for deriving technical account ID for the pot.
-		#[pallet::constant]
-		type PalletId: Get<PalletId>;
 
+		/// max encoded length of note. a typical trusted call is expected to be 3x32 byte + 256 byte for utf8 content
 		#[pallet::constant]
-		type MaxAttempts: Get<u8>;
-
-		#[pallet::constant]
-		type MaxWinners: Get<u8>;
+		type MaxNoteSize: Get<u32>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		RoundSchedulePushedByOneDay,
+		BuckedPurged { index: BucketIndex },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NoDrawYet,
-		TooManyAttempts,
-		TooManyWinners,
+		BucketPurged,
+		Overflow,
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn current_round_index)]
-	pub(super) type CurrentRoundIndex<T: Config> = StorageValue<_, RoundIndexType, ValueQuery>;
+	#[pallet::getter(fn last_note_index)]
+	pub(super) type LastNoteIndex<T: Config> = StorageValue<_, NoteIndex, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn last_lucky_number)]
-	pub(super) type LastLuckyNumber<T: Config> = StorageValue<_, GuessType, OptionQuery>;
+	#[pallet::getter(fn buckets)]
+	pub(super) type Buckets<T: Config> =
+		StorageMap<_, Blake2_128Concat, BucketIndex, Vec<BucketInfo<T>>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn lucky_number)]
-	pub(super) type LuckyNumber<T: Config> = StorageValue<_, GuessType, OptionQuery>;
+	#[pallet::getter(fn notes)]
+	pub(super) type Notes<T: Config> =
+		StorageDoubleMap<_, Blake2_128Concat, BucketIndex, NoteIndex, TrustedNote<T>, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn guess_attempts)]
-	pub(super) type GuessAttempts<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, u8, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn last_winning_distance)]
-	pub(super) type LastWinningDistance<T: Config> = StorageValue<_, GuessType, OptionQuery>;
-	#[pallet::storage]
-	#[pallet::getter(fn winning_distance)]
-	pub(super) type WinningDistance<T: Config> = StorageValue<_, GuessType, OptionQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn last_winners)]
-	pub(super) type LastWinners<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn winners)]
-	pub(super) type Winners<T: Config> = StorageValue<_, Vec<T::AccountId>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn winnings)]
-	pub(super) type Winnings<T: Config> = StorageValue<_, BalanceOf<T>, ValueQuery>;
-
-	#[pallet::type_value]
-	pub(super) fn DefaultForNextRoundTimestamp<T: Config>() -> T::Moment {
-		T::Moment::zero()
-	}
-
-	#[pallet::storage]
-	#[pallet::getter(fn next_round_timestamp)]
-	pub(super) type NextRoundTimestamp<T: Config> =
-		StorageValue<_, T::Moment, ValueQuery, DefaultForNextRoundTimestamp<T>>;
+	#[pallet::getter(fn notes_lookup)]
+	pub(super) type NotesLookup<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		BucketIndex,
+		T::AccountId,
+		Vec<NoteIndex>,
+		OptionQuery,
+	>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
 		sp_core::H256: From<<T as frame_system::Config>::Hash>,
 	{
-		/// Push next round by one entire day
-		///
-		/// May only be called from `T::GameMaster`.
 		#[pallet::call_index(0)]
-		#[pallet::weight((<T as Config>::WeightInfo::push_by_one_day(), DispatchClass::Normal, Pays::Yes)
-        )]
-		pub fn push_by_one_day(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			T::GameMaster::ensure_origin(origin)?;
-			let tnext = Self::next_round_timestamp().saturating_add(T::MomentsPerDay::get());
-			<NextRoundTimestamp<T>>::put(tnext);
-			debug!("pushing next round by one day");
-			Self::deposit_event(Event::RoundSchedulePushedByOneDay);
-			Ok(().into())
-		}
-
-		#[pallet::call_index(1)]
-		#[pallet::weight((<T as Config>::WeightInfo::set_winnings(), DispatchClass::Normal, Pays::Yes)
-        )]
-		pub fn set_winnings(
+		#[pallet::weight((10_000, DispatchClass::Normal, Pays::Yes))]
+		pub fn note_trusted_call(
 			origin: OriginFor<T>,
-			winnings: BalanceOf<T>,
+			// who is involved in this note (usually sender and recipient)
+			link_to: Vec<T::AccountId>,
+			payload: BoundedVec<u8, T::MaxNoteSize>,
 		) -> DispatchResultWithPostInfo {
-			T::GameMaster::ensure_origin(origin)?;
-			debug!("setting winnings");
-			<Winnings<T>>::put(winnings);
-			Ok(().into())
-		}
-
-		#[pallet::call_index(2)]
-		#[pallet::weight((<T as Config>::WeightInfo::guess(), DispatchClass::Normal, Pays::Yes)
-        )]
-		pub fn guess(origin: OriginFor<T>, guess: GuessType) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			ensure!(
-				Self::guess_attempts(&sender) < T::MaxAttempts::get(),
-				Error::<T>::TooManyAttempts
-			);
-			<GuessAttempts<T>>::mutate(&sender, |a| *a = a.saturating_add(1u8));
-			let lucky_number = <LuckyNumber<T>>::get().ok_or(Error::<T>::NoDrawYet)?;
-			let distance = GuessType::abs_diff(lucky_number, guess);
-			let last_winning_distance = Self::winning_distance().unwrap_or(crate::GuessType::MAX);
-			if distance <= last_winning_distance {
-				let mut winners =
-					if distance == last_winning_distance { <Winners<T>>::get() } else { vec![] };
-				<WinningDistance<T>>::put(distance);
-				ensure!(winners.len() < T::MaxWinners::get() as usize, Error::<T>::TooManyWinners);
-				if !winners.contains(&sender) {
-					winners.push(sender);
-					Winners::<T>::put(winners);
-				}
-			}
+			let bucket_index = 0; // todo
+			let note_index = if let Some(index) = Self::last_note_index() {
+				index.checked_add(1).ok_or(Error::<T>::Overflow)?
+			} else {
+				0
+			};
+			<Notes<T>>::insert(bucket_index, note_index, TrustedNote::TrustedCall(payload));
+			<LastNoteIndex<T>>::put(note_index);
 			Ok(().into())
 		}
 	}
 }
 
-impl<T: Config> Pallet<T>
-where
-	sp_core::H256: From<<T as frame_system::Config>::Hash>,
-{
-	pub fn get_pot_account() -> T::AccountId {
-		let pot_identifier = <T as Config>::PalletId::get();
-		let pot_id_hash: H256 = T::Hashing::hash_of(&pot_identifier.0.as_slice()).into();
-		T::AccountId::decode(&mut pot_id_hash.as_bytes())
-			.expect("32 bytes can always construct an AccountId32")
-	}
-
-	pub fn payout_winners() {
-		let pot = Self::get_pot_account();
-		let winners = Self::winners();
-		let winnings = min(Self::winnings(), T::Currency::free_balance(&pot));
-		let winnings_per_winner = winnings
-			.checked_div(&BalanceOf::<T>::saturated_from(winners.len() as u32))
-			.unwrap_or_default();
-
-		for winner in winners {
-			if T::Currency::transfer(
-				&pot,
-				&winner,
-				winnings_per_winner,
-				ExistenceRequirement::AllowDeath,
-			)
-			.is_err()
-			{
-				warn!("error transferring rewards")
-			};
-		}
-	}
-
-	fn progress_round() -> DispatchResult {
-		let current_round_index = <CurrentRoundIndex<T>>::get();
-		let last_round_timestamp = Self::next_round_timestamp();
-
-		Self::end_round()?;
-
-		let next_round_index = current_round_index.saturating_add(1);
-		<CurrentRoundIndex<T>>::put(next_round_index);
-		info!("new round with index {}", next_round_index);
-
-		let next = last_round_timestamp.saturating_add(T::RoundDuration::get());
-		<NextRoundTimestamp<T>>::put(next);
-
-		Self::start_round()
-	}
-
-	fn end_round() -> DispatchResult {
-		let current_round_index = <CurrentRoundIndex<T>>::get();
-		info!("ending round {}", current_round_index);
-		Self::payout_winners();
-		<LastWinners<T>>::put(Self::winners());
-		<Winners<T>>::kill();
-		<LastWinningDistance<T>>::put(Self::winning_distance().unwrap_or(GuessType::MAX));
-		<WinningDistance<T>>::kill();
-		<LastLuckyNumber<T>>::put(Self::lucky_number().unwrap_or(0));
-		let _ = <GuessAttempts<T>>::clear(u32::MAX, None);
-		Ok(())
-	}
-
-	fn start_round() -> DispatchResult {
-		let current_round_index = <CurrentRoundIndex<T>>::get();
-		let round_end_timestamp = Self::next_round_timestamp();
-		info!("starting round {}, lasting until {:?}", current_round_index, round_end_timestamp);
-		let lucky_number = T::Randomness::random_u32(0, 10_000);
-		<LuckyNumber<T>>::put(lucky_number);
-		Ok(())
-	}
-}
-impl<T: Config> OnTimestampSet<T::Moment> for Pallet<T>
-where
-	sp_core::H256: From<<T as frame_system::Config>::Hash>,
-{
-	fn on_timestamp_set(now: T::Moment) {
-		if Self::next_round_timestamp() == T::Moment::zero() {
-			// only executed in first block after genesis.
-
-			// in case we upgrade from a runtime that didn't have this pallet or other curiosities
-			if <CurrentRoundIndex<T>>::get() == 0 {
-				<CurrentRoundIndex<T>>::put(1);
-			}
-
-			// set phase start to 0:00 UTC on the day of genesis
-			let next =
-				(now - now.rem(T::MomentsPerDay::get())).saturating_add(T::RoundDuration::get());
-			<NextRoundTimestamp<T>>::put(next);
-			if Self::start_round().is_err() {
-				warn!("start first round failed")
-			};
-		} else if Self::next_round_timestamp() < now && Self::progress_round().is_err() {
-			warn!("progress round phase failed");
-		};
-	}
-}
+impl<T: Config> Pallet<T> where sp_core::H256: From<<T as frame_system::Config>::Hash> {}
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
 mod tests;
-pub mod weights;
