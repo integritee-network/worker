@@ -52,7 +52,7 @@ use itp_extrinsics_factory::CreateExtrinsics;
 use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
 use itp_pallet_storage::{SidechainPalletStorage, SidechainPalletStorageKeys};
 use itp_settings::sidechain::SLOT_DURATION;
-use itp_sgx_crypto::{key_repository::AccessKey, ToPubkey};
+use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
 use itp_types::{
@@ -75,9 +75,7 @@ use log::*;
 use sgx_types::sgx_status_t;
 use sp_core::{crypto::UncheckedFrom, Pair};
 use sp_runtime::{
-	generic::SignedBlock as SignedParentchainBlock,
-	traits::{Block as BlockTrait, IdentifyAccount},
-	MultiSignature,
+	generic::SignedBlock as SignedParentchainBlock, traits::Block as BlockTrait, MultiSignature,
 };
 use std::{sync::Arc, time::Instant, vec::Vec};
 
