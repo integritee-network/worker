@@ -20,7 +20,7 @@ use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, Worke
 use chrono::Local;
 use codec::{Decode, Encode};
 use itp_api_client_types::ParentchainApi;
-use itp_node_api::node_api_factory::CreateNodeApi;
+use itp_node_api::{api_client::AccountApi, node_api_factory::CreateNodeApi};
 use itp_types::{
 	parentchain::{Header as ParentchainHeader, ParentchainId},
 	DigestItem, WorkerRequest, WorkerResponse,
@@ -38,7 +38,7 @@ use std::{
 use substrate_api_client::{
 	ac_primitives,
 	ac_primitives::{serde_impls::StorageKey, SubstrateHeader},
-	GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	GetAccountInformation, GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
 pub struct WorkerOnChainOCall<F> {
@@ -128,6 +128,10 @@ where
 						// todo: fix this dirty type hack
 						ParentchainHeader::decode(&mut header.encode().as_slice()).unwrap(),
 					)
+				},
+				WorkerRequest::NextNonceFor(account) => {
+					let nonce = api.get_system_account_next_index(account.clone()).ok();
+					WorkerResponse::NextNonce(nonce)
 				},
 			})
 			.collect();
