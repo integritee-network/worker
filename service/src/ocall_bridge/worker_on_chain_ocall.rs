@@ -130,7 +130,7 @@ where
 					)
 				},
 				WorkerRequest::NextNonceFor(account) => {
-					let nonce = api.get_system_account_next_index(account.clone()).ok();
+					let nonce = api.get_system_account_next_index(account).ok();
 					WorkerResponse::NextNonce(nonce)
 				},
 			})
