@@ -15,6 +15,7 @@
 
 */
 use crate::{mock::*, BalanceOf, Error, Event};
+use codec::Encode;
 use frame_support::{
 	assert_err, assert_ok,
 	pallet_prelude::DispatchResultWithPostInfo,
@@ -78,13 +79,14 @@ pub fn event_at_index<T: frame_system::Config>(index: usize) -> Option<T::Runtim
 fn note_trusted_call_works() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(0);
-		let alice = AccountKeyring::Balice.to_account_id();
+		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		let call = TrustedCall::balances_transfer();
+		let call = TrustedCall::balance_transfer(bob.clone(), alice.clone(), 0);
 		assert_ok!(Notes::note_trusted_call(
 			RuntimeOrigin::signed(bob.clone()),
-			[bob, alice].into(),
-			call
+			[bob.clone(), alice.clone()].into(),
+			call.encode()
 		));
+		assert_eq!(Notes::notes_lookup(0, alice), vec![0])
 	})
 }

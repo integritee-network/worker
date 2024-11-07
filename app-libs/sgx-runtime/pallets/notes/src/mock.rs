@@ -24,7 +24,7 @@ use frame_support::{
 use frame_system as system;
 use frame_system::{EnsureRoot, EnsureSignedBy};
 use itp_randomness::MockRandomness;
-use sp_core::{crypto::AccountId32, H256};
+use sp_core::{crypto::AccountId32, ConstU32, H256};
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	generic,
@@ -78,8 +78,8 @@ parameter_types! {
 impl dut::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
-	type WeightInfo = ();
 	type Currency = Balances;
+	type MaxNoteSize = ConstU32<512>;
 }
 
 parameter_types! {
@@ -118,7 +118,7 @@ parameter_types! {
 }
 impl pallet_timestamp::Config for Test {
 	type Moment = Moment;
-	type OnTimestampSet = GuessTheNumber;
+	type OnTimestampSet = ();
 	type MinimumPeriod = MinimumPeriod;
 	type WeightInfo = ();
 }

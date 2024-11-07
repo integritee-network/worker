@@ -1,14 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Decode;
+use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,
 	pallet_prelude::Get,
 	traits::{Currency, ExistenceRequirement, OnTimestampSet},
-	BoundedVec, PalletId,
+	PalletId,
 };
 use itp_randomness::Randomness;
 use log::*;
+use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{CheckedDiv, Hash, Saturating, Zero},
 	SaturatedConversion,
@@ -23,20 +24,20 @@ pub type BalanceOf<T> =
 pub type BucketIndex = u32;
 pub type NoteIndex = u64;
 
-pub struct BucketInfo<T> {
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
+pub struct BucketInfo {
 	index: BucketIndex,
 	bytes: u32,
-	start_at: <T as pallet_timestamp::Config>::Moment,
-	end_at: <T as pallet_timestamp::Config>::Moment,
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 /// opaque payloads are fine as it will never be necessary to act on the content within the runtime
-pub enum TrustedNote<T> {
+pub enum TrustedNote {
 	/// opaque trusted call. it's up to the client to care about decoding potentially
 	/// different versions
-	TrustedCall(BoundedVec<u8, <T as Config>::MaxNoteSize>),
+	TrustedCall(Vec<u8>),
 	/// opaque because we may persist the event log across runtime upgrades without storage migration
-	SgxRuntimeEvent(BoundedVec<u8, <T as Config>::MaxNoteSize>),
+	SgxRuntimeEvent(Vec<u8>),
 }
 
 #[frame_support::pallet]
@@ -86,12 +87,19 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn buckets)]
 	pub(super) type Buckets<T: Config> =
-		StorageMap<_, Blake2_128Concat, BucketIndex, Vec<BucketInfo<T>>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, BucketIndex, Vec<BucketInfo>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn notes)]
-	pub(super) type Notes<T: Config> =
-		StorageDoubleMap<_, Blake2_128Concat, BucketIndex, NoteIndex, TrustedNote<T>, OptionQuery>;
+	pub(super) type Notes<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		BucketIndex,
+		Blake2_128Concat,
+		NoteIndex,
+		TrustedNote,
+		OptionQuery,
+	>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn notes_lookup)]
@@ -99,9 +107,10 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		BucketIndex,
+		Blake2_128Concat,
 		T::AccountId,
 		Vec<NoteIndex>,
-		OptionQuery,
+		ValueQuery,
 	>;
 
 	#[pallet::call]
@@ -115,7 +124,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			// who is involved in this note (usually sender and recipient)
 			link_to: Vec<T::AccountId>,
-			payload: BoundedVec<u8, T::MaxNoteSize>,
+			payload: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			let bucket_index = 0; // todo
