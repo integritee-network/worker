@@ -20,8 +20,10 @@ use crate::{
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };
-use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
+use codec::Decode;
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedGetter};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use log::error;
 use pallet_notes::{BucketIndex, TrustedNote};
 use sp_core::Pair;
 
@@ -41,6 +43,27 @@ impl GetNotesCommand {
 				.sign(&KeyPair::Sr25519(Box::new(who))),
 		));
 		let notes = perform_trusted_operation::<Vec<TrustedNote>>(cli, trusted_args, &top).unwrap();
+		for note in notes.clone() {
+			match note {
+				TrustedNote::TrustedCall(encoded_call) => {
+					if let Ok(call) = TrustedCall::decode(&mut encoded_call.as_slice()) {
+						match call {
+							TrustedCall::balance_transfer_with_note(from, _, _, msg) => {
+								println!(
+									"TrustedCall::balance_transfer_with_note from: {:?}, msg: {}",
+									from,
+									String::from_utf8_lossy(msg.as_ref())
+								);
+							},
+							_ => println!("{:?}", call),
+						}
+					} else {
+						error!("failed to decode note")
+					}
+				},
+				_ => println!("{:?}", note),
+			}
+		}
 		Ok(CliResultOk::Notes { notes })
 	}
 }
