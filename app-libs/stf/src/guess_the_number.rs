@@ -17,7 +17,10 @@
 
 // TrustedCalls and Getters for the Guess-The-Number game
 
-use crate::helpers::shielding_target_genesis_hash;
+use crate::{
+	helpers::{shielding_target_genesis_hash, store_note},
+	TrustedCall,
+};
 #[cfg(not(feature = "std"))]
 use alloc::format;
 use codec::{Decode, Encode};
@@ -32,7 +35,7 @@ use itp_stf_primitives::error::StfError;
 use itp_types::{parentchain::ParentchainCall, AccountId};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
-use sp_std::{sync::Arc, vec::Vec};
+use sp_std::{sync::Arc, vec, vec::Vec};
 
 /// General public information about the status of the guess-the-number game
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
@@ -85,10 +88,10 @@ where
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		match self {
+		match self.clone() {
 			Self::set_winnings(sender, winnings) => {
 				// authorization happens in pallet itself, we just pass authentication
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
 				std::println!("⣿STF⣿ guess-the-number set winnings to {}", winnings);
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::set_winnings { winnings }
 					.dispatch_bypass_filter(origin)
@@ -98,11 +101,12 @@ where
 							e.error
 						))
 					})?;
+				store_note(TrustedCall::guess_the_number(self), vec![sender])?;
 				Ok::<(), Self::Error>(())
 			},
 			Self::push_by_one_day(sender) => {
 				// authorization happens in pallet itself, we just pass authentication
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
 				std::println!("⣿STF⣿ guess-the-number push by one day");
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::push_by_one_day {}
 					.dispatch_bypass_filter(origin)
@@ -112,16 +116,18 @@ where
 							e.error
 						))
 					})?;
+				store_note(TrustedCall::guess_the_number(self), vec![sender])?;
 				Ok::<(), Self::Error>(())
 			},
 			Self::guess(sender, guess) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender);
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(sender.clone());
 				std::println!("⣿STF⣿ guess-the-number: someone is attempting a guess");
 				ita_sgx_runtime::GuessTheNumberCall::<Runtime>::guess { guess }
 					.dispatch_bypass_filter(origin)
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("GuessTheNumber guess error: {:?}", e.error))
 					})?;
+				store_note(TrustedCall::guess_the_number(self), vec![sender])?;
 				Ok::<(), Self::Error>(())
 			},
 		}?;

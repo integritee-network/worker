@@ -15,6 +15,7 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
 pallet-guess-the-number = { default-features = false, path = "pallets/guess-the-number" }
+pallet-notes = { default-features = false, path = "pallets/notes" }
 pallet-parentchain = { default-features = false, path = "pallets/parentchain" }
 
 # Substrate dependencies
@@ -54,6 +55,7 @@ std = [
     "pallet-timestamp/std",
     "pallet-transaction-payment/std",
     "pallet-parentchain/std",
+    "pallet-notes/std",
     "sp-api/std",
     "sp-core/std",
     "sp-runtime/std",

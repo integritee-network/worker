@@ -14,9 +14,10 @@
 	limitations under the License.
 
 */
-use crate::ENCLAVE_ACCOUNT_KEY;
+use crate::{TrustedCall, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
-use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB};
+use frame_support::dispatch::UnfilteredDispatchable;
+use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime};
 use itp_stf_interface::{BlockMetadata, ShardCreationInfo};
 use itp_stf_primitives::{
 	error::{StfError, StfResult},
@@ -27,7 +28,7 @@ use itp_types::parentchain::{BlockNumber, GenericMortality, Hash, ParentchainId}
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::generic::Era;
-use std::prelude::v1::*;
+use std::{format, prelude::v1::*};
 
 pub fn get_storage_value<V: Decode>(
 	storage_prefix: &'static str,
@@ -216,4 +217,11 @@ pub fn get_mortality(
 		}
 	}
 	None
+}
+
+pub fn store_note(call: TrustedCall, link_to: Vec<AccountId>) -> Result<(), StfError> {
+	ita_sgx_runtime::NotesCall::<Runtime>::note_trusted_call { link_to, payload: call.encode() }
+		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+		.map_err(|e| StfError::Dispatch(format!("Store note error: {:?}", e.error)))?;
+	Ok(())
 }

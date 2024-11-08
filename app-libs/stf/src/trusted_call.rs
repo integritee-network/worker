@@ -27,7 +27,7 @@ use crate::{
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
 		enclave_signer_account, ensure_enclave_signer_account, get_mortality, shard_vault,
-		shielding_target_genesis_hash, wrap_bytes,
+		shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
 	Getter, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
 };
@@ -64,7 +64,7 @@ use sp_core::{
 };
 use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
-use std::{format, prelude::v1::*, sync::Arc};
+use std::{format, prelude::v1::*, sync::Arc, vec};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -76,6 +76,7 @@ pub enum TrustedCall {
 	balance_transfer(AccountId, AccountId, Balance) = 2,
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier) = 3, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4, // (Root, AccountIncognito, Amount, origin parentchain)
+	balance_transfer_with_note(AccountId, AccountId, Balance, Vec<u8>) = 5,
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
@@ -133,6 +134,7 @@ impl TrustedCall {
 			Self::balance_transfer(sender_account, ..) => sender_account,
 			Self::balance_unshield(sender_account, ..) => sender_account,
 			Self::balance_shield(sender_account, ..) => sender_account,
+			Self::balance_transfer_with_note(sender_account, ..) => sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
@@ -257,7 +259,7 @@ where
 		// so it should be considered as valid
 		System::inc_account_nonce(&sender);
 
-		match self.call {
+		match self.call.clone() {
 			TrustedCall::noop(who) => {
 				debug!("noop called by {}", account_id_to_string(&who),);
 				Ok::<(), Self::Error>(())
@@ -272,13 +274,14 @@ where
 					reserved_balance
 				);
 				ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
-					who: MultiAddress::Id(who),
+					who: MultiAddress::Id(who.clone()),
 					new_free: free_balance,
 				}
 				.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 				})?;
+				store_note(self.call, vec![who])?;
 				// This explicit Error type is somehow still needed, otherwise the compiler complains
 				// 	multiple `impl`s satisfying `StfError: std::convert::From<_>`
 				// 		note: and another `impl` found in the `core` crate: `impl<T> std::convert::From<T> for T;`
@@ -289,16 +292,31 @@ where
 				Ok::<(), Self::Error>(())
 			},
 			TrustedCall::balance_transfer(from, to, value) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from);
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
 				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-					dest: MultiAddress::Id(to),
+					dest: MultiAddress::Id(to.clone()),
 					value,
 				}
 				.dispatch_bypass_filter(origin)
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
 				})?;
+				store_note(self.call, vec![from, to])?;
+				Ok(())
+			},
+			TrustedCall::balance_transfer_with_note(from, to, value, _note) => {
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				std::println!("⣿STF⣿ 🔄 balance_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ with note ⣿⣿⣿");
+				ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+					dest: MultiAddress::Id(to.clone()),
+					value,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
+				})?;
+				store_note(self.call, vec![from.clone(), to.clone()])?;
 				Ok(())
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -316,7 +334,8 @@ where
 					shard
 				);
 
-				burn_funds(account_incognito, value)?;
+				burn_funds(&account_incognito, value)?;
+				store_note(self.call, vec![account_incognito, beneficiary.clone()])?;
 
 				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
 					StfError::Dispatch("shard vault key hasn't been set".to_string())
@@ -365,7 +384,8 @@ where
 					StfError::WrongParentchainIdForShardVault
 				);
 				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
-				shield_funds(who, value)?;
+				shield_funds(&who, value)?;
+				store_note(self.call, vec![who])?;
 
 				// Send proof of execution on chain.
 				let mortality =
@@ -599,14 +619,14 @@ fn charge_fee(fee: Balance, payer: &AccountId) -> Result<(), StfError> {
 	Ok(())
 }
 
-fn burn_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+fn burn_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 	let account_info = System::account(&account);
 	if account_info.data.free < amount {
 		return Err(StfError::MissingFunds)
 	}
 
 	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
-		who: MultiAddress::Id(account),
+		who: MultiAddress::Id(account.clone()),
 		new_free: account_info.data.free - amount,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
@@ -614,7 +634,7 @@ fn burn_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	Ok(())
 }
 
-fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
+fn shield_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 	//fixme: make fee configurable and send fee to vault account on L2
 	let fee = amount / STF_SHIELDING_FEE_AMOUNT_DIVIDER;
 
@@ -632,7 +652,7 @@ fn shield_funds(account: AccountId, amount: u128) -> Result<(), StfError> {
 	// endow shieding amount - fee to beneficiary
 	let account_info = System::account(&account);
 	ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
-		who: MultiAddress::Id(account),
+		who: MultiAddress::Id(account.clone()),
 		new_free: account_info.data.free + amount - fee,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())

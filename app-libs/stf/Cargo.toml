@@ -27,6 +27,7 @@ itp-stf-primitives = { default-features = false, path = "../../core-primitives/s
 itp-storage = { default-features = false, path = "../../core-primitives/storage" }
 itp-types = { default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
+pallet-notes = { default-features = false, path = "../sgx-runtime/pallets/notes" }
 pallet-parentchain = { default-features = false, path = "../sgx-runtime/pallets/parentchain" }
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
