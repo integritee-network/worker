@@ -35,7 +35,7 @@ use crate::{
 		get_triggered_dispatcher_from_target_b_solo_or_parachain,
 		get_validator_accessor_from_integritee_solo_or_parachain,
 		get_validator_accessor_from_target_a_solo_or_parachain,
-		get_validator_accessor_from_target_b_solo_or_parachain,
+		get_validator_accessor_from_target_b_solo_or_parachain, update_nonce_cache,
 	},
 };
 use codec::Encode;
@@ -197,6 +197,14 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 	let block_composer = GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT.get()?;
 
 	let authority = GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT.get()?.retrieve_key()?;
+
+	update_nonce_cache(authority.public().into(), ParentchainId::Integritee)?;
+	if maybe_target_a_parentchain_import_dispatcher.is_some() {
+		update_nonce_cache(authority.public().into(), ParentchainId::TargetA)?;
+	}
+	if maybe_target_b_parentchain_import_dispatcher.is_some() {
+		update_nonce_cache(authority.public().into(), ParentchainId::TargetB)?;
+	}
 
 	match yield_next_slot(
 		slot_beginning_timestamp,
