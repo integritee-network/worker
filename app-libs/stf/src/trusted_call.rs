@@ -316,7 +316,7 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
 				})?;
-				store_note(&from, self.call, vec![from.clone(), to.clone()])?;
+				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {

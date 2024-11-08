@@ -65,7 +65,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Notes: dut::{Pallet, Call, Event<T>},
+		Notes: dut::{Pallet, Call},
 	}
 );
 
@@ -76,7 +76,6 @@ parameter_types! {
 	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
 }
 impl dut::Config for Test {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
 	type MaxNoteSize = ConstU32<512>;

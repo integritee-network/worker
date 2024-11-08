@@ -313,7 +313,6 @@ impl pallet_guess_the_number::Config for Runtime {
 }
 
 impl pallet_notes::Config for Runtime {
-	type RuntimeEvent = RuntimeEvent;
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
 	type MaxNoteSize = ConstU32<512>;
@@ -338,7 +337,7 @@ construct_runtime!(
 
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 
-		Notes: pallet_notes::{Pallet, Call, Storage, Event<T>} = 40,
+		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 	}
 );
 
@@ -367,7 +366,7 @@ construct_runtime!(
 
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 
-		Notes: pallet_notes::{Pallet, Call, Storage, Event<T>} = 40,
+		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 	}
 );
 

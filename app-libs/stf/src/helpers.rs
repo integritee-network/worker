@@ -225,7 +225,7 @@ pub fn store_note(
 	link_to: Vec<AccountId>,
 ) -> Result<(), StfError> {
 	// i.e. unshielding can go to self or to other. make sure we don't duplicate links
-	let mut unique_links = link_to.clone();
+	let mut unique_links = link_to;
 	unique_links.sort_unstable();
 	unique_links.dedup();
 

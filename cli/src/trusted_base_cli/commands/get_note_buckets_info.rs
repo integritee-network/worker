@@ -18,7 +18,7 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
 	CliResultOk,
 };
-use ita_stf::{Getter, ParentchainsInfo, PublicGetter, TrustedCallSigned};
+use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
 use pallet_notes::BucketInfo;
 

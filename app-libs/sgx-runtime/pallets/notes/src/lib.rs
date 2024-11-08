@@ -1,22 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{
-	dispatch::DispatchResult,
-	pallet_prelude::Get,
-	traits::{Currency, ExistenceRequirement, OnTimestampSet},
-	PalletId,
-};
-use itp_randomness::Randomness;
-use log::*;
-use scale_info::TypeInfo;
-use sp_runtime::{
-	traits::{CheckedDiv, Hash, Saturating, Zero},
-	SaturatedConversion,
-};
-use sp_std::{cmp::min, ops::Rem, vec, vec::Vec};
-
+use frame_support::{pallet_prelude::Get, traits::Currency};
 pub use pallet::*;
+use scale_info::TypeInfo;
+
+use sp_std::{vec, vec::Vec};
 
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -45,7 +34,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::Zero;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 	#[pallet::pallet]
@@ -56,8 +44,6 @@ pub mod pallet {
 	/// Configuration trait.
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
-		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-
 		#[pallet::constant]
 		type MomentsPerDay: Get<Self::Moment>;
 
@@ -66,12 +52,6 @@ pub mod pallet {
 		/// max encoded length of note. a typical trusted call is expected to be 3x32 byte + 256 byte for utf8 content
 		#[pallet::constant]
 		type MaxNoteSize: Get<u32>;
-	}
-
-	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
-	pub enum Event<T: Config> {
-		BuckedPurged { index: BucketIndex },
 	}
 
 	#[pallet::error]
@@ -128,7 +108,7 @@ pub mod pallet {
 			link_to: Vec<T::AccountId>,
 			payload: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
+			ensure_signed(origin)?;
 			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
 			ensure!(payload.len() <= T::MaxNoteSize::get() as usize, Error::<T>::NoteTooLong);
 			let bucket_index = 0; // todo

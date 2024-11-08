@@ -212,7 +212,9 @@ impl ExecuteGetter for TrustedGetterSigned {
 				// todo: do we need pagination here?
 				let mut notes = Vec::new();
 				for note_index in note_indices {
-					Notes::notes(bucket_index, note_index).map(|note| notes.push(note));
+					if let Some(note) = Notes::notes(bucket_index, note_index) {
+						notes.push(note)
+					};
 				}
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: notes for ⣿⣿⣿",);
 				Some(notes.encode())

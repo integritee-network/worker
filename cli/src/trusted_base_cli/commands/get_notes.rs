@@ -15,10 +15,8 @@
 
 */
 use crate::{
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_balance, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli, CliResult, CliResultOk,
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
 use ita_stf::{

@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, BalanceOf, Error, Event, TrustedNote};
+use crate::{mock::*, BalanceOf, Error, TrustedNote};
 use codec::Encode;
 use frame_support::{
 	assert_err, assert_ok,
