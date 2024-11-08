@@ -30,7 +30,7 @@ impl GetNoteBucketsInfoCommand {
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
 			PublicGetter::note_buckets_info,
 		));
-		let (first, last): (BucketInfo, BucketInfo) =
+		let (first, last): (Option<BucketInfo>, Option<BucketInfo>) =
 			perform_trusted_operation(cli, trusted_args, &top).unwrap();
 		println!("first bucket: {:?}", first);
 		println!("last bucket: {:?}", last);

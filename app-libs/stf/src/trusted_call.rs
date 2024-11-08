@@ -281,7 +281,7 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Set Balance error: {:?}", e.error))
 				})?;
-				store_note(self.call, vec![who])?;
+				store_note(&root, self.call, vec![who])?;
 				// This explicit Error type is somehow still needed, otherwise the compiler complains
 				// 	multiple `impl`s satisfying `StfError: std::convert::From<_>`
 				// 		note: and another `impl` found in the `core` crate: `impl<T> std::convert::From<T> for T;`
@@ -302,7 +302,7 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
 				})?;
-				store_note(self.call, vec![from, to])?;
+				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
 			},
 			TrustedCall::balance_transfer_with_note(from, to, value, _note) => {
@@ -316,7 +316,7 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Balance Transfer error: {:?}", e.error))
 				})?;
-				store_note(self.call, vec![from.clone(), to.clone()])?;
+				store_note(&from, self.call, vec![from.clone(), to.clone()])?;
 				Ok(())
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
@@ -335,7 +335,11 @@ where
 				);
 
 				burn_funds(&account_incognito, value)?;
-				store_note(self.call, vec![account_incognito, beneficiary.clone()])?;
+				store_note(
+					&account_incognito,
+					self.call,
+					vec![account_incognito.clone(), beneficiary.clone()],
+				)?;
 
 				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
 					StfError::Dispatch("shard vault key hasn't been set".to_string())
@@ -385,7 +389,7 @@ where
 				);
 				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
 				shield_funds(&who, value)?;
-				store_note(self.call, vec![who])?;
+				store_note(&enclave_account, self.call, vec![who])?;
 
 				// Send proof of execution on chain.
 				let mortality =

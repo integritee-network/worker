@@ -122,8 +122,8 @@ pub enum CliResultOk {
 		info: ParentchainsInfo,
 	},
 	NoteBucketsInfo {
-		first: BucketInfo,
-		last: BucketInfo,
+		first: Option<BucketInfo>,
+		last: Option<BucketInfo>,
 	},
 	Notes {
 		notes: Vec<TrustedNote>,

@@ -101,7 +101,7 @@ where
 							e.error
 						))
 					})?;
-				store_note(TrustedCall::guess_the_number(self), vec![sender])?;
+				store_note(&sender, TrustedCall::guess_the_number(self), vec![sender.clone()])?;
 				Ok::<(), Self::Error>(())
 			},
 			Self::push_by_one_day(sender) => {
@@ -116,7 +116,7 @@ where
 							e.error
 						))
 					})?;
-				store_note(TrustedCall::guess_the_number(self), vec![sender])?;
+				store_note(&sender, TrustedCall::guess_the_number(self), vec![sender.clone()])?;
 				Ok::<(), Self::Error>(())
 			},
 			Self::guess(sender, guess) => {
@@ -127,7 +127,7 @@ where
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("GuessTheNumber guess error: {:?}", e.error))
 					})?;
-				store_note(TrustedCall::guess_the_number(self), vec![sender])?;
+				store_note(&sender, TrustedCall::guess_the_number(self), vec![sender.clone()])?;
 				Ok::<(), Self::Error>(())
 			},
 		}?;
