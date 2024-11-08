@@ -21,7 +21,10 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned, TrustedGetter};
+use ita_stf::{
+	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
+	TrustedGetter,
+};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use log::error;
 use pallet_notes::{BucketIndex, TrustedNote};
@@ -48,11 +51,45 @@ impl GetNotesCommand {
 				TrustedNote::TrustedCall(encoded_call) => {
 					if let Ok(call) = TrustedCall::decode(&mut encoded_call.as_slice()) {
 						match call {
-							TrustedCall::balance_transfer_with_note(from, _, _, msg) => {
+							TrustedCall::balance_transfer_with_note(from, to, amount, msg) => {
 								println!(
-									"TrustedCall::balance_transfer_with_note from: {:?}, msg: {}",
+									"TrustedCall::balance_transfer_with_note from: {:?}, to: {:?}, amount: {}  msg: {}",
 									from,
+									to,
+									amount,
 									String::from_utf8_lossy(msg.as_ref())
+								);
+							},
+							TrustedCall::balance_transfer(from, to, amount) => {
+								println!(
+									"TrustedCall::balance_transfer from: {:?}, to: {:?}, amount: {}",
+									from,
+									to,
+									amount
+								);
+							},
+							TrustedCall::balance_unshield(from, to, amount, shard) => {
+								println!(
+									"TrustedCall::balance_unshield from: {:?}, to: {:?}, amount: {}, shard: {}",
+									from,
+									to,
+									amount,
+									shard
+								);
+							},
+							TrustedCall::balance_shield(_, to, amount, parentchain_id) => {
+								println!(
+									"TrustedCall::balance_shield from: {:?}, to: {:?}, amount: {}",
+									parentchain_id, to, amount
+								);
+							},
+							TrustedCall::guess_the_number(GuessTheNumberTrustedCall::guess(
+								sender,
+								guess,
+							)) => {
+								println!(
+									"TrustedCall::guess_the_number::guess sender: {:?}, guess: {}",
+									sender, guess,
 								);
 							},
 							_ => println!("{:?}", call),

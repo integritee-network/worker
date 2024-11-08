@@ -224,8 +224,16 @@ pub fn store_note(
 	call: TrustedCall,
 	link_to: Vec<AccountId>,
 ) -> Result<(), StfError> {
-	ita_sgx_runtime::NotesCall::<Runtime>::note_trusted_call { link_to, payload: call.encode() }
-		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sender.clone()))
-		.map_err(|e| StfError::Dispatch(format!("Store note error: {:?}", e.error)))?;
+	// i.e. unshielding can go to self or to other. make sure we don't duplicate links
+	let mut unique_links = link_to.clone();
+	unique_links.sort_unstable();
+	unique_links.dedup();
+
+	ita_sgx_runtime::NotesCall::<Runtime>::note_trusted_call {
+		link_to: unique_links,
+		payload: call.encode(),
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sender.clone()))
+	.map_err(|e| StfError::Dispatch(format!("Store note error: {:?}", e.error)))?;
 	Ok(())
 }
