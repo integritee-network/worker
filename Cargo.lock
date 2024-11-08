@@ -2582,6 +2582,7 @@ dependencies = [
  "pallet-balances",
  "pallet-enclave-bridge",
  "pallet-evm",
+ "pallet-notes",
  "pallet-sidechain",
  "pallet-teeracle",
  "pallet-teerex",

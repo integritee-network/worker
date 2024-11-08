@@ -43,6 +43,9 @@ pub struct TransferCommand {
 
 	/// amount to be transferred
 	amount: Balance,
+
+	/// an optional note for the recipient to pass along with the funds
+	note: Option<String>,
 }
 
 impl TransferCommand {
@@ -61,10 +64,20 @@ impl TransferCommand {
             self.amount,
             nonce, mrenclave.to_base58(), shard.0.to_base58()
         );
-		let top: TrustedOperation<TrustedCallSigned, Getter> =
+		let top: TrustedOperation<TrustedCallSigned, Getter> = if let Some(note) = &self.note {
+			TrustedCall::balance_transfer_with_note(
+				from.public().into(),
+				to,
+				self.amount,
+				note.as_bytes().into(),
+			)
+			.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
+			.into_trusted_operation(trusted_args.direct)
+		} else {
 			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
+				.into_trusted_operation(trusted_args.direct)
+		};
 
 		if trusted_args.direct {
 			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)

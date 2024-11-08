@@ -59,6 +59,7 @@ itp-time-utils = { path = "../core-primitives/time-utils" }
 itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
 its-primitives = { path = "../sidechain/primitives" }
+pallet-notes = { path = "../app-libs/sgx-runtime/pallets/notes" }
 
 [features]
 default = []
