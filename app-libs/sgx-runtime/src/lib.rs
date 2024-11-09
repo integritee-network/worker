@@ -316,6 +316,8 @@ impl pallet_notes::Config for Runtime {
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
 	type MaxNoteSize = ConstU32<512>;
+	type MaxBucketSize = ConstU32<51200>;
+	type MaxTotalSize = ConstU32<5_120_000>;
 }
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]

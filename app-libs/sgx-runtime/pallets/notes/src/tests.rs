@@ -91,7 +91,7 @@ fn note_trusted_call_works() {
 		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
 		assert_eq!(Notes::notes(0, 0), Some(TrustedNote::TrustedCall(call.encode())));
 		let bucket = Notes::buckets(0).unwrap();
-		assert_eq!(bucket.bytes, call.encode().len() as u32);
+		assert_eq!(bucket.bytes, call.encode().len() as u32 + 3);
 
 		let charlie = AccountKeyring::Charlie.to_account_id();
 		let call2 = TrustedCall::balance_transfer(charlie.clone(), alice.clone(), 42);

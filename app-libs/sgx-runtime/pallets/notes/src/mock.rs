@@ -79,6 +79,8 @@ impl dut::Config for Test {
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
 	type MaxNoteSize = ConstU32<512>;
+	type MaxBucketSize = ConstU32<5120>;
+	type MaxTotalSize = ConstU32<51_200>;
 }
 
 parameter_types! {

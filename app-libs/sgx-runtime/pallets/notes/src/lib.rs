@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{pallet_prelude::Get, traits::Currency};
+use frame_support::{dispatch::DispatchResult, ensure, pallet_prelude::Get, traits::Currency};
 pub use pallet::*;
 use scale_info::TypeInfo;
-
+use sp_runtime::Saturating;
 use sp_std::{vec, vec::Vec};
 
 pub type BalanceOf<T> =
@@ -52,6 +52,14 @@ pub mod pallet {
 		/// max encoded length of note. a typical trusted call is expected to be 3x32 byte + 256 byte for utf8 content
 		#[pallet::constant]
 		type MaxNoteSize: Get<u32>;
+
+		/// max size of a bucket in bytes
+		#[pallet::constant]
+		type MaxBucketSize: Get<u32>;
+
+		/// max size of all persisted buckets in bytes
+		#[pallet::constant]
+		type MaxTotalSize: Get<u32>;
 	}
 
 	#[pallet::error]
@@ -60,11 +68,24 @@ pub mod pallet {
 		Overflow,
 		TooManyLinkedAccounts,
 		NoteTooLong,
+		EnforceRetentionLimitFailed,
 	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn last_note_index)]
 	pub(super) type LastNoteIndex<T: Config> = StorageValue<_, NoteIndex, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn last_bucket_index)]
+	pub(super) type LastBucketIndex<T: Config> = StorageValue<_, BucketIndex, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn first_bucket_index)]
+	pub(super) type FirstBucketIndex<T: Config> = StorageValue<_, BucketIndex, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn closed_buckets_size)]
+	pub(super) type ClosedBucketsSize<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn buckets)]
@@ -110,28 +131,77 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
-			ensure!(payload.len() <= T::MaxNoteSize::get() as usize, Error::<T>::NoteTooLong);
-			let bucket_index = 0; // todo
-			let mut bucket =
-				Self::buckets(bucket_index).unwrap_or(BucketInfo { index: 0, bytes: 0 });
-			bucket.bytes += payload.len() as u32;
-			let note_index = if let Some(index) = Self::last_note_index() {
-				index.checked_add(1).ok_or(Error::<T>::Overflow)?
-			} else {
-				0
-			};
-			<Notes<T>>::insert(bucket_index, note_index, TrustedNote::TrustedCall(payload));
+
+			let (bucket_index, note_index) = Self::store_note(TrustedNote::TrustedCall(payload))?;
+
 			for account in link_to {
 				<NotesLookup<T>>::mutate(bucket_index, account, |v| v.push(note_index));
 			}
-			<Buckets<T>>::insert(bucket_index, bucket);
-			<LastNoteIndex<T>>::put(note_index);
 			Ok(().into())
 		}
 	}
 }
 
-impl<T: Config> Pallet<T> where sp_core::H256: From<<T as frame_system::Config>::Hash> {}
+impl<T: Config> Pallet<T> {
+	fn store_note(note: TrustedNote) -> Result<(BucketIndex, NoteIndex), Error<T>> {
+		let bytes = note.encoded_size() as u32;
+		let mut bucket = Self::get_bucket_with_room_for(bytes)?;
+
+		let note_index = if let Some(index) = Self::last_note_index() {
+			index.checked_add(1).ok_or(Error::<T>::Overflow)?
+		} else {
+			0
+		};
+		bucket.bytes = bucket.bytes.saturating_add(bytes as u32);
+		<Buckets<T>>::insert(bucket.index, bucket);
+		<Notes<T>>::insert(bucket.index, note_index, note);
+
+		Ok((bucket.index, note_index))
+	}
+	fn get_bucket_with_room_for(free: u32) -> Result<BucketInfo, Error<T>> {
+		ensure!(free < T::MaxNoteSize::get(), Error::<T>::NoteTooLong);
+		let new_bucket_index = if let Some(bucket_index) = Self::last_bucket_index() {
+			if let Some(bucket) = Self::buckets(bucket_index) {
+				if bucket.bytes < T::MaxBucketSize::get() {
+					return Ok(bucket)
+				}
+			}
+			bucket_index.saturating_add(1)
+		} else {
+			0
+		};
+		<LastBucketIndex<T>>::put(new_bucket_index);
+		Self::new_bucket(new_bucket_index)
+	}
+
+	fn new_bucket(index: BucketIndex) -> Result<BucketInfo, Error<T>> {
+		let bucket = BucketInfo { index, bytes: 0 };
+		Self::enforce_retention_limits(index)?;
+		Ok(bucket)
+	}
+
+	fn enforce_retention_limits(stop_at_bucket_index: BucketIndex) -> Result<(), Error<T>> {
+		if Self::closed_buckets_size() + T::MaxBucketSize::get() < T::MaxTotalSize::get() {
+			return Ok(())
+		};
+		if let Some(bi) = Self::first_bucket_index() {
+			if bi >= stop_at_bucket_index {
+				return Ok(())
+			};
+			let purged_bucket_size = Self::buckets(bi).map(|b| b.bytes).unwrap_or(0);
+			<Buckets<T>>::remove(bi);
+			<Notes<T>>::clear_prefix(bi, u32::MAX, None);
+			<NotesLookup<T>>::clear_prefix(bi, u32::MAX, None);
+			<ClosedBucketsSize<T>>::mutate(|s| s.saturating_sub(purged_bucket_size));
+			<FirstBucketIndex<T>>::put(bi.saturating_add(1));
+		} else {
+			return Err(Error::<T>::EnforceRetentionLimitFailed)
+		};
+		// when limits change, it may not be enough to purge one bucket only
+		Self::enforce_retention_limits(stop_at_bucket_index)?;
+		Ok(())
+	}
+}
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
