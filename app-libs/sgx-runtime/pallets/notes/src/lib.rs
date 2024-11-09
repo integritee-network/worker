@@ -39,9 +39,9 @@ pub enum TrustedNote {
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 pub struct TimestampedTrustedNote<Moment> {
-	timestamp: Moment,
-	version: u16,
-	note: TrustedNote,
+	pub timestamp: Moment,
+	pub version: u16,
+	pub note: TrustedNote,
 }
 
 #[frame_support::pallet]

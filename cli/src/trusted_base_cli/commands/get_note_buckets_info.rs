@@ -20,6 +20,7 @@ use crate::{
 };
 use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
+use itp_types::Moment;
 use pallet_notes::BucketInfo;
 
 #[derive(Parser)]
@@ -30,7 +31,7 @@ impl GetNoteBucketsInfoCommand {
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
 			PublicGetter::note_buckets_info,
 		));
-		let (first, last): (Option<BucketInfo>, Option<BucketInfo>) =
+		let (first, last): (Option<BucketInfo<Moment>>, Option<BucketInfo<Moment>>) =
 			perform_trusted_operation(cli, trusted_args, &top).unwrap();
 		println!("first bucket: {:?}", first);
 		println!("last bucket: {:?}", last);

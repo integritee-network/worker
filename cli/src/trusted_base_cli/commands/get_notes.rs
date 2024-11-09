@@ -18,14 +18,16 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
+use chrono::{DateTime, Local, NaiveDateTime};
 use codec::Decode;
 use ita_stf::{
 	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
 	TrustedGetter,
 };
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use itp_types::Moment;
 use log::error;
-use pallet_notes::{BucketIndex, TrustedNote};
+use pallet_notes::{BucketIndex, TimestampedTrustedNote, TrustedNote};
 use sp_core::Pair;
 
 #[derive(Parser)]
@@ -43,15 +45,26 @@ impl GetNotesCommand {
 			TrustedGetter::notes_for(who.public().into(), self.bucket_index)
 				.sign(&KeyPair::Sr25519(Box::new(who))),
 		));
-		let notes = perform_trusted_operation::<Vec<TrustedNote>>(cli, trusted_args, &top).unwrap();
-		for note in notes.clone() {
-			match note {
+		let notes = perform_trusted_operation::<Vec<TimestampedTrustedNote<Moment>>>(
+			cli,
+			trusted_args,
+			&top,
+		)
+		.unwrap();
+		for tnote in notes.clone() {
+			let naive_datetime =
+				NaiveDateTime::from_timestamp_millis(tnote.timestamp.try_into().unwrap()).unwrap();
+			let datetime: DateTime<Local> =
+				DateTime::from_utc(naive_datetime, Local::now().offset().clone());
+			let datetime_str = datetime.format("%Y-%m-%d %H:%M:%S");
+			match tnote.note {
 				TrustedNote::TrustedCall(encoded_call) => {
 					if let Ok(call) = TrustedCall::decode(&mut encoded_call.as_slice()) {
 						match call {
 							TrustedCall::balance_transfer_with_note(from, to, amount, msg) => {
 								println!(
-									"TrustedCall::balance_transfer_with_note from: {:?}, to: {:?}, amount: {}  msg: {}",
+									"[{}] TrustedCall::balance_transfer_with_note from: {:?}, to: {:?}, amount: {}  msg: {}",
+									datetime_str,
 									from,
 									to,
 									amount,
@@ -60,7 +73,8 @@ impl GetNotesCommand {
 							},
 							TrustedCall::balance_transfer(from, to, amount) => {
 								println!(
-									"TrustedCall::balance_transfer from: {:?}, to: {:?}, amount: {}",
+									"[{}] TrustedCall::balance_transfer from: {:?}, to: {:?}, amount: {}",
+									datetime_str,
 									from,
 									to,
 									amount
@@ -68,7 +82,8 @@ impl GetNotesCommand {
 							},
 							TrustedCall::balance_unshield(from, to, amount, shard) => {
 								println!(
-									"TrustedCall::balance_unshield from: {:?}, to: {:?}, amount: {}, shard: {}",
+									"[{}] TrustedCall::balance_unshield from: {:?}, to: {:?}, amount: {}, shard: {}",
+									datetime_str,
 									from,
 									to,
 									amount,
@@ -77,7 +92,8 @@ impl GetNotesCommand {
 							},
 							TrustedCall::balance_shield(_, to, amount, parentchain_id) => {
 								println!(
-									"TrustedCall::balance_shield from: {:?}, to: {:?}, amount: {}",
+									"[{}] TrustedCall::balance_shield from: {:?}, to: {:?}, amount: {}",
+									datetime_str,
 									parentchain_id, to, amount
 								);
 							},
@@ -86,17 +102,18 @@ impl GetNotesCommand {
 								guess,
 							)) => {
 								println!(
-									"TrustedCall::guess_the_number::guess sender: {:?}, guess: {}",
+									"[{}] TrustedCall::guess_the_number::guess sender: {:?}, guess: {}",
+									datetime_str,
 									sender, guess,
 								);
 							},
-							_ => println!("{:?}", call),
+							_ => println!("[{}] {:?}", datetime_str, call),
 						}
 					} else {
 						error!("failed to decode note")
 					}
 				},
-				_ => println!("{:?}", note),
+				_ => println!("{:?}", tnote.note),
 			}
 		}
 		Ok(CliResultOk::Notes { notes })
