@@ -32,6 +32,12 @@ pub enum TrustedNote {
 	SgxRuntimeEvent(Vec<u8>),
 }
 
+#[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
+pub struct TimestampedTrustedNote<T: pallet_timestamp::Config> {
+	timestamp: <T as pallet_timestamp::Config>::Moment,
+	note: TrustedNote,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -103,7 +109,7 @@ pub mod pallet {
 		BucketIndex,
 		Blake2_128Concat,
 		NoteIndex,
-		TrustedNote,
+		TimestampedTrustedNote<T>,
 		OptionQuery,
 	>;
 
@@ -134,8 +140,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
-
-			let (bucket_index, note_index) = Self::store_note(TrustedNote::TrustedCall(payload))?;
+			let note = TimestampedTrustedNote::<T> {
+				timestamp: Timestamp::<T>::get(),
+				note: TrustedNote::TrustedCall(payload),
+			};
+			let (bucket_index, note_index) = Self::store_note(note)?;
 
 			for account in link_to {
 				<NotesLookup<T>>::mutate(bucket_index, account, |v| v.push(note_index));
@@ -146,7 +155,7 @@ pub mod pallet {
 }
 
 impl<T: Config + TypeInfo> Pallet<T> {
-	fn store_note(note: TrustedNote) -> Result<(BucketIndex, NoteIndex), Error<T>> {
+	fn store_note(note: TimestampedTrustedNote<T>) -> Result<(BucketIndex, NoteIndex), Error<T>> {
 		let bytes = note.encoded_size() as u32;
 		let mut bucket = Self::get_bucket_with_room_for(bytes)?;
 

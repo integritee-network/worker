@@ -14,7 +14,9 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, BalanceOf, BucketInfo, Buckets, Config, Error, TrustedNote};
+use crate::{
+	mock::*, BalanceOf, BucketInfo, Buckets, Config, Error, TimestampedTrustedNote, TrustedNote,
+};
 use codec::Encode;
 use frame_support::{
 	assert_err, assert_ok,
@@ -148,6 +150,8 @@ fn enforce_retention_limits_works() {
 fn note_trusted_call_works() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(0);
+		let now: u64 = 234;
+		set_timestamp(now);
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
 		let call = TrustedCall::balance_transfer(bob.clone(), alice.clone(), 0);
@@ -158,9 +162,15 @@ fn note_trusted_call_works() {
 		));
 		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0]);
 		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
-		assert_eq!(Notes::notes(0, 0), Some(TrustedNote::TrustedCall(call.encode())));
+		assert_eq!(
+			Notes::notes(0, 0),
+			Some(TimestampedTrustedNote::<Test> {
+				timestamp: now,
+				note: TrustedNote::TrustedCall(call.encode())
+			})
+		);
 		let bucket = Notes::buckets(0).unwrap();
-		assert_eq!(bucket.bytes, call.encode().len() as u32 + 3);
+		assert_eq!(bucket.bytes, call.encode().len() as u32 + 11);
 
 		let charlie = AccountKeyring::Charlie.to_account_id();
 		let call2 = TrustedCall::balance_transfer(charlie.clone(), alice.clone(), 42);
@@ -172,7 +182,13 @@ fn note_trusted_call_works() {
 		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0, 1]);
 		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
 		assert_eq!(Notes::notes_lookup(0, charlie.clone()), vec![1]);
-		assert_eq!(Notes::notes(0, 1), Some(TrustedNote::TrustedCall(call2.encode())));
+		assert_eq!(
+			Notes::notes(0, 1),
+			Some(TimestampedTrustedNote::<Test> {
+				timestamp: now,
+				note: TrustedNote::TrustedCall(call2.encode())
+			})
+		);
 
 		let call3 = TrustedCall::noop(charlie.clone());
 		assert_ok!(Notes::note_trusted_call(
@@ -183,6 +199,12 @@ fn note_trusted_call_works() {
 		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0, 1]);
 		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
 		assert_eq!(Notes::notes_lookup(0, charlie.clone()), vec![1, 2]);
-		assert_eq!(Notes::notes(0, 2), Some(TrustedNote::TrustedCall(call3.encode())));
+		assert_eq!(
+			Notes::notes(0, 2),
+			Some(TimestampedTrustedNote::<Test> {
+				timestamp: now,
+				note: TrustedNote::TrustedCall(call3.encode())
+			})
+		);
 	})
 }
