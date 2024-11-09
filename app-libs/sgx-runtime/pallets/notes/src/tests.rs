@@ -165,7 +165,7 @@ fn note_trusted_call_works() {
 		let expected_note = TimestampedTrustedNote::<Moment> {
 			timestamp: now,
 			version: 1,
-			note: TrustedNote::TrustedCall(call.encode()),
+			note: TrustedNote::SuccessfulTrustedCall(call.encode()),
 		};
 		assert_eq!(Notes::notes(0, 0), Some(expected_note.clone()));
 		let bucket = Notes::buckets(0).unwrap();
@@ -186,7 +186,7 @@ fn note_trusted_call_works() {
 			Some(TimestampedTrustedNote::<Moment> {
 				timestamp: now,
 				version: 1,
-				note: TrustedNote::TrustedCall(call2.encode())
+				note: TrustedNote::SuccessfulTrustedCall(call2.encode())
 			})
 		);
 
@@ -204,7 +204,7 @@ fn note_trusted_call_works() {
 			Some(TimestampedTrustedNote::<Moment> {
 				timestamp: now,
 				version: 1,
-				note: TrustedNote::TrustedCall(call3.encode())
+				note: TrustedNote::SuccessfulTrustedCall(call3.encode())
 			})
 		);
 	})

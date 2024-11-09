@@ -15,8 +15,8 @@
 
 */
 use crate::{
-	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
-	CliResultOk,
+	command_utils::format_moment, trusted_cli::TrustedCli,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
@@ -31,10 +31,24 @@ impl GetNoteBucketsInfoCommand {
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
 			PublicGetter::note_buckets_info,
 		));
-		let (first, last): (Option<BucketInfo<Moment>>, Option<BucketInfo<Moment>>) =
+		let (maybe_first, maybe_last): (Option<BucketInfo<Moment>>, Option<BucketInfo<Moment>>) =
 			perform_trusted_operation(cli, trusted_args, &top).unwrap();
-		println!("first bucket: {:?}", first);
-		println!("last bucket: {:?}", last);
-		Ok(CliResultOk::NoteBucketsInfo { first, last })
+		if let Some(bucket) = maybe_first {
+			println!(
+				"first bucket : index {}, bytes: {}, begins at {}",
+				bucket.index,
+				bucket.bytes,
+				format_moment(bucket.begins_at)
+			);
+		}
+		if let Some(bucket) = maybe_last {
+			println!(
+				"last bucket  : index {}, bytes: {}, ends at {}",
+				bucket.index,
+				bucket.bytes,
+				format_moment(bucket.ends_at)
+			);
+		}
+		Ok(CliResultOk::NoteBucketsInfo { maybe_first, maybe_last })
 	}
 }

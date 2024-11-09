@@ -123,8 +123,8 @@ pub enum CliResultOk {
 		info: ParentchainsInfo,
 	},
 	NoteBucketsInfo {
-		first: Option<BucketInfo<Moment>>,
-		last: Option<BucketInfo<Moment>>,
+		maybe_first: Option<BucketInfo<Moment>>,
+		maybe_last: Option<BucketInfo<Moment>>,
 	},
 	Notes {
 		notes: Vec<TimestampedTrustedNote<Moment>>,

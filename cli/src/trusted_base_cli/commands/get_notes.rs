@@ -15,10 +15,11 @@
 
 */
 use crate::{
-	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+	command_utils::format_moment, trusted_cli::TrustedCli,
+	trusted_command_utils::get_pair_from_str, trusted_operation::perform_trusted_operation, Cli,
+	CliResult, CliResultOk,
 };
-use chrono::{DateTime, Local, NaiveDateTime};
+
 use codec::Decode;
 use ita_stf::{
 	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
@@ -52,13 +53,9 @@ impl GetNotesCommand {
 		)
 		.unwrap();
 		for tnote in notes.clone() {
-			let naive_datetime =
-				NaiveDateTime::from_timestamp_millis(tnote.timestamp.try_into().unwrap()).unwrap();
-			let datetime: DateTime<Local> =
-				DateTime::from_utc(naive_datetime, Local::now().offset().clone());
-			let datetime_str = datetime.format("%Y-%m-%d %H:%M:%S");
+			let datetime_str = format_moment(tnote.timestamp);
 			match tnote.note {
-				TrustedNote::TrustedCall(encoded_call) => {
+				TrustedNote::SuccessfulTrustedCall(encoded_call) => {
 					if let Ok(call) = TrustedCall::decode(&mut encoded_call.as_slice()) {
 						match call {
 							TrustedCall::balance_transfer_with_note(from, to, amount, msg) => {
@@ -110,7 +107,7 @@ impl GetNotesCommand {
 							_ => println!("[{}] {:?}", datetime_str, call),
 						}
 					} else {
-						error!("failed to decode note")
+						error!("failed to decode note. check version")
 					}
 				},
 				_ => println!("{:?}", tnote.note),

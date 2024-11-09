@@ -16,10 +16,10 @@ pub type NoteIndex = u64;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 pub struct BucketInfo<Moment> {
-	index: BucketIndex,
-	bytes: u32,
-	begins_at: Moment,
-	ends_at: Moment,
+	pub index: BucketIndex,
+	pub bytes: u32,
+	pub begins_at: Moment,
+	pub ends_at: Moment,
 }
 
 // Bump this version to indicate type changes breaking downstream decoding of wrapped payloads in TrustedNote
@@ -28,9 +28,9 @@ pub const NOTE_VERSION: u16 = 1;
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 /// opaque payloads are fine as it will never be necessary to act on the content within the runtime
 pub enum TrustedNote {
-	/// opaque trusted call. it's up to the client to care about decoding potentially
+	/// opaque trusted call which executed successfully. it's up to the client to care about decoding potentially
 	/// different versions
-	TrustedCall(Vec<u8>),
+	SuccessfulTrustedCall(Vec<u8>),
 	/// opaque because we may persist the event log across runtime upgrades without storage migration
 	SgxRuntimeEvent(Vec<u8>),
 	/// plain utf8 string
@@ -149,7 +149,7 @@ pub mod pallet {
 			let note = TimestampedTrustedNote::<T::Moment> {
 				timestamp: Timestamp::<T>::get(),
 				version: NOTE_VERSION,
-				note: TrustedNote::TrustedCall(payload),
+				note: TrustedNote::SuccessfulTrustedCall(payload),
 			};
 			let (bucket_index, note_index) = Self::store_note(note)?;
 
@@ -165,6 +165,7 @@ impl<T: Config> Pallet<T> {
 	fn store_note(
 		note: TimestampedTrustedNote<T::Moment>,
 	) -> Result<(BucketIndex, NoteIndex), Error<T>> {
+		let now = Timestamp::<T>::get();
 		let bytes = note.encoded_size() as u32;
 		let mut bucket = Self::get_bucket_with_room_for(bytes)?;
 
@@ -173,7 +174,8 @@ impl<T: Config> Pallet<T> {
 		} else {
 			0
 		};
-		bucket.bytes = bucket.bytes.saturating_add(bytes as u32);
+		bucket.bytes = bucket.bytes.saturating_add(bytes);
+		bucket.ends_at = now;
 		<Buckets<T>>::insert(bucket.index, bucket.clone());
 		<Notes<T>>::insert(bucket.index, note_index, note);
 		<LastNoteIndex<T>>::put(note_index);
