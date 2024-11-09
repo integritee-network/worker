@@ -162,15 +162,14 @@ fn note_trusted_call_works() {
 		));
 		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0]);
 		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
-		assert_eq!(
-			Notes::notes(0, 0),
-			Some(TimestampedTrustedNote::<Test> {
-				timestamp: now,
-				note: TrustedNote::TrustedCall(call.encode())
-			})
-		);
+		let expected_note = TimestampedTrustedNote::<Test> {
+			timestamp: now,
+			version: 1,
+			note: TrustedNote::TrustedCall(call.encode()),
+		};
+		assert_eq!(Notes::notes(0, 0), Some(expected_note.clone()));
 		let bucket = Notes::buckets(0).unwrap();
-		assert_eq!(bucket.bytes, call.encode().len() as u32 + 11);
+		assert_eq!(bucket.bytes, expected_note.encoded_size() as u32);
 
 		let charlie = AccountKeyring::Charlie.to_account_id();
 		let call2 = TrustedCall::balance_transfer(charlie.clone(), alice.clone(), 42);
@@ -186,6 +185,7 @@ fn note_trusted_call_works() {
 			Notes::notes(0, 1),
 			Some(TimestampedTrustedNote::<Test> {
 				timestamp: now,
+				version: 1,
 				note: TrustedNote::TrustedCall(call2.encode())
 			})
 		);
@@ -203,6 +203,7 @@ fn note_trusted_call_works() {
 			Notes::notes(0, 2),
 			Some(TimestampedTrustedNote::<Test> {
 				timestamp: now,
+				version: 1,
 				note: TrustedNote::TrustedCall(call3.encode())
 			})
 		);

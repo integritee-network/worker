@@ -22,6 +22,9 @@ pub struct BucketInfo<T: pallet_timestamp::Config> {
 	ends_at: <T as pallet_timestamp::Config>::Moment,
 }
 
+// Bump this version to indicate type changes breaking downstream decoding of wrapped payloads in TrustedNote
+pub const NOTE_VERSION: u16 = 1;
+
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 /// opaque payloads are fine as it will never be necessary to act on the content within the runtime
 pub enum TrustedNote {
@@ -30,11 +33,14 @@ pub enum TrustedNote {
 	TrustedCall(Vec<u8>),
 	/// opaque because we may persist the event log across runtime upgrades without storage migration
 	SgxRuntimeEvent(Vec<u8>),
+	/// plain utf8 string
+	String(Vec<u8>),
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
 pub struct TimestampedTrustedNote<T: pallet_timestamp::Config> {
 	timestamp: <T as pallet_timestamp::Config>::Moment,
+	version: u16,
 	note: TrustedNote,
 }
 
@@ -142,6 +148,7 @@ pub mod pallet {
 			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
 			let note = TimestampedTrustedNote::<T> {
 				timestamp: Timestamp::<T>::get(),
+				version: NOTE_VERSION,
 				note: TrustedNote::TrustedCall(payload),
 			};
 			let (bucket_index, note_index) = Self::store_note(note)?;
