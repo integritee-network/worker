@@ -195,7 +195,7 @@ impl<T: Config> Pallet<T> {
 			<Buckets<T>>::remove(bi);
 			<Notes<T>>::clear_prefix(bi, u32::MAX, None);
 			<NotesLookup<T>>::clear_prefix(bi, u32::MAX, None);
-			<ClosedBucketsSize<T>>::mutate(|s| s.saturating_sub(purged_bucket_size));
+			<ClosedBucketsSize<T>>::mutate(|s| *s = s.saturating_sub(purged_bucket_size));
 			<FirstBucketIndex<T>>::put(bi.saturating_add(1));
 		} else {
 			return Err(Error::<T>::EnforceRetentionLimitFailed)

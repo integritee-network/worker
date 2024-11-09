@@ -109,7 +109,8 @@ fn get_bucket_with_room_for_works() {
 #[test]
 fn enforce_retention_limits_works() {
 	new_test_ext().execute_with(|| {
-		let bucket = BucketInfo { index: 0, bytes: MaxBucketSize::get() - 500 };
+		let first_bucket_size = MaxBucketSize::get() - 500;
+		let bucket = BucketInfo { index: 0, bytes: first_bucket_size };
 		<Buckets<Test>>::insert(0, bucket);
 		<LastBucketIndex<Test>>::put(0);
 		<FirstBucketIndex<Test>>::put(0);
@@ -117,15 +118,18 @@ fn enforce_retention_limits_works() {
 		assert_eq!(Notes::last_bucket_index(), Some(0));
 		assert_eq!(Notes::first_bucket_index(), Some(0));
 
-		<ClosedBucketsSize<Test>>::put(MaxTotalSize::get() - MaxBucketSize::get() + 1);
+		let closed_buckets_size = MaxTotalSize::get() - MaxBucketSize::get() + 1;
+		<ClosedBucketsSize<Test>>::put(closed_buckets_size);
 
 		assert_eq!(Notes::get_bucket_with_room_for(500).unwrap().index, 0);
+
 		let new_bucket = Notes::get_bucket_with_room_for(512).unwrap();
 		assert_eq!(new_bucket.index, 1);
 		assert_eq!(new_bucket.bytes, 0);
 		assert_eq!(Notes::last_bucket_index(), Some(1));
 		assert_eq!(Notes::first_bucket_index(), Some(1));
 		assert!(Notes::buckets(0).is_none());
+		assert_eq!(Notes::closed_buckets_size(), closed_buckets_size - first_bucket_size);
 	});
 }
 
