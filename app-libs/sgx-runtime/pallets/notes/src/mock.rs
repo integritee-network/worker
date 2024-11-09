@@ -65,7 +65,7 @@ frame_support::construct_runtime!(
 		System: frame_system::{Pallet, Call, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Notes: dut::{Pallet, Call},
+		Notes: dut::{Pallet, Call, Storage},
 	}
 );
 

@@ -3,6 +3,7 @@
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchResult, ensure, pallet_prelude::Get, traits::Currency};
 pub use pallet::*;
+use pallet_timestamp::Pallet as Timestamp;
 use scale_info::TypeInfo;
 use sp_runtime::Saturating;
 use sp_std::{vec, vec::Vec};
@@ -14,9 +15,11 @@ pub type BucketIndex = u32;
 pub type NoteIndex = u64;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
-pub struct BucketInfo {
+pub struct BucketInfo<T: pallet_timestamp::Config> {
 	index: BucketIndex,
 	bytes: u32,
+	begins_at: <T as pallet_timestamp::Config>::Moment,
+	ends_at: <T as pallet_timestamp::Config>::Moment,
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
@@ -43,7 +46,7 @@ pub mod pallet {
 
 	/// Configuration trait.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_timestamp::Config {
+	pub trait Config: frame_system::Config + pallet_timestamp::Config + TypeInfo {
 		#[pallet::constant]
 		type MomentsPerDay: Get<Self::Moment>;
 
@@ -90,7 +93,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn buckets)]
 	pub(super) type Buckets<T: Config> =
-		StorageMap<_, Blake2_128Concat, BucketIndex, BucketInfo, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, BucketIndex, BucketInfo<T>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn notes)]
@@ -142,7 +145,7 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config> Pallet<T> {
+impl<T: Config + TypeInfo> Pallet<T> {
 	fn store_note(note: TrustedNote) -> Result<(BucketIndex, NoteIndex), Error<T>> {
 		let bytes = note.encoded_size() as u32;
 		let mut bucket = Self::get_bucket_with_room_for(bytes)?;
@@ -153,12 +156,12 @@ impl<T: Config> Pallet<T> {
 			0
 		};
 		bucket.bytes = bucket.bytes.saturating_add(bytes as u32);
-		<Buckets<T>>::insert(bucket.index, bucket);
+		<Buckets<T>>::insert(bucket.index, bucket.clone());
 		<Notes<T>>::insert(bucket.index, note_index, note);
 		<LastNoteIndex<T>>::put(note_index);
 		Ok((bucket.index, note_index))
 	}
-	fn get_bucket_with_room_for(free: u32) -> Result<BucketInfo, Error<T>> {
+	fn get_bucket_with_room_for(free: u32) -> Result<BucketInfo<T>, Error<T>> {
 		ensure!(free <= T::MaxNoteSize::get(), Error::<T>::NoteTooLong);
 		if Self::first_bucket_index().is_none() {
 			<FirstBucketIndex<T>>::put(0);
@@ -177,8 +180,9 @@ impl<T: Config> Pallet<T> {
 		Self::new_bucket(new_bucket_index)
 	}
 
-	fn new_bucket(index: BucketIndex) -> Result<BucketInfo, Error<T>> {
-		let bucket = BucketInfo { index, bytes: 0 };
+	fn new_bucket(index: BucketIndex) -> Result<BucketInfo<T>, Error<T>> {
+		let now = Timestamp::<T>::get();
+		let bucket = BucketInfo::<T> { index, bytes: 0, begins_at: now, ends_at: now };
 		Self::enforce_retention_limits(index)?;
 		Ok(bucket)
 	}

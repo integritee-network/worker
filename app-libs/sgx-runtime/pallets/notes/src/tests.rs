@@ -92,7 +92,12 @@ fn new_bucket_works() {
 #[test]
 fn get_bucket_with_room_for_works() {
 	new_test_ext().execute_with(|| {
-		let bucket = BucketInfo { index: 0, bytes: MaxBucketSize::get() - 500 };
+		let bucket = BucketInfo {
+			index: 0,
+			bytes: MaxBucketSize::get() - 500,
+			begins_at: Default::default(),
+			ends_at: Default::default(),
+		};
 		<Buckets<Test>>::insert(0, bucket);
 		<LastBucketIndex<Test>>::put(0);
 		assert_eq!(Notes::get_bucket_with_room_for(500).unwrap().index, 0);
@@ -110,7 +115,13 @@ fn get_bucket_with_room_for_works() {
 fn enforce_retention_limits_works() {
 	new_test_ext().execute_with(|| {
 		let first_bucket_size = MaxBucketSize::get() - 500;
-		let bucket = BucketInfo { index: 0, bytes: first_bucket_size };
+		let bucket = BucketInfo {
+			index: 0,
+			bytes: first_bucket_size,
+			begins_at: Default::default(),
+			ends_at: Default::default(),
+		};
+
 		<Buckets<Test>>::insert(0, bucket);
 		<LastBucketIndex<Test>>::put(0);
 		<FirstBucketIndex<Test>>::put(0);
