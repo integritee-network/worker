@@ -15,11 +15,11 @@ pub type BucketIndex = u32;
 pub type NoteIndex = u64;
 
 #[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
-pub struct BucketInfo<T: pallet_timestamp::Config> {
+pub struct BucketInfo<Moment> {
 	index: BucketIndex,
 	bytes: u32,
-	begins_at: <T as pallet_timestamp::Config>::Moment,
-	ends_at: <T as pallet_timestamp::Config>::Moment,
+	begins_at: Moment,
+	ends_at: Moment,
 }
 
 // Bump this version to indicate type changes breaking downstream decoding of wrapped payloads in TrustedNote
@@ -38,8 +38,8 @@ pub enum TrustedNote {
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
-pub struct TimestampedTrustedNote<T: pallet_timestamp::Config> {
-	timestamp: <T as pallet_timestamp::Config>::Moment,
+pub struct TimestampedTrustedNote<Moment> {
+	timestamp: Moment,
 	version: u16,
 	note: TrustedNote,
 }
@@ -58,7 +58,7 @@ pub mod pallet {
 
 	/// Configuration trait.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_timestamp::Config + TypeInfo {
+	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		#[pallet::constant]
 		type MomentsPerDay: Get<Self::Moment>;
 
@@ -105,7 +105,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn buckets)]
 	pub(super) type Buckets<T: Config> =
-		StorageMap<_, Blake2_128Concat, BucketIndex, BucketInfo<T>, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, BucketIndex, BucketInfo<T::Moment>, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn notes)]
@@ -115,7 +115,7 @@ pub mod pallet {
 		BucketIndex,
 		Blake2_128Concat,
 		NoteIndex,
-		TimestampedTrustedNote<T>,
+		TimestampedTrustedNote<T::Moment>,
 		OptionQuery,
 	>;
 
@@ -146,7 +146,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			ensure_signed(origin)?;
 			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
-			let note = TimestampedTrustedNote::<T> {
+			let note = TimestampedTrustedNote::<T::Moment> {
 				timestamp: Timestamp::<T>::get(),
 				version: NOTE_VERSION,
 				note: TrustedNote::TrustedCall(payload),
@@ -161,8 +161,10 @@ pub mod pallet {
 	}
 }
 
-impl<T: Config + TypeInfo> Pallet<T> {
-	fn store_note(note: TimestampedTrustedNote<T>) -> Result<(BucketIndex, NoteIndex), Error<T>> {
+impl<T: Config> Pallet<T> {
+	fn store_note(
+		note: TimestampedTrustedNote<T::Moment>,
+	) -> Result<(BucketIndex, NoteIndex), Error<T>> {
 		let bytes = note.encoded_size() as u32;
 		let mut bucket = Self::get_bucket_with_room_for(bytes)?;
 
@@ -177,7 +179,7 @@ impl<T: Config + TypeInfo> Pallet<T> {
 		<LastNoteIndex<T>>::put(note_index);
 		Ok((bucket.index, note_index))
 	}
-	fn get_bucket_with_room_for(free: u32) -> Result<BucketInfo<T>, Error<T>> {
+	fn get_bucket_with_room_for(free: u32) -> Result<BucketInfo<T::Moment>, Error<T>> {
 		ensure!(free <= T::MaxNoteSize::get(), Error::<T>::NoteTooLong);
 		if Self::first_bucket_index().is_none() {
 			<FirstBucketIndex<T>>::put(0);
@@ -196,9 +198,9 @@ impl<T: Config + TypeInfo> Pallet<T> {
 		Self::new_bucket(new_bucket_index)
 	}
 
-	fn new_bucket(index: BucketIndex) -> Result<BucketInfo<T>, Error<T>> {
+	fn new_bucket(index: BucketIndex) -> Result<BucketInfo<T::Moment>, Error<T>> {
 		let now = Timestamp::<T>::get();
-		let bucket = BucketInfo::<T> { index, bytes: 0, begins_at: now, ends_at: now };
+		let bucket = BucketInfo::<T::Moment> { index, bytes: 0, begins_at: now, ends_at: now };
 		Self::enforce_retention_limits(index)?;
 		Ok(bucket)
 	}

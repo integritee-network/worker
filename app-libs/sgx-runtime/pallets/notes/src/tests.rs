@@ -162,7 +162,7 @@ fn note_trusted_call_works() {
 		));
 		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0]);
 		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
-		let expected_note = TimestampedTrustedNote::<Test> {
+		let expected_note = TimestampedTrustedNote::<Moment> {
 			timestamp: now,
 			version: 1,
 			note: TrustedNote::TrustedCall(call.encode()),
@@ -183,7 +183,7 @@ fn note_trusted_call_works() {
 		assert_eq!(Notes::notes_lookup(0, charlie.clone()), vec![1]);
 		assert_eq!(
 			Notes::notes(0, 1),
-			Some(TimestampedTrustedNote::<Test> {
+			Some(TimestampedTrustedNote::<Moment> {
 				timestamp: now,
 				version: 1,
 				note: TrustedNote::TrustedCall(call2.encode())
@@ -201,7 +201,7 @@ fn note_trusted_call_works() {
 		assert_eq!(Notes::notes_lookup(0, charlie.clone()), vec![1, 2]);
 		assert_eq!(
 			Notes::notes(0, 2),
-			Some(TimestampedTrustedNote::<Test> {
+			Some(TimestampedTrustedNote::<Moment> {
 				timestamp: now,
 				version: 1,
 				note: TrustedNote::TrustedCall(call3.encode())
