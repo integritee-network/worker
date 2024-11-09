@@ -14,14 +14,15 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, BalanceOf, Error, TrustedNote};
+use crate::{mock::*, BalanceOf, BucketInfo, Buckets, Config, Error, TrustedNote};
 use codec::Encode;
 use frame_support::{
 	assert_err, assert_ok,
-	pallet_prelude::DispatchResultWithPostInfo,
+	pallet_prelude::{DispatchResultWithPostInfo, Get},
 	traits::{Currency, Hooks},
 };
 
+use crate::pallet::{ClosedBucketsSize, FirstBucketIndex, LastBucketIndex};
 use ita_stf::TrustedCall;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
@@ -75,6 +76,59 @@ pub fn event_at_index<T: frame_system::Config>(index: usize) -> Option<T::Runtim
 	let frame_system::EventRecord { event, .. } = &events[index];
 	Some(event.clone())
 }
+
+#[test]
+fn new_bucket_works() {
+	new_test_ext().execute_with(|| {
+		let bucket = Notes::new_bucket(0).unwrap();
+		assert_eq!(bucket.index, 0);
+		assert_eq!(bucket.bytes, 0);
+
+		let bucket2 = Notes::new_bucket(1).unwrap();
+		assert_eq!(bucket2.index, 1);
+		assert_eq!(bucket2.bytes, 0);
+	});
+}
+#[test]
+fn get_bucket_with_room_for_works() {
+	new_test_ext().execute_with(|| {
+		let bucket = BucketInfo { index: 0, bytes: MaxBucketSize::get() - 500 };
+		<Buckets<Test>>::insert(0, bucket);
+		<LastBucketIndex<Test>>::put(0);
+		assert_eq!(Notes::get_bucket_with_room_for(500).unwrap().index, 0);
+		assert_eq!(Notes::last_bucket_index(), Some(0));
+		assert_eq!(Notes::first_bucket_index(), Some(0));
+		let new_bucket = Notes::get_bucket_with_room_for(512).unwrap();
+		assert_eq!(new_bucket.index, 1);
+		assert_eq!(new_bucket.bytes, 0);
+		assert_eq!(Notes::last_bucket_index(), Some(1));
+		assert_eq!(Notes::first_bucket_index(), Some(0));
+	});
+}
+
+#[test]
+fn enforce_retention_limits_works() {
+	new_test_ext().execute_with(|| {
+		let bucket = BucketInfo { index: 0, bytes: MaxBucketSize::get() - 500 };
+		<Buckets<Test>>::insert(0, bucket);
+		<LastBucketIndex<Test>>::put(0);
+		<FirstBucketIndex<Test>>::put(0);
+		Notes::enforce_retention_limits(99).unwrap();
+		assert_eq!(Notes::last_bucket_index(), Some(0));
+		assert_eq!(Notes::first_bucket_index(), Some(0));
+
+		<ClosedBucketsSize<Test>>::put(MaxTotalSize::get() - MaxBucketSize::get() + 1);
+
+		assert_eq!(Notes::get_bucket_with_room_for(500).unwrap().index, 0);
+		let new_bucket = Notes::get_bucket_with_room_for(512).unwrap();
+		assert_eq!(new_bucket.index, 1);
+		assert_eq!(new_bucket.bytes, 0);
+		assert_eq!(Notes::last_bucket_index(), Some(1));
+		assert_eq!(Notes::first_bucket_index(), Some(1));
+		assert!(Notes::buckets(0).is_none());
+	});
+}
+
 #[test]
 fn note_trusted_call_works() {
 	new_test_ext().execute_with(|| {

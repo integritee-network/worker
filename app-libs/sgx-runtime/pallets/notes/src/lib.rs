@@ -155,14 +155,17 @@ impl<T: Config> Pallet<T> {
 		bucket.bytes = bucket.bytes.saturating_add(bytes as u32);
 		<Buckets<T>>::insert(bucket.index, bucket);
 		<Notes<T>>::insert(bucket.index, note_index, note);
-
+		<LastNoteIndex<T>>::put(note_index);
 		Ok((bucket.index, note_index))
 	}
 	fn get_bucket_with_room_for(free: u32) -> Result<BucketInfo, Error<T>> {
-		ensure!(free < T::MaxNoteSize::get(), Error::<T>::NoteTooLong);
+		ensure!(free <= T::MaxNoteSize::get(), Error::<T>::NoteTooLong);
+		if Self::first_bucket_index().is_none() {
+			<FirstBucketIndex<T>>::put(0);
+		}
 		let new_bucket_index = if let Some(bucket_index) = Self::last_bucket_index() {
 			if let Some(bucket) = Self::buckets(bucket_index) {
-				if bucket.bytes < T::MaxBucketSize::get() {
+				if bucket.bytes + free <= T::MaxBucketSize::get() {
 					return Ok(bucket)
 				}
 			}
