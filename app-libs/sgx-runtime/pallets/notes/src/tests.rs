@@ -131,18 +131,42 @@ fn enforce_retention_limits_works() {
 		assert_eq!(Notes::last_bucket_index(), Some(0));
 		assert_eq!(Notes::first_bucket_index(), Some(0));
 
+		let second_bucket_size = MaxBucketSize::get() - 100;
+		let bucket = BucketInfo {
+			index: 1,
+			bytes: second_bucket_size,
+			begins_at: Default::default(),
+			ends_at: Default::default(),
+		};
+		<Buckets<Test>>::insert(1, bucket);
+		<LastBucketIndex<Test>>::put(1);
+
+		let third_bucket_size = MaxBucketSize::get() - 100;
+		let bucket = BucketInfo {
+			index: 2,
+			bytes: third_bucket_size,
+			begins_at: Default::default(),
+			ends_at: Default::default(),
+		};
+		<Buckets<Test>>::insert(2, bucket);
+		<LastBucketIndex<Test>>::put(2);
+
 		let closed_buckets_size = MaxTotalSize::get() - MaxBucketSize::get() + 1;
 		<ClosedBucketsSize<Test>>::put(closed_buckets_size);
 
-		assert_eq!(Notes::get_bucket_with_room_for(500).unwrap().index, 0);
+		assert_eq!(Notes::get_bucket_with_room_for(99).unwrap().index, 2);
 
 		let new_bucket = Notes::get_bucket_with_room_for(512).unwrap();
-		assert_eq!(new_bucket.index, 1);
+		assert_eq!(new_bucket.index, 3);
 		assert_eq!(new_bucket.bytes, 0);
-		assert_eq!(Notes::last_bucket_index(), Some(1));
-		assert_eq!(Notes::first_bucket_index(), Some(1));
+		assert_eq!(Notes::last_bucket_index(), Some(3));
+		assert_eq!(Notes::first_bucket_index(), Some(2));
 		assert!(Notes::buckets(0).is_none());
-		assert_eq!(Notes::closed_buckets_size(), closed_buckets_size - first_bucket_size);
+		assert!(Notes::buckets(1).is_none());
+		assert_eq!(
+			Notes::closed_buckets_size(),
+			closed_buckets_size - first_bucket_size - second_bucket_size + third_bucket_size
+		);
 	});
 }
 
