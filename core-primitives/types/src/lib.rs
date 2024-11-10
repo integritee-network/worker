@@ -116,19 +116,21 @@ pub enum WorkerRequest {
 	ChainStorage(Vec<u8>, Option<BlockHash>), // (storage_key, at_block)
 	/// for awareness: we call it unverified because there is no way how the enclave could verify the correctness of the information
 	LatestParentchainHeaderUnverified,
+	NextNonceFor(AccountId),
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq)]
 pub enum WorkerResponse<H: HeaderTrait, V: Encode + Decode> {
 	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 	LatestParentchainHeaderUnverified(H),
+	NextNonce(Option<Nonce>),
 }
 
 impl<H: HeaderTrait> From<WorkerResponse<H, Vec<u8>>> for StorageEntry<Vec<u8>> {
 	fn from(response: WorkerResponse<H, Vec<u8>>) -> Self {
 		match response {
 			WorkerResponse::ChainStorage(key, value, proof) => StorageEntry { key, value, proof },
-			WorkerResponse::LatestParentchainHeaderUnverified(_) => StorageEntry::default(),
+			_ => StorageEntry::default(),
 		}
 	}
 }

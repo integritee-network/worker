@@ -16,6 +16,7 @@
 */
 
 use derive_more::From;
+use itp_types::parentchain::ParentchainId;
 use sgx_types::{sgx_quote3_error_t, sgx_status_t};
 use std::{boxed::Box, result::Result as StdResult, string::String};
 
@@ -53,6 +54,7 @@ pub enum Error {
 	Attestation(itp_attestation_handler::error::Error),
 	Metadata(itp_node_api_metadata::error::Error),
 	BufferError(itp_utils::buffer::BufferError),
+	NonceUpdateFailed(ParentchainId),
 	Other(Box<dyn std::error::Error>),
 }
 

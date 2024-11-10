@@ -22,10 +22,11 @@ use crate::{
 		IntegriteeParentchainTriggeredBlockImportDispatcher,
 		TargetAParentchainTriggeredBlockImportDispatcher,
 		TargetBParentchainTriggeredBlockImportDispatcher,
-		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT,
-		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT,
+		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
+		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
+		GLOBAL_TARGET_A_PARACHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARACHAIN_HANDLER_COMPONENT,
-		GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
+		GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE, GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT,
 	},
 	ocall::OcallApi,
 };
@@ -34,9 +35,10 @@ use codec::{Decode, Input};
 use ita_stf::ParentchainHeader;
 use itc_parentchain_block_import_dispatcher::BlockImportDispatcher;
 use itp_component_container::ComponentGetter;
+use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_types::{
-	parentchain::{GenericMortality, ParentchainId},
+	parentchain::{AccountId, GenericMortality, ParentchainId},
 	WorkerRequest, WorkerResponse,
 };
 use log::*;
@@ -325,4 +327,32 @@ pub(crate) fn try_mortality(blocks_to_live: u64, ocall_api: &OcallApi) -> Generi
 	} else {
 		GenericMortality::immortal()
 	}
+}
+
+/// fetch latest nonce and update nonce cache, considering the tx pool
+pub(crate) fn update_nonce_cache(
+	enclave_account: AccountId,
+	parentchain_id: ParentchainId,
+) -> Result<()> {
+	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
+	let mut nonce_lock = match parentchain_id {
+		ParentchainId::Integritee => GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::TargetA => GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+		ParentchainId::TargetB => GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE.load_for_mutation(),
+	}
+	.map_err(|_| Error::NonceUpdateFailed(parentchain_id))?;
+
+	if let WorkerResponse::NextNonce(Some(nonce)) = ocall_api
+		.worker_request::<ParentchainHeader, Vec<u8>>(
+			[WorkerRequest::NextNonceFor(enclave_account)].into(),
+			&parentchain_id,
+		)?
+		.first()
+		.ok_or_else(|| Error::NonceUpdateFailed(parentchain_id))?
+	{
+		*nonce_lock = Nonce(*nonce);
+		debug!("updated nonce cache from rpc for {:?} to {}", parentchain_id, *nonce);
+		return Ok(())
+	}
+	Err(Error::NonceUpdateFailed(parentchain_id))
 }
