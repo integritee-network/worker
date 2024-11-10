@@ -27,6 +27,8 @@ pub enum StfError {
 	MissingPrivileges(AccountId),
 	#[display(fmt = "Valid enclave signer account is required")]
 	RequireEnclaveSignerAccount,
+	#[display(fmt = "Valid maintainer account is required")]
+	RequireMaintainerAccount,
 	#[display(fmt = "Error dispatching runtime call. {:?}", _0)]
 	Dispatch(String),
 	#[display(fmt = "Not enough funds to perform operation")]

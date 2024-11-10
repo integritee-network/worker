@@ -26,8 +26,8 @@ use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_addre
 use crate::{
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
-		enclave_signer_account, ensure_enclave_signer_account, get_mortality, shard_vault,
-		shielding_target_genesis_hash, store_note, wrap_bytes,
+		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
+		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
 	Getter, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
 };
@@ -77,6 +77,8 @@ pub enum TrustedCall {
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier) = 3, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4, // (Root, AccountIncognito, Amount, origin parentchain)
 	balance_transfer_with_note(AccountId, AccountId, Balance, Vec<u8>) = 5,
+	note_bloat(AccountId, u32) = 10,
+	waste_time(AccountId, u32) = 11,
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
@@ -136,6 +138,8 @@ impl TrustedCall {
 			Self::balance_shield(sender_account, ..) => sender_account,
 			Self::balance_transfer_with_note(sender_account, ..) => sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
+			Self::note_bloat(sender_account, ..) => sender_account,
+			Self::waste_time(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -463,7 +467,27 @@ where
 				};
 				Ok(())
 			},
-
+			TrustedCall::note_bloat(sender, kilobytes) => {
+				ensure_maintainer_account(&sender)?;
+				std::println!("⣿STF⣿ bloating notes by{} kB", kilobytes);
+				let msg = vec![0u8; 512];
+				for _ in [0..kilobytes * 2] {
+					ita_sgx_runtime::NotesCall::<Runtime>::note_trusted_call {
+						link_to: vec![],
+						payload: msg.encode(),
+					}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sender.clone()))
+					.map_err(|e| StfError::Dispatch(format!("Store note error: {:?}", e.error)))?;
+				}
+				Ok(())
+			},
+			TrustedCall::waste_time(sender, milliseconds) => {
+				ensure_maintainer_account(&sender)?;
+				std::println!("⣿STF⣿ waste time: {}ms", milliseconds);
+				std::thread::sleep(std::time::Duration::from_millis(milliseconds as u64));
+				std::println!("⣿STF⣿ finished wasting time");
+				Ok(())
+			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);

@@ -24,7 +24,9 @@ use crate::{
 		get_notes::GetNotesCommand, get_parentchains_info::GetParentchainsInfoCommand,
 		get_shard::GetShardCommand, get_shard_vault::GetShardVaultCommand,
 		get_total_issuance::GetTotalIssuanceCommand, nonce::NonceCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand, version::VersionCommand,
+		note_bloat::NoteBloatCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
+		waste_time::WasteTimeCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -86,6 +88,12 @@ pub enum TrustedBaseCommand {
 	/// get notes for account
 	GetNotes(GetNotesCommand),
 
+	/// waste time for benchmarking
+	WasteTime(WasteTimeCommand),
+
+	/// bloat state with dummy notes for benchmarking
+	NoteBloat(NoteBloatCommand),
+
 	/// get a version string for the enclave
 	Version(VersionCommand),
 }
@@ -109,6 +117,8 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}

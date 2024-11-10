@@ -108,6 +108,26 @@ pub fn ensure_enclave_signer_account<AccountId: Encode + Decode + PartialEq>(
 	}
 }
 
+pub fn ensure_maintainer_account<AccountId: Encode + Decode + PartialEq + From<[u8; 32]>>(
+	account: &AccountId,
+) -> StfResult<()> {
+	let expected_maintainer_account: AccountId = AccountId::from([
+		148, 117, 87, 242, 252, 96, 167, 29, 118, 69, 87, 119, 15, 57, 142, 82, 216, 8, 210, 102,
+		12, 213, 46, 76, 214, 5, 144, 153, 148, 113, 89, 95,
+	])
+	.into();
+	if &expected_maintainer_account == account {
+		Ok(())
+	} else {
+		error!(
+			"Expected maintainer account {}, but found {}",
+			account_id_to_string(&expected_maintainer_account),
+			account_id_to_string(account)
+		);
+		Err(StfError::RequireMaintainerAccount)
+	}
+}
+
 pub fn set_block_number(block_number: u32) {
 	sp_io::storage::set(&storage_value_key("System", "Number"), &block_number.encode());
 }

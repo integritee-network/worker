@@ -209,3 +209,30 @@ fn note_trusted_call_works() {
 		);
 	})
 }
+
+#[test]
+fn note_string_works() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(0);
+		let now: u64 = 234;
+		set_timestamp(now);
+		let alice = AccountKeyring::Alice.to_account_id();
+		let bob = AccountKeyring::Bob.to_account_id();
+		let msg = "helllllooo Aliiicceee".to_string();
+		assert_ok!(Notes::note_string(
+			RuntimeOrigin::signed(bob.clone()),
+			[bob.clone(), alice.clone()].into(),
+			msg.encode()
+		));
+		assert_eq!(Notes::notes_lookup(0, alice.clone()), vec![0]);
+		assert_eq!(Notes::notes_lookup(0, bob.clone()), vec![0]);
+		let expected_note = TimestampedTrustedNote::<Moment> {
+			timestamp: now,
+			version: 1,
+			note: TrustedNote::String(msg.encode()),
+		};
+		assert_eq!(Notes::notes(0, 0), Some(expected_note.clone()));
+		let bucket = Notes::buckets(0).unwrap();
+		assert_eq!(bucket.bytes, expected_note.encoded_size() as u32);
+	})
+}

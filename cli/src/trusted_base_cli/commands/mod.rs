@@ -9,9 +9,11 @@ pub mod get_shard_vault;
 pub mod get_total_issuance;
 
 pub mod nonce;
+pub mod note_bloat;
 pub mod transfer;
 pub mod unshield_funds;
 pub mod version;
+pub mod waste_time;
 
 #[cfg(feature = "test")]
 pub mod set_balance;
