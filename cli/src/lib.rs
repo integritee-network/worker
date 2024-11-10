@@ -48,7 +48,9 @@ use crate::commands::Commands;
 use clap::Parser;
 use ita_stf::{guess_the_number::GuessTheNumberInfo, ParentchainsInfo};
 use itp_node_api::api_client::Metadata;
+use itp_types::Moment;
 use its_primitives::types::header::SidechainHeader;
+use pallet_notes::{BucketRange, TimestampedTrustedNote};
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use thiserror::Error;
@@ -119,6 +121,12 @@ pub enum CliResultOk {
 	},
 	ParentchainsInfo {
 		info: ParentchainsInfo,
+	},
+	NoteBucketRange {
+		range: BucketRange<Moment>,
+	},
+	Notes {
+		notes: Vec<TimestampedTrustedNote<Moment>>,
 	},
 	String {
 		value: String,

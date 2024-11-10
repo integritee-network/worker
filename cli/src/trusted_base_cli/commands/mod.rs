@@ -1,6 +1,8 @@
 pub mod balance;
 pub mod get_fingerprint;
 pub mod get_header;
+pub mod get_note_buckets_info;
+pub mod get_notes;
 pub mod get_parentchains_info;
 pub mod get_shard;
 pub mod get_shard_vault;

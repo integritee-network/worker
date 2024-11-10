@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "enclave-runtime"
-version = "0.15.2"
+version = "0.15.3"
 dependencies = [
  "array-bytes 6.2.2",
  "cid",
@@ -1705,6 +1705,7 @@ dependencies = [
  "pallet-balances",
  "pallet-evm",
  "pallet-guess-the-number",
+ "pallet-notes",
  "pallet-parentchain",
  "pallet-sudo",
  "pallet-timestamp",
@@ -1738,6 +1739,7 @@ dependencies = [
  "itp-utils",
  "log",
  "pallet-balances",
+ "pallet-notes",
  "pallet-parentchain",
  "pallet-sudo",
  "pallet-timestamp",
@@ -3001,6 +3003,24 @@ dependencies = [
 [[package]]
 name = "pallet-guess-the-number"
 version = "0.11.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-randomness",
+ "log",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-notes"
+version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",

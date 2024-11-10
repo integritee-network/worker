@@ -17,9 +17,11 @@
 
 use crate::Cli;
 use base58::FromBase58;
+use chrono::{DateTime, Local, NaiveDateTime};
 use ita_parentchain_interface::integritee::{AccountId, Signature};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::api_client::{ParentchainApi, TungsteniteRpcClient};
+use itp_types::Moment;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::sr25519;
@@ -91,4 +93,11 @@ pub(crate) fn mrenclave_from_base58(src: &str) -> [u8; 32] {
 	let mut mrenclave = [0u8; 32];
 	mrenclave.copy_from_slice(&src.from_base58().expect("mrenclave has to be base58 encoded"));
 	mrenclave
+}
+
+pub(crate) fn format_moment(timestamp: Moment) -> String {
+	let naive_datetime =
+		NaiveDateTime::from_timestamp_millis(timestamp.try_into().unwrap()).unwrap();
+	let datetime: DateTime<Local> = DateTime::from_utc(naive_datetime, *Local::now().offset());
+	datetime.format("%Y-%m-%d %H:%M:%S").to_string()
 }

@@ -79,6 +79,7 @@ use itp_randomness::SgxRandomness;
 use itp_sgx_runtime_primitives::types::Moment;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
+pub use pallet_notes::Call as NotesCall;
 pub use pallet_parentchain::Call as ParentchainPalletCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_core::crypto::AccountId32;
@@ -311,6 +312,13 @@ impl pallet_guess_the_number::Config for Runtime {
 	type MaxWinners = ConstU8<12>;
 }
 
+impl pallet_notes::Config for Runtime {
+	type MomentsPerDay = MomentsPerDay;
+	type Currency = Balances;
+	type MaxNoteSize = ConstU32<512>;
+	type MaxBucketSize = ConstU32<51200>;
+	type MaxTotalSize = ConstU32<5_120_000>;
+}
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -330,6 +338,8 @@ construct_runtime!(
 		ParentchainTargetB: pallet_parentchain::<Instance3>::{Pallet, Call, Event<T>} = 12,
 
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
+
+		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 	}
 );
 
@@ -357,6 +367,8 @@ construct_runtime!(
 		Evm: pallet_evm::{Pallet, Call, Storage, Config, Event<T>} = 20,
 
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
+
+		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 	}
 );
 

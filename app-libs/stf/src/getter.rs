@@ -17,7 +17,7 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{
-	Balances, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, System,
+	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, System,
 };
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
@@ -44,6 +44,7 @@ use ita_parentchain_specs::MinimalChainSpec;
 use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_primitives::traits::{GetDecimals, PoolTransactionValidation};
 use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
+use pallet_notes::{BucketIndex, BucketRange};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
@@ -113,6 +114,7 @@ pub enum PublicGetter {
 	some_value = 0,
 	total_issuance = 1,
 	parentchains_info = 10,
+	note_buckets_info = 11,
 	guess_the_number(GuessTheNumberPublicGetter) = 50,
 }
 
@@ -122,6 +124,7 @@ pub enum PublicGetter {
 #[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
 	account_info(AccountId) = 0,
+	notes_for(AccountId, BucketIndex) = 10,
 	guess_the_number(GuessTheNumberTrustedGetter) = 50,
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId) = 90,
@@ -135,6 +138,7 @@ impl TrustedGetter {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
 			TrustedGetter::account_info(sender_account) => sender_account,
+			TrustedGetter::notes_for(sender_account, ..) => sender_account,
 			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
@@ -200,6 +204,20 @@ impl ExecuteGetter for TrustedGetterSigned {
 				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
 				Some(info.encode())
+			},
+			TrustedGetter::notes_for(who, bucket_index) => {
+				debug!("TrustedGetter notes_for");
+				let note_indices = Notes::notes_lookup(bucket_index, &who);
+				debug!("Note indices for {} are {:?}", account_id_to_string(&who), note_indices);
+				// todo: do we need pagination here?
+				let mut notes = Vec::new();
+				for note_index in note_indices {
+					if let Some(note) = Notes::notes(bucket_index, note_index) {
+						notes.push(note)
+					};
+				}
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: notes for ⣿⣿⣿",);
+				Some(notes.encode())
 			},
 			TrustedGetter::guess_the_number(getter) => getter.execute(),
 			#[cfg(feature = "evm")]
@@ -282,6 +300,11 @@ impl ExecuteGetter for PublicGetter {
 					shielding_target: shielding_target(),
 				};
 				Some(parentchains_info.encode())
+			},
+			PublicGetter::note_buckets_info => {
+				let maybe_first = Notes::buckets(Notes::first_bucket_index().unwrap_or_default());
+				let maybe_last = Notes::buckets(Notes::last_bucket_index().unwrap_or_default());
+				Some(BucketRange { maybe_first, maybe_last }.encode())
 			},
 			PublicGetter::guess_the_number(getter) => getter.execute(),
 		}
