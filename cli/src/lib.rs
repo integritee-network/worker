@@ -50,7 +50,7 @@ use ita_stf::{guess_the_number::GuessTheNumberInfo, ParentchainsInfo};
 use itp_node_api::api_client::Metadata;
 use itp_types::Moment;
 use its_primitives::types::header::SidechainHeader;
-use pallet_notes::{BucketInfo, TimestampedTrustedNote, TrustedNote};
+use pallet_notes::{BucketInfo, BucketRange, TimestampedTrustedNote, TrustedNote};
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
 use thiserror::Error;
@@ -122,9 +122,8 @@ pub enum CliResultOk {
 	ParentchainsInfo {
 		info: ParentchainsInfo,
 	},
-	NoteBucketsInfo {
-		maybe_first: Option<BucketInfo<Moment>>,
-		maybe_last: Option<BucketInfo<Moment>>,
+	NoteBucketRange {
+		range: BucketRange<Moment>,
 	},
 	Notes {
 		notes: Vec<TimestampedTrustedNote<Moment>>,

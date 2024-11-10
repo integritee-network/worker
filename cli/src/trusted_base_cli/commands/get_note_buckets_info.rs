@@ -21,7 +21,7 @@ use crate::{
 use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
 use itp_types::Moment;
-use pallet_notes::BucketInfo;
+use pallet_notes::{BucketInfo, BucketRange};
 
 #[derive(Parser)]
 pub struct GetNoteBucketsInfoCommand {}
@@ -31,9 +31,9 @@ impl GetNoteBucketsInfoCommand {
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
 			PublicGetter::note_buckets_info,
 		));
-		let (maybe_first, maybe_last): (Option<BucketInfo<Moment>>, Option<BucketInfo<Moment>>) =
+		let range: BucketRange<Moment> =
 			perform_trusted_operation(cli, trusted_args, &top).unwrap();
-		if let Some(bucket) = maybe_first {
+		if let Some(bucket) = range.maybe_first {
 			println!(
 				"first bucket : index {}, bytes: {}, begins at {}",
 				bucket.index,
@@ -41,7 +41,7 @@ impl GetNoteBucketsInfoCommand {
 				format_moment(bucket.begins_at)
 			);
 		}
-		if let Some(bucket) = maybe_last {
+		if let Some(bucket) = range.maybe_last {
 			println!(
 				"last bucket  : index {}, bytes: {}, ends at {}",
 				bucket.index,
@@ -49,6 +49,6 @@ impl GetNoteBucketsInfoCommand {
 				format_moment(bucket.ends_at)
 			);
 		}
-		Ok(CliResultOk::NoteBucketsInfo { maybe_first, maybe_last })
+		Ok(CliResultOk::NoteBucketRange { range })
 	}
 }

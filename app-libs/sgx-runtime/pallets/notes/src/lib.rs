@@ -22,6 +22,11 @@ pub struct BucketInfo<Moment> {
 	pub ends_at: Moment,
 }
 
+#[derive(Encode, Decode, Copy, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
+pub struct BucketRange<Moment> {
+	pub maybe_first: Option<BucketInfo<Moment>>,
+	pub maybe_last: Option<BucketInfo<Moment>>,
+}
 // Bump this version to indicate type changes breaking downstream decoding of wrapped payloads in TrustedNote
 pub const NOTE_VERSION: u16 = 1;
 

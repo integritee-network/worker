@@ -44,7 +44,7 @@ use ita_parentchain_specs::MinimalChainSpec;
 use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_primitives::traits::{GetDecimals, PoolTransactionValidation};
 use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
-use pallet_notes::BucketIndex;
+use pallet_notes::{BucketIndex, BucketRange};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
@@ -302,9 +302,9 @@ impl ExecuteGetter for PublicGetter {
 				Some(parentchains_info.encode())
 			},
 			PublicGetter::note_buckets_info => {
-				let first_bucket = Notes::buckets(0);
-				let last_bucket = Notes::buckets(0);
-				Some((first_bucket, last_bucket).encode())
+				let maybe_first = Notes::buckets(Notes::first_bucket_index().unwrap_or_default());
+				let maybe_last = Notes::buckets(Notes::last_bucket_index().unwrap_or_default());
+				Some(BucketRange { maybe_first, maybe_last }.encode())
 			},
 			PublicGetter::guess_the_number(getter) => getter.execute(),
 		}
