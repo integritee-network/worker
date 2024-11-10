@@ -429,8 +429,7 @@ fn test_create_state_diff() {
 	assert_eq!(
 		sender_acc_info.data.free,
 		ita_stf::test_genesis::ENDOWED_ACC_FUNDS
-			- TX_AMOUNT
-			- 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
+			- TX_AMOUNT - 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
 	);
 }
 
