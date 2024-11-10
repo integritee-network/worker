@@ -494,7 +494,7 @@ where
 			TrustedCall::waste_time(sender, milliseconds) => {
 				ensure_maintainer_account(&sender)?;
 				if milliseconds > 10_000 {
-					return Err(StfError::Dispatch(format!("waste time value must be below 10s")))
+					return Err(StfError::Dispatch("waste time value must be below 10s".to_string()))
 				}
 				std::println!("⣿STF⣿ waste time: {}ms", milliseconds);
 				std::thread::sleep(std::time::Duration::from_millis(milliseconds as u64));

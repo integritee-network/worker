@@ -114,8 +114,7 @@ pub fn ensure_maintainer_account<AccountId: Encode + Decode + PartialEq + From<[
 	let expected_maintainer_account: AccountId = AccountId::from([
 		148, 117, 87, 242, 252, 96, 167, 29, 118, 69, 87, 119, 15, 57, 142, 82, 216, 8, 210, 102,
 		12, 213, 46, 76, 214, 5, 144, 153, 148, 113, 89, 95,
-	])
-	.into();
+	]);
 	if &expected_maintainer_account == account {
 		Ok(())
 	} else {
