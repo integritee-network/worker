@@ -1,11 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{dispatch::DispatchResult, ensure, pallet_prelude::Get, traits::Currency};
+use frame_support::{ensure, pallet_prelude::Get, traits::Currency};
 pub use pallet::*;
 use pallet_timestamp::Pallet as Timestamp;
 use scale_info::TypeInfo;
-use sp_runtime::Saturating;
 use sp_std::{vec, vec::Vec};
 
 pub type BalanceOf<T> =
@@ -183,7 +182,7 @@ impl<T: Config> Pallet<T> {
 		};
 		bucket.bytes = bucket.bytes.saturating_add(bytes);
 		bucket.ends_at = now;
-		<Buckets<T>>::insert(bucket.index, bucket.clone());
+		<Buckets<T>>::insert(bucket.index, bucket);
 		<Notes<T>>::insert(bucket.index, note_index, note);
 		<LastNoteIndex<T>>::put(note_index);
 		Ok((bucket.index, note_index))
@@ -224,8 +223,8 @@ impl<T: Config> Pallet<T> {
 			};
 			let purged_bucket_size = Self::buckets(bi).map(|b| b.bytes).unwrap_or(0);
 			<Buckets<T>>::remove(bi);
-			<Notes<T>>::clear_prefix(bi, u32::MAX, None);
-			<NotesLookup<T>>::clear_prefix(bi, u32::MAX, None);
+			let _ = <Notes<T>>::clear_prefix(bi, u32::MAX, None);
+			let _ = <NotesLookup<T>>::clear_prefix(bi, u32::MAX, None);
 			<ClosedBucketsSize<T>>::mutate(|s| *s = s.saturating_sub(purged_bucket_size));
 			<FirstBucketIndex<T>>::put(bi.saturating_add(1));
 		} else {

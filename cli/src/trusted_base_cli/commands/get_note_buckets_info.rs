@@ -21,7 +21,7 @@ use crate::{
 use ita_stf::{Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
 use itp_types::Moment;
-use pallet_notes::{BucketInfo, BucketRange};
+use pallet_notes::BucketRange;
 
 #[derive(Parser)]
 pub struct GetNoteBucketsInfoCommand {}

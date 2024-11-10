@@ -98,7 +98,6 @@ pub(crate) fn mrenclave_from_base58(src: &str) -> [u8; 32] {
 pub(crate) fn format_moment(timestamp: Moment) -> String {
 	let naive_datetime =
 		NaiveDateTime::from_timestamp_millis(timestamp.try_into().unwrap()).unwrap();
-	let datetime: DateTime<Local> =
-		DateTime::from_utc(naive_datetime, Local::now().offset().clone());
+	let datetime: DateTime<Local> = DateTime::from_utc(naive_datetime, *Local::now().offset());
 	datetime.format("%Y-%m-%d %H:%M:%S").to_string()
 }
