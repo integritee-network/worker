@@ -35,6 +35,8 @@ pub enum TrustedNote {
 	SgxRuntimeEvent(Vec<u8>),
 	/// plain utf8 string
 	String(Vec<u8>),
+	/// IPFS cid
+	Ipfs([u8; 46]),
 }
 
 #[derive(Encode, Decode, Clone, PartialEq, Eq, sp_core::RuntimeDebug, TypeInfo)]
