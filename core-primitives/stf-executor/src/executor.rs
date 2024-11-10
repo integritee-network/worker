@@ -335,7 +335,7 @@ where
 		for trusted_call_signed in trusted_calls.into_iter() {
 			// Break if allowed time window is over.
 			if ends_at < duration_now() {
-				info!("Aborting execution of trusted calls because slot time is up");
+				info!("stopping execution of further trusted calls because slot time is up");
 				break
 			}
 

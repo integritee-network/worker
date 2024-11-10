@@ -42,9 +42,8 @@ pub struct WasteTimeCommand {
 
 impl WasteTimeCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, &self.account);
-		let signer = get_pair_from_str(trusted_args, "//Alice");
-		info!("account ss58 is {}", who.public().to_ss58check());
+		let signer = get_pair_from_str(trusted_args, &self.account);
+		info!("account ss58 is {}", signer.public().to_ss58check());
 
 		println!("send trusted call waste-time({}ms)", self.millis);
 

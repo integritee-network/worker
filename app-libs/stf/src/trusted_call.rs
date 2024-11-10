@@ -58,6 +58,7 @@ use itp_types::{
 };
 use itp_utils::stringify::account_id_to_string;
 use log::*;
+use pallet_notes::{TimestampedTrustedNote, TrustedNote};
 use sp_core::{
 	crypto::{AccountId32, UncheckedFrom},
 	ed25519,
@@ -469,12 +470,21 @@ where
 			},
 			TrustedCall::note_bloat(sender, kilobytes) => {
 				ensure_maintainer_account(&sender)?;
-				std::println!("⣿STF⣿ bloating notes by{} kB", kilobytes);
-				let msg = vec![0u8; 512];
-				for _ in [0..kilobytes * 2] {
-					ita_sgx_runtime::NotesCall::<Runtime>::note_trusted_call {
+				if kilobytes >= 1_100 {
+					return Err(StfError::Dispatch("bloat value must be below 1.1 MB".to_string()))
+				}
+				std::println!("⣿STF⣿ bloating notes by {}kB", kilobytes);
+				// make sure we use exactly 512 bytes per note
+				let dummy = TimestampedTrustedNote {
+					timestamp: 0u64,
+					version: 0u16,
+					note: TrustedNote::String(vec![0u8; 400]),
+				};
+				let msg = vec![111u8; 512 - (dummy.encoded_size() - 400)];
+				for _ in 0..kilobytes * 2 {
+					ita_sgx_runtime::NotesCall::<Runtime>::note_string {
 						link_to: vec![],
-						payload: msg.encode(),
+						payload: msg.clone(),
 					}
 					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sender.clone()))
 					.map_err(|e| StfError::Dispatch(format!("Store note error: {:?}", e.error)))?;
@@ -483,6 +493,9 @@ where
 			},
 			TrustedCall::waste_time(sender, milliseconds) => {
 				ensure_maintainer_account(&sender)?;
+				if milliseconds > 10_000 {
+					return Err(StfError::Dispatch(format!("waste time value must be below 10s")))
+				}
 				std::println!("⣿STF⣿ waste time: {}ms", milliseconds);
 				std::thread::sleep(std::time::Duration::from_millis(milliseconds as u64));
 				std::println!("⣿STF⣿ finished wasting time");

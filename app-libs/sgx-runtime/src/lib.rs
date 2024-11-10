@@ -312,13 +312,20 @@ impl pallet_guess_the_number::Config for Runtime {
 	type MaxWinners = ConstU8<12>;
 }
 
+parameter_types! {
+	pub const MaxNoteSize: u32 = 512;
+	pub const MaxBucketSize: u32 = 51_200;
+	pub const MaxTotalSize: u32 = 5_120_000;
+}
+
 impl pallet_notes::Config for Runtime {
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
-	type MaxNoteSize = ConstU32<512>;
-	type MaxBucketSize = ConstU32<51200>;
-	type MaxTotalSize = ConstU32<5_120_000>;
+	type MaxNoteSize = MaxNoteSize;
+	type MaxBucketSize = MaxBucketSize;
+	type MaxTotalSize = MaxTotalSize;
 }
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
