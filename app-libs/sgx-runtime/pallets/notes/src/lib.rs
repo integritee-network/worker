@@ -164,6 +164,29 @@ pub mod pallet {
 			}
 			Ok(().into())
 		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight((10_000, DispatchClass::Normal, Pays::Yes))]
+		pub fn note_string(
+			origin: OriginFor<T>,
+			// who is involved in this note (usually sender and recipient)
+			link_to: Vec<T::AccountId>,
+			payload: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+			ensure_signed(origin)?;
+			ensure!(link_to.len() < 3, Error::<T>::TooManyLinkedAccounts);
+			let note = TimestampedTrustedNote::<T::Moment> {
+				timestamp: Timestamp::<T>::get(),
+				version: NOTE_VERSION,
+				note: TrustedNote::String(payload),
+			};
+			let (bucket_index, note_index) = Self::store_note(note)?;
+
+			for account in link_to {
+				<NotesLookup<T>>::mutate(bucket_index, account, |v| v.push(note_index));
+			}
+			Ok(().into())
+		}
 	}
 }
 
@@ -196,6 +219,8 @@ impl<T: Config> Pallet<T> {
 			if let Some(bucket) = Self::buckets(bucket_index) {
 				if bucket.bytes + free <= T::MaxBucketSize::get() {
 					return Ok(bucket)
+				} else {
+					<ClosedBucketsSize<T>>::mutate(|s| *s = s.saturating_add(bucket.bytes));
 				}
 			}
 			bucket_index.saturating_add(1)

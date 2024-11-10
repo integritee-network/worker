@@ -363,12 +363,13 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		if !timestamp_within_slot(&slot_info, &proposing.block) {
 			warn!(
-
-				"⌛️ Discarding proposal for slot {}, block number {}; block production took too long",
-				*slot, proposing.block.block().header().block_number(),
+				"⌛️ overdue proposal for slot {}, block number {}; block production took too long",
+				*slot,
+				proposing.block.block().header().block_number(),
 			);
-
-			return None
+			// fixme: currently, we can't abort here because the TOP pool will keep the long-running
+			//   TOPs and we'll never produce blocks again. just warn for now
+			//return None
 		}
 
 		if last_imported_integritee_header.is_some() {
