@@ -219,6 +219,8 @@ impl<T: Config> Pallet<T> {
 			if let Some(bucket) = Self::buckets(bucket_index) {
 				if bucket.bytes + free <= T::MaxBucketSize::get() {
 					return Ok(bucket)
+				} else {
+					<ClosedBucketsSize<T>>::mutate(|s| *s = s.saturating_add(bucket.bytes));
 				}
 			}
 			bucket_index.saturating_add(1)
