@@ -84,13 +84,13 @@ use std::{
 	str::Utf8Error,
 	sync::{
 		atomic::{AtomicBool, Ordering},
-		Arc,
+		mpsc, Arc,
 	},
 	thread,
 	time::Duration,
 };
 use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
-use tokio::{runtime::Handle, task::JoinHandle};
+use tokio::{runtime::Handle, task::JoinHandle, time::Instant};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -886,7 +886,7 @@ where
 	let last_synced_header = parentchain_handler.init_parentchain_components().unwrap();
 	println!("[{:?}] last synced parentchain block: {}", parentchain_id, last_synced_header.number);
 
-	let nonce = node_api.get_nonce_of(tee_account_id).unwrap();
+	let nonce = node_api.get_system_account_next_index(tee_account_id.clone()).unwrap();
 	info!("[{:?}] Enclave nonce = {:?}", parentchain_id, nonce);
 	enclave.set_nonce(nonce, parentchain_id).unwrap_or_else(|_| {
 		panic!("[{:?}] Could not set nonce of enclave. Returning here...", parentchain_id)
@@ -1028,37 +1028,63 @@ fn send_integritee_extrinsic(
 	fee_payer: &AccountId32,
 	is_development_mode: bool,
 ) -> ServiceResult<Hash> {
-	let fee = crate::account_funding::estimate_fee(api, extrinsic.clone())?;
-	let ed = api.get_existential_deposit()?;
-	let free = api.get_free_balance(fee_payer)?;
-	let missing_funds = fee.saturating_add(ed).saturating_sub(free);
-	info!("[Integritee] send extrinsic");
-	debug!("fee: {:?}, ed: {:?}, free: {:?} => missing: {:?}", fee, ed, free, missing_funds);
-	trace!(
-		"  encoded extrinsic len: {}, payload: 0x{:}",
-		extrinsic.len(),
-		hex::encode(extrinsic.clone())
-	);
+	let timeout = Duration::from_secs(5 * 60);
+	let (sender, receiver) = mpsc::channel();
+	let local_fee_payer = fee_payer.clone();
+	let local_api = api.clone();
+	// start thread which can time out
+	let handle = thread::spawn(move || {
+		let fee = crate::account_funding::estimate_fee(&local_api, extrinsic.clone()).unwrap();
+		let ed = local_api.get_existential_deposit().unwrap();
+		let free = local_api.get_free_balance(&local_fee_payer).unwrap();
+		let missing_funds = fee.saturating_add(ed).saturating_sub(free);
+		info!("[Integritee] send extrinsic");
+		debug!("fee: {:?}, ed: {:?}, free: {:?} => missing: {:?}", fee, ed, free, missing_funds);
+		trace!(
+			"  encoded extrinsic len: {}, payload: 0x{:}",
+			extrinsic.len(),
+			hex::encode(extrinsic.clone())
+		);
 
-	if missing_funds > 0 {
-		setup_reasonable_account_funding(
-			api,
-			fee_payer,
-			ParentchainId::Integritee,
-			is_development_mode,
-		)?
-	}
+		if missing_funds > 0 {
+			setup_reasonable_account_funding(
+				&local_api,
+				&local_fee_payer,
+				ParentchainId::Integritee,
+				is_development_mode,
+			)
+			.unwrap()
+		}
 
-	match api.submit_and_watch_opaque_extrinsic_until(&extrinsic.into(), XtStatus::Finalized) {
-		Ok(xt_report) => {
-			info!(
-				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
-				xt_report.extrinsic_hash, xt_report.status
-			);
-			xt_report.block_hash.ok_or(Error::Custom("no extrinsic hash returned".into()))
+		match local_api
+			.submit_and_watch_opaque_extrinsic_until(&extrinsic.into(), XtStatus::Finalized)
+		{
+			Ok(xt_report) => {
+				info!(
+					"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+					xt_report.extrinsic_hash, xt_report.status
+				);
+				xt_report.block_hash.ok_or(Error::Custom("no extrinsic hash returned".into()));
+				sender.send(xt_report.block_hash.unwrap());
+			},
+			Err(e) => {
+				panic!(
+					"Extrinsic failed {:?} parentchain genesis: {:?}",
+					e,
+					local_api.genesis_hash()
+				);
+			},
+		}
+	});
+	// Wait for the result with a timeout
+	match receiver.recv_timeout(timeout) {
+		Ok(result) => {
+			println!("Task finished within timeout: {:?}", result);
+			Ok(result)
 		},
-		Err(e) => {
-			panic!("Extrinsic failed {:?} parentchain genesis: {:?}", e, api.genesis_hash());
+		Err(_) => {
+			println!("Task timed out after {:?}", timeout);
+			panic!("Extrinsic sending timed out. shutting down.");
 		},
 	}
 }
