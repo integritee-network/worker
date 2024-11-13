@@ -647,6 +647,12 @@ fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
 					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
 		TrustedCall::balance_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
 		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(call),
+		TrustedCall::note_bloat(..) => Balance::from(0u32),
+		TrustedCall::waste_time(..) => Balance::from(0u32),
+		TrustedCall::timestamp_set(..) => Balance::from(0u32),
+		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
+		#[cfg(any(feature = "test", test))]
+		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
 		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,
 	}
 }
