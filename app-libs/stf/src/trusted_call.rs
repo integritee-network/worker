@@ -641,9 +641,19 @@ fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
 	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
 	match &tc.call {
 		TrustedCall::balance_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+		TrustedCall::balance_transfer_with_note(_, _, _, note) =>
+			one / crate::STF_TX_FEE_UNIT_DIVIDER
+				+ (one.saturating_mul(Balance::from(note.len() as u32)))
+					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
 		TrustedCall::balance_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
 		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(call),
-		_ => Balance::from(0u32),
+		TrustedCall::note_bloat(..) => Balance::from(0u32),
+		TrustedCall::waste_time(..) => Balance::from(0u32),
+		TrustedCall::timestamp_set(..) => Balance::from(0u32),
+		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
+		#[cfg(any(feature = "test", test))]
+		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
+		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,
 	}
 }
 
