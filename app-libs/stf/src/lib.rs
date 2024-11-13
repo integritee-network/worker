@@ -49,4 +49,6 @@ pub mod trusted_call;
 pub(crate) const ENCLAVE_ACCOUNT_KEY: &str = "Enclave_Account_Key";
 pub const STF_SHIELDING_FEE_AMOUNT_DIVIDER: Balance = 571; // approx 0.175%
 pub const STF_TX_FEE_UNIT_DIVIDER: Balance = 100; // 0.01 tokens
+pub const STF_BYTE_FEE_UNIT_DIVIDER: Balance = 10_000; // 0.0001 tokens per byte of certain payload
+
 pub const STF_GUESS_FEE_UNIT_DIVIDER: Balance = 10; // 0.1 tokens
