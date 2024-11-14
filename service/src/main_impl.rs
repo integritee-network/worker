@@ -55,7 +55,7 @@ use sgx_types::*;
 use sp_runtime::traits::{Header as HeaderT, IdentifyAccount};
 use substrate_api_client::{
 	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetBalance, GetChainInfo,
-	SubmitAndWatch, SubscribeChain, SubscribeEvents,
+	GetStorage, SubmitAndWatch, SubscribeChain, SubscribeEvents,
 };
 
 use teerex_primitives::{AnySigner, MultiEnclave};
@@ -72,8 +72,13 @@ use crate::{
 	sidechain_setup::ParentchainIntegriteeSidechainInfoProvider,
 };
 use enclave_bridge_primitives::ShardIdentifier;
+use ita_parentchain_interface::{
+	integritee::{api_client_types::IntegriteeApi, api_factory::IntegriteeNodeApiFactory},
+	ParentchainApiTrait,
+};
 use itc_parentchain::primitives::ParentchainId;
-use itp_types::parentchain::{AccountId, Balance};
+use itp_node_api::api_client::ChainApi;
+use itp_types::parentchain::{AccountId, Balance, Index};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
@@ -95,8 +100,13 @@ use tokio::{runtime::Handle, task::JoinHandle, time::Instant};
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(feature = "link-binary")]
-pub type EnclaveWorker =
-	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
+pub type EnclaveWorker = Worker<
+	Config,
+	IntegriteeNodeApiFactory,
+	IntegriteeApi,
+	Enclave,
+	InitializationHandler<WorkerModeProvider>,
+>;
 
 pub(crate) fn main() {
 	// Setup logging
@@ -502,9 +512,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("our enclave should be registered at this point");
 	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
-	let (we_are_primary_validateer, re_init_parentchain_needed) =
-		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
-			Some(primary_enclave) => match primary_enclave.instance_signer() {
+	let (we_are_primary_validateer, re_init_parentchain_needed) = match integritee_rpc_api
+		.primary_worker_for_shard(shard, None)
+		.unwrap()
+	{
+		Some(primary_enclave) =>
+			match primary_enclave.instance_signer() {
 				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
 					if primary.encode() == tee_accountid.encode() {
 						println!("We are primary worker on this shard and we have been previously running.");
@@ -539,24 +552,24 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-			None => {
-				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				enclave.init_shard(shard.encode()).unwrap();
-				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-					enclave
-						.init_shard_creation_parentchain_header(
-							shard,
-							&ParentchainId::Integritee,
-							&register_enclave_xt_header,
-						)
-						.unwrap();
-					debug!("shard config should be initialized on integritee network now");
-					(true, true)
-				} else {
-					(true, false)
-				}
-			},
-		};
+		None => {
+			println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+			enclave.init_shard(shard.encode()).unwrap();
+			if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+				enclave
+					.init_shard_creation_parentchain_header(
+						shard,
+						&ParentchainId::Integritee,
+						&register_enclave_xt_header,
+					)
+					.unwrap();
+				debug!("shard config should be initialized on integritee network now");
+				(true, true)
+			} else {
+				(true, false)
+			}
+		},
+	};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();
 
@@ -651,10 +664,14 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	let maybe_target_a_rpc_api = if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
-		let (api, mut handles) = init_target_parentchain(
+		println!("Initializing parentchain TargetA with url: {}", url);
+		let api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
+			.create_api()
+			.unwrap_or_else(|_| panic!("[TargetA] Failed to create parentchain node API"));
+		let mut handles = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
-			url,
+			&api,
 			shard,
 			ParentchainId::TargetA,
 			is_development_mode,
@@ -667,10 +684,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	};
 
 	let maybe_target_b_rpc_api = if let Some(url) = config.target_b_parentchain_rpc_endpoint() {
-		let (api, mut handles) = init_target_parentchain(
+		println!("Initializing parentchain TargetB with url: {}", url);
+		let api = ita_parentchain_interface::target_b::api_factory::TargetBNodeApiFactory::new(
+			url,
+			AccountKeyring::Alice.pair(),
+		)
+		.create_api()
+		.unwrap_or_else(|_| panic!("[TargetB] Failed to create parentchain node API"));
+		let mut handles = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
-			url,
+			&api,
 			shard,
 			ParentchainId::TargetB,
 			is_development_mode,
@@ -787,32 +811,22 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 	}
 }
 
-fn init_target_parentchain<E>(
+fn init_target_parentchain<E, ParentchainApi: ParentchainApiTrait>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
-	url: String,
+	node_api: &ParentchainApi,
 	shard: &ShardIdentifier,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
 	shutdown_flag: Arc<AtomicBool>,
-) -> (ParentchainApi, Vec<thread::JoinHandle<()>>)
+) -> Vec<thread::JoinHandle<()>>
 where
 	E: EnclaveBase + Sidechain,
 {
-	println!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
-	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
-		.create_api()
-		.unwrap_or_else(|_| panic!("[{:?}] Failed to create parentchain node API", parentchain_id));
-
-	setup_reasonable_account_funding(
-		&node_api,
-		tee_account_id,
-		parentchain_id,
-		is_development_mode,
-	)
-	.unwrap_or_else(|_| {
-		panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
-	});
+	setup_reasonable_account_funding(node_api, tee_account_id, parentchain_id, is_development_mode)
+		.unwrap_or_else(|_| {
+			panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
+		});
 
 	// we attempt to set shard creation for this parentchain in case it hasn't been done before
 	let api_head = node_api.get_header(None).unwrap().unwrap();
@@ -855,16 +869,16 @@ where
 		.name(format!("{:?}_parentchain_event_subscription", parentchain_id))
 		.spawn(move || {
 			ita_parentchain_interface::event_subscriber::subscribe_to_parentchain_events(
-				&node_api_clone,
+				node_api_clone,
 				parentchain_id,
 				shutdown_flag,
 			)
 		})
 		.unwrap();
-	(node_api, handles)
+	handles
 }
 
-fn init_parentchain<E>(
+fn init_parentchain<E, ParentchainApi: ParentchainApiTrait>(
 	enclave: &Arc<E>,
 	node_api: &ParentchainApi,
 	tee_account_id: &AccountId32,

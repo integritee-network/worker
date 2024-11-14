@@ -19,12 +19,11 @@
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
 use humantime::format_duration;
-use ita_parentchain_interface::integritee::Header;
+use ita_parentchain_interface::{integritee::Header, ParentchainApiTrait};
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},
 };
-use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
@@ -74,9 +73,10 @@ pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
 
 // #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict
 // any more with the api-clients own trait definitions.
-impl<EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<EnclaveApi, ParentchainApi> ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
+	ParentchainApi: ParentchainApiTrait,
 {
 	pub fn new(
 		parentchain_api: ParentchainApi,
@@ -142,9 +142,11 @@ where
 	}
 }
 
-impl<EnclaveApi> HandleParentchain for ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<EnclaveApi, ParentchainApi> HandleParentchain
+	for ParentchainHandler<ParentchainApi, EnclaveApi>
 where
 	EnclaveApi: Sidechain + EnclaveBase,
+	ParentchainApi: ParentchainApiTrait,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {
 		Ok(self

@@ -34,13 +34,17 @@ use codec::{Decode, Encode};
 use core::time::Duration;
 use enclave_bridge_primitives::ShardIdentifier;
 use frame_support::scale_info::TypeInfo;
+use ita_parentchain_interface::{
+	integritee::api_client_types::IntegriteeApi, target_a::api_client_types::TargetAApi,
+	target_b::api_client_types::TargetBApi,
+};
 #[cfg(feature = "attesteer")]
 use itc_rest_client::{
 	http_client::{DefaultSend, HttpClient},
 	rest_client::{RestClient, Url as URL},
 	RestGet, RestPath,
 };
-use itp_api_client_types::ParentchainApi;
+
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_types::{parentchain::ParentchainId, EnclaveFingerprint};
@@ -354,16 +358,16 @@ pub fn start_prometheus_metrics_server<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	shard: &ShardIdentifier,
-	integritee_rpc_api: ParentchainApi,
-	maybe_target_a_rpc_api: Option<ParentchainApi>,
-	maybe_target_b_rpc_api: Option<ParentchainApi>,
+	integritee_rpc_api: IntegriteeApi,
+	maybe_target_a_rpc_api: Option<TargetAApi>,
+	maybe_target_b_rpc_api: Option<TargetBApi>,
 	shielding_target: Option<ParentchainId>,
 	tokio_handle: &Handle,
 	metrics_server_port: u16,
 ) where
 	E: EnclaveBase + Sidechain,
 {
-	let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider>> = vec![];
+	let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider<_>>> = vec![];
 	account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 		ParentchainId::Integritee,
 		integritee_rpc_api.clone(),

@@ -19,6 +19,12 @@
 use crate::ocall_bridge::bridge_api::{OCallBridgeError, OCallBridgeResult, WorkerOnChainBridge};
 use chrono::Local;
 use codec::{Decode, Encode};
+use ita_parentchain_interface::{
+	integritee::{api_client_types::IntegriteeApi, api_factory::IntegriteeNodeApiFactory},
+	target_a::{api_client_types::TargetAApi, api_factory::TargetANodeApiFactory},
+	target_b::{api_client_types::TargetBApi, api_factory::TargetBNodeApiFactory},
+	ParentchainApiTrait,
+};
 use itp_api_client_types::ParentchainApi;
 use itp_node_api::{api_client::AccountApi, node_api_factory::CreateNodeApi};
 use itp_types::{
@@ -41,18 +47,18 @@ use substrate_api_client::{
 	GetAccountInformation, GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
-pub struct WorkerOnChainOCall<F> {
-	integritee_api_factory: Arc<F>,
-	target_a_parentchain_api_factory: Option<Arc<F>>,
-	target_b_parentchain_api_factory: Option<Arc<F>>,
+pub struct WorkerOnChainOCall {
+	integritee_api_factory: Arc<IntegriteeApi>,
+	target_a_parentchain_api_factory: Option<Arc<TargetAApi>>,
+	target_b_parentchain_api_factory: Option<Arc<TargetBApi>>,
 	log_dir: Arc<Path>,
 }
 
-impl<F> WorkerOnChainOCall<F> {
+impl WorkerOnChainOCall {
 	pub fn new(
-		integritee_api_factory: Arc<F>,
-		target_a_parentchain_api_factory: Option<Arc<F>>,
-		target_b_parentchain_api_factory: Option<Arc<F>>,
+		integritee_api_factory: Arc<IntegriteeNodeApiFactory>,
+		target_a_parentchain_api_factory: Option<Arc<TargetANodeApiFactory>>,
+		target_b_parentchain_api_factory: Option<Arc<TargetBNodeApiFactory>>,
 		log_dir: Arc<Path>,
 	) -> Self {
 		WorkerOnChainOCall {
@@ -64,7 +70,7 @@ impl<F> WorkerOnChainOCall<F> {
 	}
 }
 
-impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
+impl WorkerOnChainOCall {
 	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
 		Ok(match parentchain_id {
 			ParentchainId::Integritee => self.integritee_api_factory.create_api()?,
@@ -82,10 +88,7 @@ impl<F: CreateNodeApi> WorkerOnChainOCall<F> {
 	}
 }
 
-impl<F> WorkerOnChainBridge for WorkerOnChainOCall<F>
-where
-	F: CreateNodeApi,
-{
+impl WorkerOnChainBridge for WorkerOnChainOCall {
 	fn worker_request(
 		&self,
 		request: Vec<u8>,

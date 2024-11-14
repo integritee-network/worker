@@ -17,10 +17,11 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
+use ita_parentchain_interface::ParentchainApiTrait;
 use itp_node_api::api_client::{AccountApi, ParentchainApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
 use itp_types::{
-	parentchain::{AccountId, Balance, ParentchainId},
+	parentchain::{AccountId, Balance, Index, ParentchainId},
 	Moment,
 };
 use log::*;
@@ -29,10 +30,12 @@ use sp_core::{
 	Pair,
 };
 use sp_keyring::AccountKeyring;
-use sp_runtime::{MultiAddress, Saturating};
+use sp_runtime::{traits::SignedExtension, MultiAddress, Saturating};
 use std::{fmt::Display, thread, time::Duration};
 use substrate_api_client::{
-	ac_compose_macros::compose_extrinsic, ac_primitives::Bytes, extrinsic::BalancesExtrinsics,
+	ac_compose_macros::{compose_extrinsic, compose_extrinsic_with_nonce},
+	ac_primitives::Bytes,
+	extrinsic::BalancesExtrinsics,
 	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, SystemApi, XtStatus,
 };
 use teerex_primitives::SgxAttestationMethod;
@@ -76,13 +79,19 @@ pub trait ParentchainAccountInfo {
 	fn decimals(&self) -> ServiceResult<u64>;
 }
 
-pub struct ParentchainAccountInfoProvider {
+pub struct ParentchainAccountInfoProvider<ParentchainApi>
+where
+	ParentchainApi: ParentchainApiTrait,
+{
 	parentchain_id: ParentchainId,
 	node_api: ParentchainApi,
 	account_and_role: AccountAndRole,
 }
 
-impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
+impl<ParentchainApi> ParentchainAccountInfo for ParentchainAccountInfoProvider<ParentchainApi>
+where
+	ParentchainApi: ParentchainApiTrait,
+{
 	fn free_balance(&self) -> ServiceResult<Balance> {
 		self.node_api
 			.get_free_balance(&self.account_and_role.account_id())
@@ -107,7 +116,10 @@ impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
 	}
 }
 
-impl ParentchainAccountInfoProvider {
+impl<ParentchainApi> ParentchainAccountInfoProvider<ParentchainApi>
+where
+	ParentchainApi: ParentchainApiTrait,
+{
 	pub fn new(
 		parentchain_id: ParentchainId,
 		node_api: ParentchainApi,
@@ -120,7 +132,7 @@ impl ParentchainAccountInfoProvider {
 /// evaluate if the enclave should have more funds and how much more
 /// in --dev mode: let Alice pay for missing funds
 /// in production mode: wait for manual transfer before continuing
-pub fn setup_reasonable_account_funding(
+pub fn setup_reasonable_account_funding<ParentchainApi: ParentchainApiTrait>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
@@ -148,7 +160,7 @@ pub fn setup_reasonable_account_funding(
 	}
 }
 
-fn estimate_funds_needed_to_run_for_a_while(
+fn estimate_funds_needed_to_run_for_a_while<ParentchainApi: ParentchainApiTrait>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
@@ -163,32 +175,35 @@ fn estimate_funds_needed_to_run_for_a_while(
 	info!("[{:?}] a single transfer costs {:?}", parentchain_id, transfer_fee);
 	min_required_funds += 1000 * transfer_fee;
 
-	// Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
-	if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
-		info!("[{:?}] this chain has the teerex pallet. estimating RA fees", parentchain_id);
-		let encoded_xt: Bytes = compose_extrinsic!(
-			api,
-			TEEREX,
-			"register_sgx_enclave",
-			vec![0u8; SGX_RA_PROOF_MAX_LEN],
-			Some(vec![0u8; MAX_URL_LEN]),
-			SgxAttestationMethod::Dcap { proxied: false }
-		)
-		.encode()
-		.into();
-		let tx_fee =
-			api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
-		let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
-		info!(
-			"[{:?}] one enclave registration costs {:?} and needs to be renewed every {:?}h",
-			parentchain_id,
-			ra_fee,
-			ra_renewal / 1_000 / 3_600
-		);
-		min_required_funds += 5 * ra_fee;
-	} else {
-		info!("[{:?}] this chain has no teerex pallet, no need to add RA fees", parentchain_id);
-	}
+	// // Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
+	// if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
+	// 	info!("[{:?}] this chain has the teerex pallet. estimating RA fees", parentchain_id);
+	// 	let nonce = api.get_nonce_of(accountid)?;
+	//
+	// 	let encoded_xt: Bytes = compose_extrinsic_with_nonce!(
+	// 		api,
+	// 		nonce,
+	// 		TEEREX,
+	// 		"register_sgx_enclave",
+	// 		vec![0u8; SGX_RA_PROOF_MAX_LEN],
+	// 		Some(vec![0u8; MAX_URL_LEN]),
+	// 		SgxAttestationMethod::Dcap { proxied: false }
+	// 	)
+	// 	.encode()
+	// 	.into();
+	// 	let tx_fee =
+	// 		api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
+	// 	let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
+	// 	info!(
+	// 		"[{:?}] one enclave registration costs {:?} and needs to be renewed every {:?}h",
+	// 		parentchain_id,
+	// 		ra_fee,
+	// 		ra_renewal / 1_000 / 3_600
+	// 	);
+	// 	min_required_funds += 5 * ra_fee;
+	// } else {
+	// 	info!("[{:?}] this chain has no teerex pallet, no need to add RA fees", parentchain_id);
+	// }
 
 	info!(
 		"[{:?}] we estimate the funding requirement for the primary validateer (worst case) to be {:?}",
@@ -198,7 +213,10 @@ fn estimate_funds_needed_to_run_for_a_while(
 	Ok(min_required_funds)
 }
 
-pub fn estimate_fee(api: &ParentchainApi, encoded_extrinsic: Vec<u8>) -> Result<u128, Error> {
+pub fn estimate_fee<ParentchainApi: ParentchainApiTrait>(
+	api: &ParentchainApi,
+	encoded_extrinsic: Vec<u8>,
+) -> Result<u128, Error> {
 	let reg_fee_details = api.get_fee_details(&encoded_extrinsic.into(), None)?;
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
@@ -213,7 +231,7 @@ pub fn estimate_fee(api: &ParentchainApi, encoded_extrinsic: Vec<u8>) -> Result<
 }
 
 /// Alice sends some funds to the account. only for dev chains testing
-fn bootstrap_funds_from_alice(
+fn bootstrap_funds_from_alice<ParentchainApi: ParentchainApiTrait>(
 	api: &ParentchainApi,
 	accountid: &AccountId32,
 	funding_amount: u128,
@@ -253,7 +271,9 @@ fn bootstrap_funds_from_alice(
 }
 
 /// precise estimation of necessary funds to register a hardcoded number of proxies
-pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error> {
+pub fn shard_vault_initial_funds<ParentchainApi: ParentchainApiTrait>(
+	api: &ParentchainApi,
+) -> Result<Balance, Error> {
 	let proxy_deposit_base: Balance = api.get_constant("Proxy", "ProxyDepositBase")?;
 	let proxy_deposit_factor: Balance = api.get_constant("Proxy", "ProxyDepositFactor")?;
 	let transfer_fee = estimate_transfer_fee(api)?;
@@ -263,12 +283,18 @@ pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error>
 }
 
 /// precise estimation of a single transfer fee
-pub fn estimate_transfer_fee(api: &ParentchainApi) -> Result<Balance, Error> {
+pub fn estimate_transfer_fee<ParentchainApi: ParentchainApiTrait>(
+	api: &ParentchainApi,
+) -> Result<Balance, Error> {
 	let encoded_xt: Bytes = api
 		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
 		.encode()
 		.into();
-	let tx_fee = api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
+	let tx_fee = api
+		.get_fee_details(&encoded_xt, None)?
+		.expect("the node must understand our extrinsic encoding")
+		.inclusion_fee
+		.unwrap();
 	let transfer_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
 	Ok(transfer_fee)
 }

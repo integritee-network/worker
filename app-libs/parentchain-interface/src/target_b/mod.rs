@@ -15,6 +15,9 @@
 
 */
 
+pub mod api_client_types;
+#[cfg(feature = "std")]
+pub mod api_factory;
 mod event_filter;
 mod event_handler;
 
@@ -33,10 +36,25 @@ use itc_parentchain_indirect_calls_executor::{
 	filter_metadata::FilterIntoDataFrom,
 	IndirectDispatch,
 };
-use itp_api_client_types::ParentchainSignedExtra;
+use itp_api_client_types::{
+	AssetRuntimeConfig, AssetTip, GenericAdditionalParams, GenericExtrinsicParams,
+	GenericSignedExtra, PairSignature, ParentchainPlainTip, Signature, UncheckedExtrinsicV4,
+};
 use itp_node_api::metadata::pallet_timestamp::TimestampCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
+use itp_types::parentchain::{Address, Balance, Hash, Index};
 use log::*;
+
+// We assume Asset Hub here (or any similar parachain)
+// Pay in asset fees.
+// This needs to be used if the node uses the `pallet_asset_tx_payment`.
+pub type ParentchainExtrinsicParams = GenericExtrinsicParams<AssetRuntimeConfig, AssetTip<Balance>>;
+pub type ParentchainAdditionalParams = GenericAdditionalParams<AssetRuntimeConfig, Hash>;
+
+pub type ParentchainUncheckedExtrinsic<Call> =
+	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
+pub type ParentchainSignedExtra = GenericSignedExtra<ParentchainPlainTip, Index>;
+pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 
 /// Parses the extrinsics corresponding to the parentchain.
 pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;

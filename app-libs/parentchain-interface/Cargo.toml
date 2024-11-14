@@ -25,11 +25,12 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 log = { version = "0.4", default-features = false }
 regex = { optional = true, version = "1.9.5" }
 
-substrate-api-client = { optional = true, default-features = false, features = ["std", "sync-api"], git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
+substrate-api-client = { default-features = false, git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
 
 # substrate dep
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 sp-runtime = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-version = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 
 [dev-dependencies]
 env_logger = "0.9.0"
@@ -62,7 +63,8 @@ std = [
     "regex",
     "sp-core/std",
     "sp-runtime/std",
-    "substrate-api-client",
+    "substrate-api-client/std",
+    "substrate-api-client/sync-api",
 ]
 sgx = [
     "sgx_tstd",
