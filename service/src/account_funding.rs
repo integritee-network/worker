@@ -17,12 +17,14 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
-use ita_parentchain_interface::ParentchainApiTrait;
+use ita_parentchain_interface::{
+	integritee::api_client_types::Config, ParentchainApiTrait, ParentchainRuntimeConfig,
+};
 use itp_node_api::api_client::{AccountApi, ParentchainApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
 use itp_types::{
 	parentchain::{AccountId, Balance, Index, ParentchainId},
-	Moment,
+	AccountData, Moment, Nonce,
 };
 use log::*;
 use sp_core::{
@@ -34,9 +36,10 @@ use sp_runtime::{traits::SignedExtension, MultiAddress, Saturating};
 use std::{fmt::Display, thread, time::Duration};
 use substrate_api_client::{
 	ac_compose_macros::{compose_extrinsic, compose_extrinsic_with_nonce},
-	ac_primitives::Bytes,
+	ac_primitives::{Bytes, Config as ParentchainNodeConfig},
 	extrinsic::BalancesExtrinsics,
-	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, SystemApi, XtStatus,
+	rpc::{Request, Subscribe},
+	Api, GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, SystemApi, XtStatus,
 };
 use teerex_primitives::SgxAttestationMethod;
 
@@ -79,18 +82,22 @@ pub trait ParentchainAccountInfo {
 	fn decimals(&self) -> ServiceResult<u64>;
 }
 
-pub struct ParentchainAccountInfoProvider<ParentchainApi>
+pub struct ParentchainAccountInfoProvider<Tip, Client>
 where
-	ParentchainApi: ParentchainApiTrait,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
 {
 	parentchain_id: ParentchainId,
-	node_api: ParentchainApi,
+	node_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	account_and_role: AccountAndRole,
 }
 
-impl<ParentchainApi> ParentchainAccountInfo for ParentchainAccountInfoProvider<ParentchainApi>
+impl<Tip, Client> ParentchainAccountInfo for ParentchainAccountInfoProvider<Tip, Client>
 where
-	ParentchainApi: ParentchainApiTrait,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
 {
 	fn free_balance(&self) -> ServiceResult<Balance> {
 		self.node_api
@@ -116,13 +123,15 @@ where
 	}
 }
 
-impl<ParentchainApi> ParentchainAccountInfoProvider<ParentchainApi>
+impl<Tip, Client> ParentchainAccountInfoProvider<Tip, Client>
 where
-	ParentchainApi: ParentchainApiTrait,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
 {
 	pub fn new(
 		parentchain_id: ParentchainId,
-		node_api: ParentchainApi,
+		node_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 		account_and_role: AccountAndRole,
 	) -> Self {
 		ParentchainAccountInfoProvider { parentchain_id, node_api, account_and_role }
@@ -132,12 +141,17 @@ where
 /// evaluate if the enclave should have more funds and how much more
 /// in --dev mode: let Alice pay for missing funds
 /// in production mode: wait for manual transfer before continuing
-pub fn setup_reasonable_account_funding<ParentchainApi: ParentchainApiTrait>(
-	api: &ParentchainApi,
+pub fn setup_reasonable_account_funding<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
-) -> ServiceResult<()> {
+) -> ServiceResult<()>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request + Subscribe,
+{
 	loop {
 		let needed = estimate_funds_needed_to_run_for_a_while(api, accountid, parentchain_id)?;
 		let free = api.get_free_balance(accountid)?;
@@ -160,11 +174,16 @@ pub fn setup_reasonable_account_funding<ParentchainApi: ParentchainApiTrait>(
 	}
 }
 
-fn estimate_funds_needed_to_run_for_a_while<ParentchainApi: ParentchainApiTrait>(
-	api: &ParentchainApi,
+fn estimate_funds_needed_to_run_for_a_while<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
-) -> ServiceResult<Balance> {
+) -> ServiceResult<Balance>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
+{
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("[{:?}] Existential deposit is = {:?}", parentchain_id, existential_deposit);
 
@@ -213,10 +232,15 @@ fn estimate_funds_needed_to_run_for_a_while<ParentchainApi: ParentchainApiTrait>
 	Ok(min_required_funds)
 }
 
-pub fn estimate_fee<ParentchainApi: ParentchainApiTrait>(
+pub fn estimate_fee<Tip, Client>(
 	api: &ParentchainApi,
 	encoded_extrinsic: Vec<u8>,
-) -> Result<u128, Error> {
+) -> Result<u128, Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
+{
 	let reg_fee_details = api.get_fee_details(&encoded_extrinsic.into(), None)?;
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
@@ -231,11 +255,16 @@ pub fn estimate_fee<ParentchainApi: ParentchainApiTrait>(
 }
 
 /// Alice sends some funds to the account. only for dev chains testing
-fn bootstrap_funds_from_alice<ParentchainApi: ParentchainApiTrait>(
-	api: &ParentchainApi,
+fn bootstrap_funds_from_alice<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	funding_amount: u128,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request + Subscribe,
+{
 	let alice = AccountKeyring::Alice.pair();
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 
@@ -271,9 +300,14 @@ fn bootstrap_funds_from_alice<ParentchainApi: ParentchainApiTrait>(
 }
 
 /// precise estimation of necessary funds to register a hardcoded number of proxies
-pub fn shard_vault_initial_funds<ParentchainApi: ParentchainApiTrait>(
-	api: &ParentchainApi,
-) -> Result<Balance, Error> {
+pub fn shard_vault_initial_funds<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+) -> Result<Balance, Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
+{
 	let proxy_deposit_base: Balance = api.get_constant("Proxy", "ProxyDepositBase")?;
 	let proxy_deposit_factor: Balance = api.get_constant("Proxy", "ProxyDepositFactor")?;
 	let transfer_fee = estimate_transfer_fee(api)?;
@@ -283,9 +317,14 @@ pub fn shard_vault_initial_funds<ParentchainApi: ParentchainApiTrait>(
 }
 
 /// precise estimation of a single transfer fee
-pub fn estimate_transfer_fee<ParentchainApi: ParentchainApiTrait>(
-	api: &ParentchainApi,
-) -> Result<Balance, Error> {
+pub fn estimate_transfer_fee<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+) -> Result<Balance, Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request,
+{
 	let encoded_xt: Bytes = api
 		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
 		.encode()

@@ -91,5 +91,5 @@ mod api {
 
 	pub type IntegriteeApi = Api<IntegriteeRuntimeConfig, TungsteniteRpcClient>;
 
-	impl ParentchainApiTrait for IntegriteeApi {}
+	// impl ParentchainApiTrait for IntegriteeApi {}
 }

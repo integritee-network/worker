@@ -87,5 +87,5 @@ mod api {
 
 	pub type TargetBApi = Api<TargetBRuntimeConfig, TungsteniteRpcClient>;
 
-	impl ParentchainApiTrait for TargetBApi {}
+	// impl ParentchainApiTrait for TargetBApi {}
 }

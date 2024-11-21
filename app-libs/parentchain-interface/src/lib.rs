@@ -18,20 +18,30 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
+extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
+use crate::integritee::api_client_types::Config;
 use codec::{Decode, Encode};
+use core::marker::PhantomData;
+use itp_api_client_types::{ExtrinsicParams, GenericExtrinsicParams};
 use itp_node_api::api_client::{AccountApi, ChainApi};
 use itp_types::parentchain::{AccountId, Balance, Hash, Header, Index};
+use sp_core::{crypto::AccountId32, sr25519};
 use sp_runtime::{
 	generic::{Block, UncheckedExtrinsic},
-	MultiAddress,
+	MultiAddress, MultiSignature,
 };
 use sp_version::GetRuntimeVersionAt;
 use substrate_api_client::{
-	ac_primitives::Properties, extrinsic::BalancesExtrinsics, GetAccountInformation, GetBalance,
-	GetStorage, GetTransactionPayment, SubmitAndWatch, SubscribeEvents, SystemApi,
+	ac_primitives::{
+		AccountData, AssetTipExtrinsicParams, BlakeTwo256, ExtrinsicSigner, Properties,
+		SubstrateBlock, SubstrateHeader, SubstrateOpaqueExtrinsic,
+	},
+	extrinsic::BalancesExtrinsics,
+	GetAccountInformation, GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch,
+	SubscribeEvents, SystemApi,
 };
 
 #[cfg(feature = "std")]
@@ -79,4 +89,32 @@ pub trait ParentchainApiTrait:
 	+ GetTransactionPayment<Balance = Balance>
 	+ SubmitAndWatch<Hash = Hash> //+ GetRuntimeVersionAt<Block<Header, UncheckedExtrinsic<A>>>
 {
+}
+
+#[derive(Decode, Encode, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainRuntimeConfig<Tip: Sized> {
+	_phantom: PhantomData<Tip>,
+}
+
+impl<Tip> Config for ParentchainRuntimeConfig<Tip>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+{
+	type Index = u32;
+	type BlockNumber = u32;
+	type Hash = Hash;
+	type AccountId = AccountId32;
+	type Address = MultiAddress<Self::AccountId, u32>;
+	type Signature = MultiSignature;
+	type Hasher = BlakeTwo256;
+	type Header = SubstrateHeader<Self::BlockNumber, BlakeTwo256>;
+	type AccountData = itp_types::AccountData;
+	type ExtrinsicParams = GenericExtrinsicParams<Self, Tip>;
+	type CryptoKey = sr25519::Pair;
+	type ExtrinsicSigner = ExtrinsicSigner<Self>;
+	type Block = SubstrateBlock<Self::Header, SubstrateOpaqueExtrinsic>;
+	type Balance = itp_types::Balance;
+	type ContractCurrency = u128;
+	type StakingBalance = u128;
 }
