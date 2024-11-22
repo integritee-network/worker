@@ -44,7 +44,7 @@ use crate::{
 		EnclaveStfEnclaveSigner,
 	},
 };
-use ita_parentchain_interface::target_a::api_client_types::Config;
+use ita_parentchain_interface::Config;
 use itp_component_container::ComponentGetter;
 use itp_nonce_cache::NonceCache;
 use itp_sgx_crypto::key_repository::AccessKey;

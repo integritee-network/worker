@@ -17,7 +17,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
-use ita_parentchain_interface::{integritee::api_client_types::Config, ParentchainRuntimeConfig};
+use ita_parentchain_interface::{Config, ParentchainRuntimeConfig};
 use itp_node_api::api_client::{AccountApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
 use itp_types::{
