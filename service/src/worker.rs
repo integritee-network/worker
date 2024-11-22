@@ -23,7 +23,11 @@ use crate::{config::Config, error::Error, initialized_service::TrackInitializati
 use async_trait::async_trait;
 use ita_parentchain_interface::ParentchainApiTrait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
+use itp_api_client_types::{Config as NodeRuntimeConfig, Request};
+use itp_node_api::{
+	api_client::PalletTeerexApi,
+	node_api_factory::{CreateNodeApi, NodeApiFactory},
+};
 use itp_types::ShardIdentifier;
 use itp_utils::ToHexPrefixed;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
@@ -42,23 +46,28 @@ use url::Url as UrlType;
 
 pub type WorkerResult<T> = Result<T, Error>;
 pub type Url = String;
-pub struct Worker<Config, NodeApiFactory, NodeApi, Enclave, InitializationHandler> {
+pub struct Worker<
+	Config,
+	NodeConfig: NodeRuntimeConfig,
+	Client: Request,
+	Enclave,
+	InitializationHandler,
+> {
 	_config: Config,
 	// unused yet, but will be used when more methods are migrated to the worker
 	_enclave_api: Arc<Enclave>,
-	node_api_factory: Arc<NodeApiFactory>,
+	node_api_factory: Arc<NodeApiFactory<NodeConfig, Client>>,
 	initialization_handler: Arc<InitializationHandler>,
 	peers: RwLock<Vec<Url>>,
-	_phantom: PhantomData<NodeApi>,
 }
 
-impl<Config, NodeApiFactory, NodeApi, Enclave, InitializationHandler>
-	Worker<Config, NodeApiFactory, NodeApi, Enclave, InitializationHandler>
+impl<Config, NodeConfig: NodeRuntimeConfig, Client: Request, Enclave, InitializationHandler>
+	Worker<Config, NodeConfig, Client, Enclave, InitializationHandler>
 {
 	pub fn new(
 		config: Config,
 		enclave_api: Arc<Enclave>,
-		node_api_factory: Arc<NodeApiFactory>,
+		node_api_factory: Arc<NodeApiFactory<NodeConfig, Client>>,
 		initialization_handler: Arc<InitializationHandler>,
 		peers: Vec<Url>,
 	) -> Self {
@@ -79,11 +88,11 @@ pub trait AsyncBlockBroadcaster {
 }
 
 #[async_trait]
-impl<NodeApiFactory, NodeApi, Enclave, InitializationHandler> AsyncBlockBroadcaster
-	for Worker<Config, NodeApiFactory, NodeApi, Enclave, InitializationHandler>
+impl<NodeConfig, Client, Enclave, InitializationHandler> AsyncBlockBroadcaster
+	for Worker<Config, NodeConfig, Client, Enclave, InitializationHandler>
 where
-	NodeApiFactory: CreateNodeApi<NodeApi> + Send + Sync,
-	NodeApi: ParentchainApiTrait,
+	NodeConfig: NodeRuntimeConfig,
+	Client: Request,
 	Enclave: Send + Sync,
 	InitializationHandler: TrackInitialization + Send + Sync,
 {
@@ -141,11 +150,11 @@ pub trait UpdatePeers {
 	}
 }
 
-impl<NodeApiFactory, NodeApi, Enclave, InitializationHandler> UpdatePeers
-	for Worker<Config, NodeApiFactory, NodeApi, Enclave, InitializationHandler>
+impl<NodeConfig, Client, Enclave, InitializationHandler> UpdatePeers
+	for Worker<Config, NodeConfig, Client, Enclave, InitializationHandler>
 where
-	NodeApiFactory: CreateNodeApi<NodeApi> + Send + Sync,
-	NodeApi: ParentchainApiTrait,
+	NodeConfig: NodeRuntimeConfig,
+	Client: Request,
 {
 	fn search_peers(&self, shard: ShardIdentifier) -> WorkerResult<Vec<String>> {
 		let node_api = self

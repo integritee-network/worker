@@ -16,8 +16,9 @@
 
 */
 
-use super::api_client_types::IntegriteeApi;
-use itp_api_client_types::TungsteniteRpcClient;
+use super::api_client_types::IntegriteeTip;
+use crate::ParentchainRuntimeConfig;
+use itp_api_client_types::{Api, TungsteniteRpcClient};
 use itp_node_api::node_api_factory::{CreateNodeApi, NodeApiFactoryError, Result};
 use sp_core::sr25519;
 
@@ -33,12 +34,15 @@ impl IntegriteeNodeApiFactory {
 	}
 }
 
-impl CreateNodeApi<IntegriteeApi> for IntegriteeNodeApiFactory {
-	fn create_api(&self) -> Result<IntegriteeApi> {
+impl CreateNodeApi<ParentchainRuntimeConfig<IntegriteeTip>, TungsteniteRpcClient>
+	for IntegriteeNodeApiFactory
+{
+	fn create_api(
+		&self,
+	) -> Result<Api<ParentchainRuntimeConfig<IntegriteeTip>, TungsteniteRpcClient>> {
 		let rpc_client = TungsteniteRpcClient::new(self.node_url.as_str(), 5)
 			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
-		let mut api =
-			IntegriteeApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		let mut api = Api::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
 		api.set_signer(self.signer.clone().into());
 		Ok(api)
 	}

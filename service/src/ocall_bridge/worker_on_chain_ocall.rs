@@ -23,13 +23,16 @@ use ita_parentchain_interface::{
 	integritee::{api_client_types::IntegriteeApi, api_factory::IntegriteeNodeApiFactory},
 	target_a::{api_client_types::TargetAApi, api_factory::TargetANodeApiFactory},
 	target_b::{api_client_types::TargetBApi, api_factory::TargetBNodeApiFactory},
-	ParentchainApiTrait,
+	ParentchainApiTrait, ParentchainRuntimeConfig,
 };
-use itp_api_client_types::ParentchainApi;
-use itp_node_api::{api_client::AccountApi, node_api_factory::CreateNodeApi};
+use itp_api_client_types::{ParentchainApi, Request};
+use itp_node_api::{
+	api_client::{AccountApi, Config},
+	node_api_factory::{CreateNodeApi, NodeApiFactory},
+};
 use itp_types::{
-	parentchain::{Header as ParentchainHeader, ParentchainId},
-	DigestItem, WorkerRequest, WorkerResponse,
+	parentchain::{AccountId, Header as ParentchainHeader, ParentchainId},
+	BlockHash, DigestItem, Nonce, WorkerRequest, WorkerResponse,
 };
 use log::*;
 use sp_core::blake2_256;
@@ -44,21 +47,38 @@ use std::{
 use substrate_api_client::{
 	ac_primitives,
 	ac_primitives::{serde_impls::StorageKey, SubstrateHeader},
-	GetAccountInformation, GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
+	rpc::TungsteniteRpcClient,
+	Api, GetAccountInformation, GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic,
+	XtStatus,
 };
 
-pub struct WorkerOnChainOCall {
-	integritee_api_factory: Arc<IntegriteeApi>,
-	target_a_parentchain_api_factory: Option<Arc<TargetAApi>>,
-	target_b_parentchain_api_factory: Option<Arc<TargetBApi>>,
+pub struct WorkerOnChainOCall<
+	IntegriteeConfig: Config,
+	TargetAConfig: Config,
+	TargetBConfig: Config,
+	Client: Request,
+> {
+	integritee_api_factory: Arc<NodeApiFactory<IntegriteeConfig, Client>>,
+	target_a_parentchain_api_factory: Option<Arc<NodeApiFactory<TargetAConfig, Client>>>,
+	target_b_parentchain_api_factory: Option<Arc<NodeApiFactory<TargetBConfig, Client>>>,
 	log_dir: Arc<Path>,
 }
 
-impl WorkerOnChainOCall {
+impl<IntegriteeConfig: Config, TargetAConfig: Config, TargetBConfig: Config>
+	WorkerOnChainOCall<IntegriteeConfig, TargetAConfig, TargetBConfig, TungsteniteRpcClient>
+where
+	<IntegriteeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetAConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetBConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+{
 	pub fn new(
-		integritee_api_factory: Arc<IntegriteeNodeApiFactory>,
-		target_a_parentchain_api_factory: Option<Arc<TargetANodeApiFactory>>,
-		target_b_parentchain_api_factory: Option<Arc<TargetBNodeApiFactory>>,
+		integritee_api_factory: Arc<NodeApiFactory<IntegriteeConfig, TungsteniteRpcClient>>,
+		target_a_parentchain_api_factory: Option<
+			Arc<NodeApiFactory<TargetAConfig, TungsteniteRpcClient>>,
+		>,
+		target_b_parentchain_api_factory: Option<
+			Arc<NodeApiFactory<TargetBConfig, TungsteniteRpcClient>>,
+		>,
 		log_dir: Arc<Path>,
 	) -> Self {
 		WorkerOnChainOCall {
@@ -70,41 +90,49 @@ impl WorkerOnChainOCall {
 	}
 }
 
-impl WorkerOnChainOCall {
-	pub fn create_api(&self, parentchain_id: ParentchainId) -> OCallBridgeResult<ParentchainApi> {
-		Ok(match parentchain_id {
-			ParentchainId::Integritee => self.integritee_api_factory.create_api()?,
-			ParentchainId::TargetA => self
-				.target_a_parentchain_api_factory
-				.as_ref()
-				.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
-				.and_then(|f| f.create_api().map_err(Into::into))?,
-			ParentchainId::TargetB => self
-				.target_b_parentchain_api_factory
-				.as_ref()
-				.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)
-				.and_then(|f| f.create_api().map_err(Into::into))?,
-		})
-	}
-}
-
-impl WorkerOnChainBridge for WorkerOnChainOCall {
-	fn worker_request(
+impl<
+		IntegriteeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+		TargetAConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+		TargetBConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+	> WorkerOnChainOCall<IntegriteeConfig, TargetAConfig, TargetBConfig, TungsteniteRpcClient>
+where
+	<IntegriteeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetAConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetBConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+{
+	pub fn create_integritee_api(
 		&self,
-		request: Vec<u8>,
-		parentchain_id: Vec<u8>,
-	) -> OCallBridgeResult<Vec<u8>> {
-		debug!("    Entering ocall_worker_request");
+	) -> OCallBridgeResult<Api<IntegriteeConfig, TungsteniteRpcClient>> {
+		Ok(self.integritee_api_factory.create_api()?)
+	}
 
-		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice())?;
-		if requests.is_empty() {
-			debug!("requests is empty, returning empty vector");
-			return Ok(Vec::<u8>::new().encode())
-		}
+	pub fn create_target_a_api(
+		&self,
+	) -> OCallBridgeResult<Api<TargetAConfig, TungsteniteRpcClient>> {
+		Ok(self
+			.target_a_parentchain_api_factory
+			.as_ref()
+			.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
+			.and_then(|f| f.create_api().map_err(Into::into))?)
+	}
 
-		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+	pub fn create_target_b_api(
+		&self,
+	) -> OCallBridgeResult<Api<TargetBConfig, TungsteniteRpcClient>> {
+		Ok(self
+			.target_b_parentchain_api_factory
+			.as_ref()
+			.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)
+			.and_then(|f| f.create_api().map_err(Into::into))?)
+	}
 
-		let api = self.create_api(parentchain_id)?;
+	fn handle_requests<
+		Config: itp_api_client_types::Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+	>(
+		&self,
+		api: &Api<Config, TungsteniteRpcClient>,
+		requests: Vec<WorkerRequest>,
+	) -> OCallBridgeResult<Vec<WorkerResponse<ParentchainHeader, Vec<u8>>>> {
 		let last_finalized =
 			api.get_finalized_head().map_err(|_| OCallBridgeError::NodeApiError)?;
 		let header = if let Some(header) =
@@ -113,7 +141,7 @@ impl WorkerOnChainBridge for WorkerOnChainOCall {
 			header
 		} else {
 			warn!("failed to fetch parentchain header. can't answer WorkerRequest");
-			return Ok(Vec::<u8>::new().encode())
+			return Ok(vec![])
 		};
 
 		let resp: Vec<WorkerResponse<ParentchainHeader, Vec<u8>>> = requests
@@ -138,6 +166,59 @@ impl WorkerOnChainBridge for WorkerOnChainOCall {
 				},
 			})
 			.collect();
+
+		Ok(resp)
+	}
+}
+
+impl<
+		IntegriteeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+		TargetAConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+		TargetBConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+	> WorkerOnChainBridge
+	for WorkerOnChainOCall<IntegriteeConfig, TargetAConfig, TargetBConfig, TungsteniteRpcClient>
+where
+	<IntegriteeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetAConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetBConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+{
+	fn worker_request(
+		&self,
+		request: Vec<u8>,
+		parentchain_id: Vec<u8>,
+	) -> OCallBridgeResult<Vec<u8>> {
+		debug!("    Entering ocall_worker_request");
+
+		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice())?;
+		if requests.is_empty() {
+			debug!("requests is empty, returning empty vector");
+			return Ok(Vec::<u8>::new().encode())
+		}
+
+		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+
+		let resp = match parentchain_id {
+			ParentchainId::Integritee => {
+				let api = self.integritee_api_factory.create_api()?;
+				self.handle_requests(&api, requests)?
+			},
+			ParentchainId::TargetA => {
+				let api = self
+					.target_a_parentchain_api_factory
+					.as_ref()
+					.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)?
+					.create_api()?;
+				self.handle_requests(&api, requests)?
+			},
+			ParentchainId::TargetB => {
+				let api = self
+					.target_b_parentchain_api_factory
+					.as_ref()
+					.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)?
+					.create_api()?;
+				self.handle_requests(&api, requests)?
+			},
+		};
 
 		let encoded_response: Vec<u8> = resp.encode();
 

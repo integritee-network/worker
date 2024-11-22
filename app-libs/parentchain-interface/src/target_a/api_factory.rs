@@ -16,8 +16,9 @@
 
 */
 
-use super::api_client_types::TargetAApi;
-use itp_api_client_types::TungsteniteRpcClient;
+use super::api_client_types::TargetATip;
+use crate::ParentchainRuntimeConfig;
+use itp_api_client_types::{Api, TungsteniteRpcClient};
 use itp_node_api::node_api_factory::{CreateNodeApi, NodeApiFactoryError, Result};
 use sp_core::sr25519;
 
@@ -33,12 +34,15 @@ impl TargetANodeApiFactory {
 	}
 }
 
-impl CreateNodeApi<TargetAApi> for TargetANodeApiFactory {
-	fn create_api(&self) -> Result<TargetAApi> {
+impl CreateNodeApi<ParentchainRuntimeConfig<TargetATip>, TungsteniteRpcClient>
+	for TargetANodeApiFactory
+{
+	fn create_api(
+		&self,
+	) -> Result<Api<ParentchainRuntimeConfig<TargetATip>, TungsteniteRpcClient>> {
 		let rpc_client = TungsteniteRpcClient::new(self.node_url.as_str(), 5)
 			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
-		let mut api =
-			TargetAApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		let mut api = Api::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
 		api.set_signer(self.signer.clone().into());
 		Ok(api)
 	}

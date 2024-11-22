@@ -15,13 +15,13 @@
 	limitations under the License.
 
 */
-
-use itp_api_client_types::{ParentchainApi, TungsteniteRpcClient};
+use itp_api_client_types::{traits::Request, Api, Config, ParentchainApi, TungsteniteRpcClient};
 use sp_core::sr25519;
+use std::marker::PhantomData;
 
 /// Trait to create a node API, based on a node URL and signer.
-pub trait CreateNodeApi<ParentchainApi> {
-	fn create_api(&self) -> Result<ParentchainApi>;
+pub trait CreateNodeApi<NodeConfig: Config, Client: Request> {
+	fn create_api(&self) -> Result<Api<NodeConfig, Client>>;
 }
 
 /// Node API factory error.
@@ -50,23 +50,27 @@ impl From<itp_api_client_types::ApiClientError> for NodeApiFactoryError {
 pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
 
 /// Node API factory implementation.
-pub struct NodeApiFactory {
+pub struct NodeApiFactory<NodeConfig: Config, Client: Request> {
 	node_url: String,
 	signer: sr25519::Pair,
+	_phantom: PhantomData<(NodeConfig, Client)>,
 }
 
-impl NodeApiFactory {
+impl<NodeConfig: Config, Client: Request> NodeApiFactory<NodeConfig, Client> {
 	pub fn new(url: String, signer: sr25519::Pair) -> Self {
-		NodeApiFactory { node_url: url, signer }
+		NodeApiFactory { node_url: url, signer, _phantom: Default::default() }
 	}
 }
 
-impl CreateNodeApi<ParentchainApi> for NodeApiFactory {
-	fn create_api(&self) -> Result<ParentchainApi> {
+impl<NodeConfig: Config> CreateNodeApi<NodeConfig, TungsteniteRpcClient>
+	for NodeApiFactory<NodeConfig, TungsteniteRpcClient>
+where
+	<NodeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+{
+	fn create_api(&self) -> Result<Api<NodeConfig, TungsteniteRpcClient>> {
 		let rpc_client = TungsteniteRpcClient::new(self.node_url.as_str(), 5)
 			.map_err(NodeApiFactoryError::FailedToCreateRpcClient)?;
-		let mut api =
-			ParentchainApi::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
+		let mut api = Api::new(rpc_client).map_err(NodeApiFactoryError::FailedToCreateNodeApi)?;
 		api.set_signer(self.signer.clone().into());
 		Ok(api)
 	}

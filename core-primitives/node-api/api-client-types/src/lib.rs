@@ -45,7 +45,10 @@ pub use substrate_api_client::{
 
 // traits from the api-client
 pub mod traits {
-	pub use substrate_api_client::{GetAccountInformation, GetChainInfo, GetStorage};
+	pub use substrate_api_client::{
+		rpc::{Request, Subscribe},
+		GetAccountInformation, GetChainInfo, GetStorage,
+	};
 }
 
 pub type ParentchainPlainTip = PlainTip<Balance>;
