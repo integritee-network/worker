@@ -378,13 +378,6 @@ pub type EnclaveSealHandler = SealHandler<
 	EnclaveLightClientSeal,
 >;
 
-pub type IntegriteeOffchainWorkerExecutor =
-	EnclaveOffchainWorkerExecutor<IntegriteeEnclaveExtrinsicsFactory>;
-pub type TargetAOffchainWorkerExecutor =
-	EnclaveOffchainWorkerExecutor<TargetAEnclaveExtrinsicsFactory>;
-pub type TargetBOffchainWorkerExecutor =
-	EnclaveOffchainWorkerExecutor<TargetBEnclaveExtrinsicsFactory>;
-
 pub type EnclaveOffchainWorkerExecutor<ExtrinsicsFactory> =
 	itc_offchain_worker_executor::executor::Executor<
 		ParentchainBlock,
