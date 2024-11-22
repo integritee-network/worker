@@ -85,7 +85,8 @@ mod api {
 		Api, GetBalance, GetChainInfo, GetStorage, GetTransactionPayment, SubscribeEvents,
 	};
 
-	pub type TargetAApi = Api<ParentchainRuntimeConfig<PlainTip<Balance>>, TungsteniteRpcClient>;
+	pub type TargetANodeConfig = ParentchainRuntimeConfig<PlainTip<Balance>>;
+	pub type TargetAApi = Api<TargetANodeConfig, TungsteniteRpcClient>;
 
 	//impl ParentchainApiTrait for TargetAApi {}
 }

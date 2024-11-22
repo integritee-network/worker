@@ -157,9 +157,10 @@ impl<
 		TokioHandle,
 		MetricsReceiver,
 	> where
-	IntegriteeRuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
-	TargetARuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
-	TargetBRuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+	IntegriteeRuntimeConfig:
+		Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
+	TargetARuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
+	TargetBRuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
 	<IntegriteeRuntimeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
 	<TargetARuntimeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
 	<TargetBRuntimeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,

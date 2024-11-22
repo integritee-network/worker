@@ -16,7 +16,6 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
-use itp_node_api::api_client::ParentchainApi;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::parentchain::ExchangeRateUpdated;
 use log::*;
@@ -42,7 +41,7 @@ impl ListenToExchangeRateEventsCmd {
 	}
 }
 
-pub fn count_exchange_rate_update_events(api: &ParentchainApi, duration: Duration) -> u32 {
+pub fn count_exchange_rate_update_events(api: &IntegriteeApi, duration: Duration) -> u32 {
 	let stop = duration_now() + duration;
 
 	//subscribe to events

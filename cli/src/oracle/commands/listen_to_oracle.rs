@@ -41,7 +41,7 @@ impl ListenToOracleEventsCmd {
 	}
 }
 
-fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> EventCount {
+fn count_oracle_update_events(api: &IntegriteeApi, duration: Duration) -> EventCount {
 	let stop = duration_now() + duration;
 
 	//subscribe to events

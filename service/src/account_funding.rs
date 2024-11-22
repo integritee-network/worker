@@ -20,7 +20,7 @@ use codec::Encode;
 use ita_parentchain_interface::{
 	integritee::api_client_types::Config, ParentchainApiTrait, ParentchainRuntimeConfig,
 };
-use itp_node_api::api_client::{AccountApi, ParentchainApi, TEEREX};
+use itp_node_api::api_client::{AccountApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
 use itp_types::{
 	parentchain::{AccountId, Balance, Index, ParentchainId},
@@ -142,7 +142,7 @@ where
 /// in --dev mode: let Alice pay for missing funds
 /// in production mode: wait for manual transfer before continuing
 pub fn setup_reasonable_account_funding<Tip, Client>(
-	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+	api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
@@ -150,10 +150,10 @@ pub fn setup_reasonable_account_funding<Tip, Client>(
 where
 	u128: From<Tip>,
 	Tip: Copy + Default + Encode,
-	Client: Request + Subscribe,
+	Client: Request + Subscribe + Clone,
 {
 	loop {
-		let needed = estimate_funds_needed_to_run_for_a_while(api, accountid, parentchain_id)?;
+		let needed = estimate_funds_needed_to_run_for_a_while(&api, accountid, parentchain_id)?;
 		let free = api.get_free_balance(accountid)?;
 		let missing_funds = needed.saturating_sub(free);
 
@@ -163,7 +163,7 @@ where
 
 		if is_development_mode {
 			info!("[{:?}] Alice will grant {:?} to {:?}", parentchain_id, missing_funds, accountid);
-			bootstrap_funds_from_alice(api, accountid, missing_funds)?;
+			bootstrap_funds_from_alice(api.clone(), accountid, missing_funds)?;
 		} else {
 			error!(
 				"[{:?}] Enclave account needs funding. please send at least {:?} to {:?}",
@@ -233,7 +233,7 @@ where
 }
 
 pub fn estimate_fee<Tip, Client>(
-	api: &ParentchainApi,
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	encoded_extrinsic: Vec<u8>,
 ) -> Result<u128, Error>
 where
@@ -256,7 +256,7 @@ where
 
 /// Alice sends some funds to the account. only for dev chains testing
 fn bootstrap_funds_from_alice<Tip, Client>(
-	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+	api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	funding_amount: u128,
 ) -> Result<(), Error>
@@ -265,6 +265,8 @@ where
 	Tip: Copy + Default + Encode,
 	Client: Request + Subscribe,
 {
+	let mut api = api;
+
 	let alice = AccountKeyring::Alice.pair();
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 
@@ -281,19 +283,17 @@ where
 		return Err(Error::ApplicationSetup)
 	}
 
-	let mut alice_signer_api = api.clone();
-	alice_signer_api.set_signer(alice.into());
+	api.set_signer(alice.into());
 
 	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
-	let xt = alice_signer_api
-		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
+	let xt = api.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
+	let xt_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 		xt_report.extrinsic_hash, xt_report.status
 	);
 	// Verify funds have arrived.
-	let free_balance = alice_signer_api.get_free_balance(accountid);
+	let free_balance = api.get_free_balance(accountid);
 	trace!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())
