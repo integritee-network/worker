@@ -169,6 +169,54 @@ where
 
 		Ok(resp)
 	}
+
+	fn submit_extrinsics_to_parentchain<
+		Config: itp_api_client_types::Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId>,
+	>(
+		&self,
+		api: &Api<Config, TungsteniteRpcClient>,
+		extrinsics: Vec<OpaqueExtrinsic>,
+		parentchain_id: ParentchainId,
+		await_each_inclusion: bool,
+	) -> OCallBridgeResult<()> {
+		debug!(
+			"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
+			extrinsics.len(),
+			parentchain_id,
+			await_each_inclusion
+		);
+		log_extrinsics_to_file(self.log_dir.clone(), parentchain_id, extrinsics.clone())
+			.map_err(|e| {
+				error!("Error logging extrinsic to disk: {}", e);
+				e
+			})
+			.unwrap_or_default();
+
+		for call in extrinsics.into_iter() {
+			if await_each_inclusion {
+				if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
+					&call.encode().into(),
+					XtStatus::InBlock,
+				) {
+					error!(
+						"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+						parentchain_id,
+						serde_json::to_string(&call),
+						e
+					);
+				}
+			} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
+				error!(
+					"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+					parentchain_id,
+					serde_json::to_string(&call),
+					e
+				);
+			}
+		}
+
+		Ok(())
+	}
 }
 
 impl<
@@ -229,60 +277,62 @@ where
 		&self,
 		extrinsics_encoded: Vec<u8>,
 		parentchain_id: Vec<u8>,
-		await_each_inlcusion: bool,
+		await_each_inclusion: bool,
 	) -> OCallBridgeResult<()> {
-		// TODO: improve error handling, using a mut status is not good design?
-		let mut status: OCallBridgeResult<()> = Ok(());
-
 		let extrinsics: Vec<OpaqueExtrinsic> =
 			match Decode::decode(&mut extrinsics_encoded.as_slice()) {
 				Ok(calls) => calls,
-				Err(_) => {
-					status = Err(OCallBridgeError::SendExtrinsicsToParentchain(
+				Err(_) =>
+					return Err(OCallBridgeError::SendExtrinsicsToParentchain(
 						"Could not decode extrinsics".to_string(),
-					));
-					Default::default()
-				},
+					)),
 			};
 
-		if !extrinsics.is_empty() {
-			let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
-			debug!(
-				"Enclave wants to send {} extrinsics to parentchain: {:?}. await each inclusion: {:?}",
-				extrinsics.len(),
-				parentchain_id, await_each_inlcusion
-			);
-			log_extrinsics_to_file(self.log_dir.clone(), parentchain_id, extrinsics.clone())
-				.map_err(|e| {
-					error!("Error logging extrinsic to disk: {}", e);
-					e
-				})
-				.unwrap_or_default();
-			let api = self.create_api(parentchain_id)?;
-			for call in extrinsics.into_iter() {
-				if await_each_inlcusion {
-					if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
-						&call.encode().into(),
-						XtStatus::InBlock,
-					) {
-						error!(
-							"Could not send extrinsic to {:?}: {:?}, error: {:?}",
-							parentchain_id,
-							serde_json::to_string(&call),
-							e
-						);
-					}
-				} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
-					error!(
-						"Could not send extrinsic to {:?}: {:?}, error: {:?}",
-						parentchain_id,
-						serde_json::to_string(&call),
-						e
-					);
-				}
-			}
+		if extrinsics.is_empty() {
+			return Ok(())
 		}
-		status
+
+		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+
+		match parentchain_id {
+			ParentchainId::Integritee => {
+				let api = self.integritee_api_factory.create_api()?;
+				self.submit_extrinsics_to_parentchain(
+					&api,
+					extrinsics,
+					parentchain_id,
+					await_each_inclusion,
+				)?
+			},
+			ParentchainId::TargetA => {
+				let api = self
+					.target_a_parentchain_api_factory
+					.as_ref()
+					.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)?
+					.create_api()?;
+				self.submit_extrinsics_to_parentchain(
+					&api,
+					extrinsics,
+					parentchain_id,
+					await_each_inclusion,
+				)?
+			},
+			ParentchainId::TargetB => {
+				let api = self
+					.target_b_parentchain_api_factory
+					.as_ref()
+					.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)?
+					.create_api()?;
+				self.submit_extrinsics_to_parentchain(
+					&api,
+					extrinsics,
+					parentchain_id,
+					await_each_inclusion,
+				)?
+			},
+		};
+
+		Ok(())
 	}
 }
 
