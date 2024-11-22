@@ -17,8 +17,8 @@
 
 use crate::{error::ServiceResult, teeracle::schedule_periodic::schedule_periodic};
 use codec::{Decode, Encode};
+use ita_parentchain_interface::integritee::api_client_types::IntegriteeApi;
 use itp_enclave_api::teeracle_api::TeeracleApi;
-use itp_node_api::api_client::ParentchainApi;
 use itp_types::parentchain::Hash;
 use itp_utils::hex::hex_encode;
 use log::*;
@@ -69,7 +69,7 @@ pub(crate) fn schedule_periodic_reregistration_thread(
 ///
 /// Note: Puts the current thread to sleep for `period`.
 pub(crate) fn start_periodic_market_update<E: TeeracleApi>(
-	api: &ParentchainApi,
+	api: &IntegriteeApi,
 	period: Duration,
 	enclave_api: &E,
 	tokio_handle: &Handle,
@@ -97,7 +97,7 @@ pub(crate) fn start_periodic_market_update<E: TeeracleApi>(
 }
 
 fn execute_oracle_update<F>(
-	node_api: &ParentchainApi,
+	node_api: &IntegriteeApi,
 	tokio_handle: &Handle,
 	get_oracle_xt: F,
 ) -> ServiceResult<()>

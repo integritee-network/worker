@@ -16,6 +16,7 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
+use ita_parentchain_interface::integritee::api_client_types::IntegriteeApi;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::parentchain::ExchangeRateUpdated;
 use log::*;
