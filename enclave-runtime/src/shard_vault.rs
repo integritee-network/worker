@@ -32,7 +32,7 @@ use crate::{
 };
 use codec::{Compact, Decode, Encode};
 use itp_component_container::ComponentGetter;
-use itp_extrinsics_factory::{CreateExtrinsics, ExtrinsicsFactory};
+use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
 	api_client::{Config, PairSignature, StaticExtrinsicSigner},
 	metadata::provider::{AccessNodeMetadata, Error as MetadataProviderError},
@@ -258,6 +258,67 @@ pub(crate) fn add_shard_vault_proxy(
 	shard: ShardIdentifier,
 	proxy: &AccountId,
 ) -> EnclaveResult<()> {
+	let (vault, parentchain_id) = get_shard_vault_internal(shard)?;
+
+	match parentchain_id {
+		ParentchainId::Integritee => {
+			let enclave_extrinsics_factory =
+				get_extrinsic_factory_from_integritee_solo_or_parachain()?;
+			let node_metadata_repo =
+				get_node_metadata_repository_from_integritee_solo_or_parachain()?;
+			add_shard_vault_proxy_int(
+				shard,
+				proxy,
+				vault,
+				parentchain_id,
+				enclave_extrinsics_factory,
+				node_metadata_repo,
+			)
+		},
+		ParentchainId::TargetA => {
+			let enclave_extrinsics_factory =
+				get_extrinsic_factory_from_target_a_solo_or_parachain()?;
+			let node_metadata_repo =
+				get_node_metadata_repository_from_target_a_solo_or_parachain()?;
+			add_shard_vault_proxy_int(
+				shard,
+				proxy,
+				vault,
+				parentchain_id,
+				enclave_extrinsics_factory,
+				node_metadata_repo,
+			)
+		},
+		ParentchainId::TargetB => {
+			let enclave_extrinsics_factory =
+				get_extrinsic_factory_from_target_b_solo_or_parachain()?;
+			let node_metadata_repo =
+				get_node_metadata_repository_from_target_b_solo_or_parachain()?;
+			add_shard_vault_proxy_int(
+				shard,
+				proxy,
+				vault,
+				parentchain_id,
+				enclave_extrinsics_factory,
+				node_metadata_repo,
+			)
+		},
+	}
+}
+
+fn add_shard_vault_proxy_int<NodeRuntimeConfig, Tip>(
+	shard: ShardIdentifier,
+	proxy: &AccountId,
+	vault: AccountId,
+	parentchain_id: ParentchainId,
+	enclave_extrinsics_factory: Arc<EnclaveExtrinsicsFactory<NodeRuntimeConfig, Tip>>,
+	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
+) -> EnclaveResult<()>
+where
+	NodeRuntimeConfig: Config<Hash = H256>,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+{
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
 		.shard_exists(&shard)
@@ -267,19 +328,6 @@ pub(crate) fn add_shard_vault_proxy(
 	};
 
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let (vault, parentchain_id) = get_shard_vault_internal(shard)?;
-
-	let enclave_extrinsics_factory = match parentchain_id {
-		ParentchainId::Integritee => get_extrinsic_factory_from_integritee_solo_or_parachain()?,
-		ParentchainId::TargetA => get_extrinsic_factory_from_target_a_solo_or_parachain()?,
-		ParentchainId::TargetB => get_extrinsic_factory_from_target_b_solo_or_parachain()?,
-	};
-	let node_metadata_repo = match parentchain_id {
-		ParentchainId::Integritee =>
-			get_node_metadata_repository_from_integritee_solo_or_parachain()?,
-		ParentchainId::TargetA => get_node_metadata_repository_from_target_a_solo_or_parachain()?,
-		ParentchainId::TargetB => get_node_metadata_repository_from_target_b_solo_or_parachain()?,
-	};
 
 	debug!(
 		"adding proxy 0x{} to shard vault account 0x{} on {:?}",
@@ -289,13 +337,13 @@ pub(crate) fn add_shard_vault_proxy(
 	);
 
 	let add_proxy_call = OpaqueCall::from_tuple(&(
-		node_metadata_repo.get_from_metadata(|m| m.add_proxy_call_indexes())??,
+		node_metadata_repository.get_from_metadata(|m| m.add_proxy_call_indexes())??,
 		Address::from(proxy.clone()),
 		ProxyType::Any,
 		0u32, // delay
 	));
 	let call = OpaqueCall::from_tuple(&(
-		node_metadata_repo.get_from_metadata(|m| m.proxy_call_indexes())??,
+		node_metadata_repository.get_from_metadata(|m| m.proxy_call_indexes())??,
 		Address::from(vault),
 		None::<ProxyType>,
 		add_proxy_call,

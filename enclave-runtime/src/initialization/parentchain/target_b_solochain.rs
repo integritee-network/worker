@@ -19,8 +19,8 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetBEnclaveExtrinsicsFactory,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, TargetBEnclaveExtrinsicsFactory,
 			TargetBParentchainBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 			GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,

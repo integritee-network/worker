@@ -17,8 +17,8 @@
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner,
-		EnclaveStfExecutor, EnclaveValidatorAccessor, IntegriteeEnclaveExtrinsicsFactory,
+		EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor,
+		EnclaveValidatorAccessor, IntegriteeEnclaveExtrinsicsFactory,
 		IntegriteeParentchainTriggeredBlockImportDispatcher, TargetAEnclaveExtrinsicsFactory,
 		TargetAParentchainTriggeredBlockImportDispatcher, TargetBEnclaveExtrinsicsFactory,
 		TargetBParentchainTriggeredBlockImportDispatcher,

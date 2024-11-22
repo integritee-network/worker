@@ -30,18 +30,15 @@ pub mod sgx_reexport_prelude {
 }
 
 use codec::Encode;
-use core::marker::{PhantomData, PhantomPinned};
+use core::marker::PhantomData;
 use error::Result;
 use itp_node_api::{
-	api_client::{
-		ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams,
-		ParentchainExtrinsicParams, SignExtrinsic,
-	},
+	api_client::{ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams, SignExtrinsic},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_types::{
-	parentchain::{AccountId, GenericMortality, Hash},
+	parentchain::{AccountId, GenericMortality},
 	OpaqueCall,
 };
 use sp_core::H256;

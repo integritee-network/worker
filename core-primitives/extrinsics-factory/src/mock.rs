@@ -15,12 +15,9 @@
 
 */
 use crate::{error::Result, AdditionParamsOf, CreateExtrinsics};
-use codec::Encode;
 use core::marker::PhantomData;
-use itp_node_api::api_client::{
-	Config, GenericAdditionalParams, GenericExtrinsicParams, ParentchainRuntimeConfig, PlainTip,
-};
-use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall, H256};
+use itp_node_api::api_client::{GenericExtrinsicParams, ParentchainRuntimeConfig, PlainTip};
+use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall};
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
