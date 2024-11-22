@@ -22,6 +22,7 @@ use crate::{
 	parentchain_handler::HandleParentchain,
 };
 use futures::executor::block_on;
+use ita_parentchain_interface::integritee::api_client_types::IntegriteeApi;
 use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::{pallet_sidechain::PalletSidechainApi, PalletTeerexApi};
@@ -53,7 +54,7 @@ pub trait ParentchainIntegriteeSidechainInfo {
 }
 
 pub struct ParentchainIntegriteeSidechainInfoProvider {
-	node_api: ParentchainApi,
+	node_api: IntegriteeApi,
 	shard: ShardIdentifier,
 }
 
@@ -91,7 +92,7 @@ impl ParentchainIntegriteeSidechainInfo for ParentchainIntegriteeSidechainInfoPr
 }
 
 impl ParentchainIntegriteeSidechainInfoProvider {
-	pub fn new(node_api: ParentchainApi, shard: ShardIdentifier) -> Self {
+	pub fn new(node_api: IntegriteeApi, shard: ShardIdentifier) -> Self {
 		ParentchainIntegriteeSidechainInfoProvider { node_api, shard }
 	}
 }

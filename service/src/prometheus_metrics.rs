@@ -353,6 +353,8 @@ pub struct PrometheusMarblerunEventActivation {
 	pub quote: String,
 }
 
+trait ParentchainAccountInfoSafe: ParentchainAccountInfo + Send + Sync + Sized {}
+
 #[allow(clippy::too_many_arguments)]
 pub fn start_prometheus_metrics_server<E>(
 	enclave: &Arc<E>,
@@ -367,7 +369,7 @@ pub fn start_prometheus_metrics_server<E>(
 ) where
 	E: EnclaveBase + Sidechain,
 {
-	let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider<_>>> = vec![];
+	let mut account_info_providers: Vec<Arc<dyn ParentchainAccountInfoSafe>> = vec![];
 	account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 		ParentchainId::Integritee,
 		integritee_rpc_api.clone(),
