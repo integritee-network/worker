@@ -72,27 +72,16 @@ pub type AdditionParamsOf<C, E> =
 	<E as ExtrinsicParams<<C as Config>::Index, <C as Config>::Hash>>::AdditionalParams;
 
 /// Extrinsics factory
-pub struct ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
-where
-	Signer: SignExtrinsic<AccountId>,
-	NonceCache: MutateNonce,
-	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
-	NodeRuntimeConfig: Config,
-{
+pub struct ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip> {
 	genesis_hash: H256,
 	signer: Signer,
 	nonce_cache: Arc<NonceCache>,
 	pub node_metadata_repository: Arc<NodeMetadataRepository>,
-	phantom: PhantomData<(NodeRuntimeConfig, Tip)>,
+	_phantom: PhantomData<(NodeRuntimeConfig, Tip)>,
 }
 
 impl<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
 	ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
-where
-	Signer: SignExtrinsic<AccountId>,
-	NonceCache: MutateNonce,
-	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
-	NodeRuntimeConfig: Config,
 {
 	pub fn new(
 		genesis_hash: H256,
@@ -105,7 +94,7 @@ where
 			signer,
 			nonce_cache,
 			node_metadata_repository,
-			phantom: Default::default(),
+			_phantom: Default::default(),
 		}
 	}
 
@@ -115,7 +104,7 @@ where
 			signer,
 			nonce_cache,
 			node_metadata_repository: self.node_metadata_repository.clone(),
-			phantom: Default::default(),
+			_phantom: Default::default(),
 		}
 	}
 }
@@ -137,7 +126,7 @@ where
 	fn create_extrinsics(
 		&self,
 		calls: &[(OpaqueCall, GenericMortality)],
-		extrinsics_params: Option<AdditionParamsOf<NodeRuntimeConfig, Self::ExtrinsicParams>>,
+		extrinsics_params: Option<AdditionParamsOf<Self::Config, Self::ExtrinsicParams>>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
@@ -184,18 +173,17 @@ pub mod tests {
 
 	use super::*;
 	use itp_node_api::{
-		api_client::{PairSignature, StaticExtrinsicSigner},
+		api_client::{AssetRuntimeConfig, PairSignature, StaticExtrinsicSigner},
 		metadata::provider::NodeMetadataRepository,
 	};
 	use itp_nonce_cache::{GetNonce, Nonce, NonceCache, NonceValue};
 	use sp_core::{ed25519, Pair};
-	//use substrate_api_client::extrinsic::xt_primitives::UncheckedExtrinsicV4;
 
 	#[test]
 	pub fn creating_xts_increases_nonce_for_each_xt() {
 		let nonce_cache = Arc::new(NonceCache::default());
 		let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::default()));
-		let extrinsics_factory = ExtrinsicsFactory::new(
+		let extrinsics_factory = ExtrinsicsFactory::<_, _, _, AssetRuntimeConfig, u128>::new(
 			test_genesis_hash(),
 			StaticExtrinsicSigner::<_, PairSignature>::new(test_account()),
 			nonce_cache.clone(),
@@ -218,7 +206,7 @@ pub mod tests {
 		*nonce_cache1.load_for_mutation().unwrap() = Nonce(42);
 
 		let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::default()));
-		let extrinsics_factory = ExtrinsicsFactory::new(
+		let extrinsics_factory = ExtrinsicsFactory::<_, _, _, AssetRuntimeConfig, u128>::new(
 			test_genesis_hash(),
 			StaticExtrinsicSigner::<_, PairSignature>::new(test_account()),
 			nonce_cache1.clone(),

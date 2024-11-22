@@ -16,17 +16,26 @@
 */
 use crate::{error::Result, AdditionParamsOf, CreateExtrinsics};
 use core::marker::PhantomData;
-use itp_node_api::api_client::{GenericExtrinsicParams, ParentchainRuntimeConfig, PlainTip};
 use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall};
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
+pub use itp_node_api::api_client::{
+	Config, GenericExtrinsicParams, ParentchainRuntimeConfig, PlainTip,
+};
+
 /// Mock of an extrinsics factory. To be used in unit tests.
 ///
 /// Returns an empty extrinsic.
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct ExtrinsicsFactoryMock<C> {
 	_phantom: PhantomData<C>,
+}
+
+impl<C> Default for ExtrinsicsFactoryMock<C> {
+	fn default() -> Self {
+		Self { _phantom: Default::default() }
+	}
 }
 
 impl CreateExtrinsics for ExtrinsicsFactoryMock<ParentchainRuntimeConfig> {

@@ -246,7 +246,7 @@ mod tests {
 	use super::*;
 	use codec::{Decode, Encode};
 	use itc_parentchain_light_client::mocks::validator_access_mock::ValidatorAccessMock;
-	use itp_extrinsics_factory::mock::ExtrinsicsFactoryMock;
+	use itp_extrinsics_factory::mock::{ExtrinsicsFactoryMock, ParentchainRuntimeConfig};
 	use itp_sgx_externalities::SgxExternalitiesTrait;
 	use itp_stf_executor::mocks::StfExecutorMock;
 
@@ -266,7 +266,7 @@ mod tests {
 	type TestTopPoolAuthor = AuthorApiMock<H256, H256, TrustedCallSignedMock, GetterMock>;
 	type TestStfExecutor = StfExecutorMock<State>;
 	type TestValidatorAccess = ValidatorAccessMock;
-	type TestExtrinsicsFactory = ExtrinsicsFactoryMock;
+	type TestExtrinsicsFactory = ExtrinsicsFactoryMock<ParentchainRuntimeConfig>;
 	type TestExecutor = Executor<
 		ParentchainBlock,
 		TestTopPoolAuthor,

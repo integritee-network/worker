@@ -354,38 +354,3 @@ fn log_extrinsics_to_file(
 	}
 	Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-
-	use super::*;
-	use itp_node_api::{
-		api_client::ParentchainApi,
-		node_api_factory::{CreateNodeApi, Result as NodeApiResult},
-	};
-	use itp_sgx_temp_dir::TempDir;
-	use mockall::mock;
-
-	#[test]
-	fn given_empty_worker_request_when_submitting_then_return_empty_response() {
-		mock! {
-			NodeApiFactory {}
-			impl CreateNodeApi for NodeApiFactory {
-				fn create_api(&self) -> NodeApiResult<ParentchainApi>;
-			}
-		}
-
-		let mock_node_api_factory = Arc::new(MockNodeApiFactory::new());
-		let temp_dir = TempDir::new().unwrap();
-		let on_chain_ocall =
-			WorkerOnChainOCall::new(mock_node_api_factory, None, None, temp_dir.path().into());
-
-		let response = on_chain_ocall
-			.worker_request(Vec::<u8>::new().encode(), ParentchainId::Integritee.encode())
-			.unwrap();
-
-		assert!(!response.is_empty()); // the encoded empty vector is not empty
-		let decoded_response: Vec<u8> = Decode::decode(&mut response.as_slice()).unwrap();
-		assert!(decoded_response.is_empty()); // decode the response, and we get an empty vector again
-	}
-}

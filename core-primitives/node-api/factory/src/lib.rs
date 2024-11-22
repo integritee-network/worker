@@ -15,9 +15,12 @@
 	limitations under the License.
 
 */
-use itp_api_client_types::{traits::Request, Api, Config, TungsteniteRpcClient};
 use sp_core::sr25519;
 use std::marker::PhantomData;
+
+pub use itp_api_client_types::{
+	traits::Request, Api, AssetRuntimeConfig, Config, DefaultRuntimeConfig, TungsteniteRpcClient,
+};
 
 /// Trait to create a node API, based on a node URL and signer.
 pub trait CreateNodeApi<NodeConfig: Config, Client: Request> {
@@ -50,13 +53,13 @@ impl From<itp_api_client_types::ApiClientError> for NodeApiFactoryError {
 pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
 
 /// Node API factory implementation.
-pub struct NodeApiFactory<NodeConfig: Config, Client: Request> {
+pub struct NodeApiFactory<NodeConfig, Client> {
 	node_url: String,
 	signer: sr25519::Pair,
 	_phantom: PhantomData<(NodeConfig, Client)>,
 }
 
-impl<NodeConfig: Config, Client: Request> NodeApiFactory<NodeConfig, Client> {
+impl<NodeConfig, Client> NodeApiFactory<NodeConfig, Client> {
 	pub fn new(url: String, signer: sr25519::Pair) -> Self {
 		NodeApiFactory { node_url: url, signer, _phantom: Default::default() }
 	}

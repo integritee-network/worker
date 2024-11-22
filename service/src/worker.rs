@@ -197,6 +197,7 @@ mod tests {
 		worker::{AsyncBlockBroadcaster, Worker},
 	};
 	use frame_support::assert_ok;
+	use ita_parentchain_interface::integritee::api_client_types::IntegriteeRuntimeConfig;
 	use itp_node_api::node_api_factory::NodeApiFactory;
 	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait};
@@ -235,7 +236,7 @@ mod tests {
 		let untrusted_worker_port = "4000".to_string();
 		let peers = vec![format!("ws://{}", W1_URL), format!("ws://{}", W2_URL)];
 
-		let worker = Worker::new(
+		let worker = Worker::<_, IntegriteeRuntimeConfig, _, _>::new(
 			local_worker_config(W1_URL.into(), untrusted_worker_port.clone(), "30".to_string()),
 			Arc::new(()),
 			Arc::new(NodeApiFactory::new(
