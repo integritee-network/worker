@@ -109,21 +109,19 @@ where
 	pub fn create_target_a_api(
 		&self,
 	) -> OCallBridgeResult<Api<TargetAConfig, TungsteniteRpcClient>> {
-		Ok(self
-			.target_a_parentchain_api_factory
+		self.target_a_parentchain_api_factory
 			.as_ref()
 			.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)
-			.and_then(|f| f.create_api().map_err(Into::into))?)
+			.and_then(|f| f.create_api().map_err(Into::into))
 	}
 
 	pub fn create_target_b_api(
 		&self,
 	) -> OCallBridgeResult<Api<TargetBConfig, TungsteniteRpcClient>> {
-		Ok(self
-			.target_b_parentchain_api_factory
+		self.target_b_parentchain_api_factory
 			.as_ref()
 			.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)
-			.and_then(|f| f.create_api().map_err(Into::into))?)
+			.and_then(|f| f.create_api().map_err(Into::into))
 	}
 
 	fn handle_requests<
