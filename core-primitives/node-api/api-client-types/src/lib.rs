@@ -77,17 +77,7 @@ pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 #[cfg(feature = "std")]
-pub use api::*;
-
-#[cfg(feature = "std")]
-mod api {
-	use super::ParentchainRuntimeConfig;
-	use substrate_api_client::Api;
-
-	pub use substrate_api_client::{
-		api::Error as ApiClientError,
-		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
-	};
-
-	pub type ParentchainApi = Api<ParentchainRuntimeConfig, TungsteniteRpcClient>;
-}
+pub use substrate_api_client::{
+	api::Error as ApiClientError,
+	rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
+};

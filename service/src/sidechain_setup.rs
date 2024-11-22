@@ -23,7 +23,6 @@ use crate::{
 };
 use futures::executor::block_on;
 use ita_parentchain_interface::integritee::api_client_types::IntegriteeApi;
-use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::{pallet_sidechain::PalletSidechainApi, PalletTeerexApi};
 use itp_settings::{

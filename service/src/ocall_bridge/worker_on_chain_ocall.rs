@@ -25,7 +25,7 @@ use ita_parentchain_interface::{
 	target_b::{api_client_types::TargetBApi, api_factory::TargetBNodeApiFactory},
 	ParentchainRuntimeConfig,
 };
-use itp_api_client_types::{ParentchainApi, Request};
+use itp_api_client_types::Request;
 use itp_node_api::{
 	api_client::{AccountApi, Config},
 	node_api_factory::{CreateNodeApi, NodeApiFactory},

@@ -39,7 +39,7 @@ use itp_enclave_api::{
 	teeracle_api::TeeracleApi,
 };
 use itp_node_api::{
-	api_client::{AccountApi, PalletTeerexApi, ParentchainApi},
+	api_client::{AccountApi, PalletTeerexApi},
 	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 };
