@@ -64,11 +64,11 @@ pub trait CreateExtrinsics {
 	fn create_extrinsics(
 		&self,
 		calls: &[(OpaqueCall, GenericMortality)],
-		extrinsics_params: Option<AdditionParamsOf<Self::Config, Self::ExtrinsicParams>>,
+		extrinsics_params: Option<AdditionalParamsOf<Self::Config, Self::ExtrinsicParams>>,
 	) -> Result<Vec<OpaqueExtrinsic>>;
 }
 
-pub type AdditionParamsOf<C, E> =
+pub type AdditionalParamsOf<C, E> =
 	<E as ExtrinsicParams<<C as Config>::Index, <C as Config>::Hash>>::AdditionalParams;
 
 /// Extrinsics factory
@@ -126,7 +126,7 @@ where
 	fn create_extrinsics(
 		&self,
 		calls: &[(OpaqueCall, GenericMortality)],
-		extrinsics_params: Option<AdditionParamsOf<Self::Config, Self::ExtrinsicParams>>,
+		extrinsics_params: Option<AdditionalParamsOf<Self::Config, Self::ExtrinsicParams>>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;

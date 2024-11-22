@@ -14,7 +14,7 @@
 	limitations under the License.
 
 */
-use crate::{error::Result, AdditionParamsOf, CreateExtrinsics};
+use crate::{error::Result, AdditionalParamsOf, CreateExtrinsics};
 use core::marker::PhantomData;
 use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall};
 use sp_runtime::OpaqueExtrinsic;
@@ -46,7 +46,7 @@ impl CreateExtrinsics for ExtrinsicsFactoryMock<ParentchainRuntimeConfig> {
 		&self,
 		_calls: &[(OpaqueCall, GenericMortality)],
 		_additional_params: Option<
-			AdditionParamsOf<ParentchainRuntimeConfig, Self::ExtrinsicParams>,
+			AdditionalParamsOf<ParentchainRuntimeConfig, Self::ExtrinsicParams>,
 		>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		// Intention was to map an OpaqueCall to some dummy OpaqueExtrinsic,
