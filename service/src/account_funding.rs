@@ -193,34 +193,34 @@ where
 	min_required_funds += 1000 * transfer_fee;
 
 	// // Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
-	// if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
-	// 	info!("[{:?}] this chain has the teerex pallet. estimating RA fees", parentchain_id);
-	// 	let nonce = api.get_nonce_of(accountid)?;
-	//
-	// 	let encoded_xt: Bytes = compose_extrinsic_with_nonce!(
-	// 		api,
-	// 		nonce,
-	// 		TEEREX,
-	// 		"register_sgx_enclave",
-	// 		vec![0u8; SGX_RA_PROOF_MAX_LEN],
-	// 		Some(vec![0u8; MAX_URL_LEN]),
-	// 		SgxAttestationMethod::Dcap { proxied: false }
-	// 	)
-	// 	.encode()
-	// 	.into();
-	// 	let tx_fee =
-	// 		api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
-	// 	let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
-	// 	info!(
-	// 		"[{:?}] one enclave registration costs {:?} and needs to be renewed every {:?}h",
-	// 		parentchain_id,
-	// 		ra_fee,
-	// 		ra_renewal / 1_000 / 3_600
-	// 	);
-	// 	min_required_funds += 5 * ra_fee;
-	// } else {
-	// 	info!("[{:?}] this chain has no teerex pallet, no need to add RA fees", parentchain_id);
-	// }
+	if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
+		info!("[{:?}] this chain has the teerex pallet. estimating RA fees", parentchain_id);
+		let nonce = api.get_nonce_of(accountid)?;
+
+		let encoded_xt: Bytes = compose_extrinsic_with_nonce!(
+			api,
+			nonce,
+			TEEREX,
+			"register_sgx_enclave",
+			vec![0u8; SGX_RA_PROOF_MAX_LEN],
+			Some(vec![0u8; MAX_URL_LEN]),
+			SgxAttestationMethod::Dcap { proxied: false }
+		)
+		.encode()
+		.into();
+		let tx_fee =
+			api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
+		let ra_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
+		info!(
+			"[{:?}] one enclave registration costs {:?} and needs to be renewed every {:?}h",
+			parentchain_id,
+			ra_fee,
+			ra_renewal / 1_000 / 3_600
+		);
+		min_required_funds += 5 * ra_fee;
+	} else {
+		info!("[{:?}] this chain has no teerex pallet, no need to add RA fees", parentchain_id);
+	}
 
 	info!(
 		"[{:?}] we estimate the funding requirement for the primary validateer (worst case) to be {:?}",
