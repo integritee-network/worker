@@ -23,7 +23,7 @@ use ita_parentchain_interface::{
 	integritee::{api_client_types::IntegriteeApi, api_factory::IntegriteeNodeApiFactory},
 	target_a::{api_client_types::TargetAApi, api_factory::TargetANodeApiFactory},
 	target_b::{api_client_types::TargetBApi, api_factory::TargetBNodeApiFactory},
-	ParentchainApiTrait, ParentchainRuntimeConfig,
+	ParentchainRuntimeConfig,
 };
 use itp_api_client_types::{ParentchainApi, Request};
 use itp_node_api::{

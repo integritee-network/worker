@@ -79,9 +79,9 @@ use ita_parentchain_interface::{
 		api_client_types::{IntegriteeApi, IntegriteeTip},
 		api_factory::IntegriteeNodeApiFactory,
 	},
-	target_a::api_client_types::{TargetAApi, TargetANodeConfig},
-	target_b::api_client_types::{TargetBApi, TargetBNodeConfig},
-	ParentchainApiTrait, ParentchainRuntimeConfig,
+	target_a::api_client_types::{TargetAApi, TargetARuntimeConfig},
+	target_b::api_client_types::{TargetBApi, TargetBRuntimeConfig},
+	ParentchainRuntimeConfig,
 };
 use itc_parentchain::primitives::ParentchainId;
 use itp_node_api::api_client::ChainApi;
@@ -182,12 +182,18 @@ pub(crate) fn main() {
 
 	let maybe_target_a_parentchain_api_factory =
 		config.target_a_parentchain_rpc_endpoint().map(|url| {
-			Arc::new(NodeApiFactory::<TargetANodeConfig, _>::new(url, AccountKeyring::Alice.pair()))
+			Arc::new(NodeApiFactory::<TargetARuntimeConfig, _>::new(
+				url,
+				AccountKeyring::Alice.pair(),
+			))
 		});
 
 	let maybe_target_b_parentchain_api_factory =
 		config.target_b_parentchain_rpc_endpoint().map(|url| {
-			Arc::new(NodeApiFactory::<TargetBNodeConfig, _>::new(url, AccountKeyring::Alice.pair()))
+			Arc::new(NodeApiFactory::<TargetBRuntimeConfig, _>::new(
+				url,
+				AccountKeyring::Alice.pair(),
+			))
 		});
 
 	// initialize o-call bridge with a concrete factory implementation

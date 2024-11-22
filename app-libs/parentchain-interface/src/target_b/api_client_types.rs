@@ -23,7 +23,6 @@
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
-use substrate_api_client::ac_primitives::{AssetTipExtrinsicParams, WithExtrinsicParams};
 pub use substrate_api_client::{
 	ac_node_api::{
 		metadata::{InvalidMetadataError, Metadata, MetadataError},
@@ -42,11 +41,6 @@ pub use substrate_api_client::{
 	storage_key, Api,
 };
 
-// traits from the api-client
-pub mod traits {
-	pub use substrate_api_client::{GetAccountInformation, GetChainInfo, GetStorage};
-}
-
 // Configuration for the ExtrinsicParams.
 //
 // Pay in asset fees.
@@ -54,6 +48,9 @@ pub mod traits {
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
 // pub type TargetBExtrinsicParams = GenericExtrinsicParams<TargetBRuntimeConfig, TargetBTip>;
 // pub type TargetBAdditionalParams = GenericAdditionalParams<TargetBRuntimeConfig, Hash>;
+
+pub type TargetBTip = AssetTip<Balance>;
+pub type TargetBRuntimeConfig = ParentchainRuntimeConfig<TargetBTip>;
 
 pub type TargetBSignedExtra = GenericSignedExtra<TargetBTip, Index>;
 pub type TargetBSignature = Signature<TargetBSignedExtra>;
@@ -64,26 +61,18 @@ pub type TargetBUncheckedExtrinsic<Call> =
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
+use crate::ParentchainRuntimeConfig;
 #[cfg(feature = "std")]
 pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use crate::{integritee::api_client_types::AssetTip, ParentchainRuntimeConfig};
-	use itp_api_client_types::PlainTip;
-	use itp_node_api::api_client::AccountApi;
-	use itp_types::parentchain::Balance;
+	use super::TargetBRuntimeConfig;
+	use substrate_api_client::Api;
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
 	};
-	use substrate_api_client::{
-		Api, GetBalance, GetChainInfo, GetStorage, GetTransactionPayment, SubscribeEvents,
-	};
 
-	pub type TargetBTip = AssetTip<Balance>;
-	pub type TargetBNodeConfig = ParentchainRuntimeConfig<TargetBTip>;
-	pub type TargetBApi = Api<ParentchainRuntimeConfig<TargetBTip>, TungsteniteRpcClient>;
-
-	// impl ParentchainApiTrait for TargetBApi {}
+	pub type TargetBApi = Api<TargetBRuntimeConfig, TungsteniteRpcClient>;
 }

@@ -15,7 +15,7 @@
 	limitations under the License.
 
 */
-use itp_api_client_types::{traits::Request, Api, Config, ParentchainApi, TungsteniteRpcClient};
+use itp_api_client_types::{traits::Request, Api, Config, TungsteniteRpcClient};
 use sp_core::sr25519;
 use std::marker::PhantomData;
 

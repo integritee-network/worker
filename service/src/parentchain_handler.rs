@@ -19,9 +19,7 @@
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
 use humantime::format_duration;
-use ita_parentchain_interface::{
-	integritee::Header, ParentchainApiTrait, ParentchainRuntimeConfig,
-};
+use ita_parentchain_interface::{integritee::Header, ParentchainRuntimeConfig};
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},

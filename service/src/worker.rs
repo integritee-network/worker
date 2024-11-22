@@ -21,7 +21,6 @@
 /// multiple traits.
 use crate::{config::Config, error::Error, initialized_service::TrackInitialization};
 use async_trait::async_trait;
-use ita_parentchain_interface::ParentchainApiTrait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_api_client_types::{Config as NodeRuntimeConfig, Request};
 use itp_node_api::{

@@ -23,7 +23,6 @@
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
-use substrate_api_client::ac_primitives::{PlainTipExtrinsicParams, WithExtrinsicParams};
 pub use substrate_api_client::{
 	ac_node_api::{
 		metadata::{InvalidMetadataError, Metadata, MetadataError},
@@ -42,14 +41,8 @@ pub use substrate_api_client::{
 	storage_key, Api,
 };
 
-// traits from the api-client
-pub mod traits {
-	pub use substrate_api_client::{GetAccountInformation, GetChainInfo, GetStorage};
-}
-
 pub type TargetATip = PlainTip<Balance>;
-pub type TargetARuntimeConfig =
-	WithExtrinsicParams<AssetRuntimeConfig, PlainTipExtrinsicParams<AssetRuntimeConfig>>;
+pub type TargetARuntimeConfig = ParentchainRuntimeConfig<TargetATip>;
 
 // Configuration for the ExtrinsicParams.
 //
@@ -68,6 +61,7 @@ pub type TargetAUncheckedExtrinsic<Call> =
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
+use crate::ParentchainRuntimeConfig;
 #[cfg(feature = "std")]
 pub use api::*;
 
@@ -75,18 +69,13 @@ pub use api::*;
 mod api {
 	use crate::ParentchainRuntimeConfig;
 	use itp_api_client_types::PlainTip;
-	use itp_node_api::api_client::AccountApi;
 	use itp_types::parentchain::Balance;
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
-	};
-	use substrate_api_client::{
-		Api, GetBalance, GetChainInfo, GetStorage, GetTransactionPayment, SubscribeEvents,
+		Api,
 	};
 
 	pub type TargetANodeConfig = ParentchainRuntimeConfig<PlainTip<Balance>>;
 	pub type TargetAApi = Api<TargetANodeConfig, TungsteniteRpcClient>;
-
-	//impl ParentchainApiTrait for TargetAApi {}
 }

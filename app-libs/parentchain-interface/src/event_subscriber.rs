@@ -17,7 +17,6 @@
 extern crate alloc;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
-use itp_api_client_types::ParentchainApi;
 use itp_node_api::api_client::AccountApi;
 use itp_types::parentchain::{
 	AddedSgxEnclave, BalanceTransfer, ExtrinsicFailed, Hash, ParentchainId,
