@@ -14,10 +14,13 @@
 	limitations under the License.
 
 */
-
-use crate::{error::Result, CreateExtrinsics};
-use itp_node_api::api_client::ParentchainAdditionalParams;
-use itp_types::{parentchain::GenericMortality, OpaqueCall};
+use crate::{error::Result, AdditionParamsOf, CreateExtrinsics};
+use codec::Encode;
+use core::marker::PhantomData;
+use itp_node_api::api_client::{
+	Config, GenericAdditionalParams, GenericExtrinsicParams, ParentchainRuntimeConfig, PlainTip,
+};
+use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall, H256};
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
@@ -25,13 +28,20 @@ use std::vec::Vec;
 ///
 /// Returns an empty extrinsic.
 #[derive(Default, Clone)]
-pub struct ExtrinsicsFactoryMock;
+pub struct ExtrinsicsFactoryMock<C> {
+	_phantom: PhantomData<C>,
+}
 
-impl CreateExtrinsics for ExtrinsicsFactoryMock {
+impl CreateExtrinsics for ExtrinsicsFactoryMock<ParentchainRuntimeConfig> {
+	type Config = ParentchainRuntimeConfig;
+	type ExtrinsicParams = GenericExtrinsicParams<ParentchainRuntimeConfig, PlainTip<Balance>>;
+
 	fn create_extrinsics(
 		&self,
 		_calls: &[(OpaqueCall, GenericMortality)],
-		_additional_params: Option<ParentchainAdditionalParams>,
+		_additional_params: Option<
+			AdditionParamsOf<ParentchainRuntimeConfig, Self::ExtrinsicParams>,
+		>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		// Intention was to map an OpaqueCall to some dummy OpaqueExtrinsic,
 		// so the output vector has the same size as the input one (and thus can be tested from the outside).

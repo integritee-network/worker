@@ -30,7 +30,14 @@ use crate::{
 	rpc::rpc_response_channel::RpcResponseChannel,
 	tls_ra::seal_handler::SealHandler,
 };
-use ita_parentchain_interface::{integritee, target_a, target_b};
+use ita_parentchain_interface::{
+	integritee,
+	integritee::api_client_types::{IntegriteeRuntimeConfig, IntegriteeTip},
+	target_a,
+	target_a::api_client_types::{TargetARuntimeConfig, TargetATip},
+	target_b,
+	target_b::api_client_types::{TargetBRuntimeConfig, TargetBTip},
+};
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
 use itc_direct_rpc_server::{
@@ -144,8 +151,36 @@ pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock, EnclaveTrustedCall
 // Parentchain types relevant for all parentchains
 pub type EnclaveLightClientSeal =
 	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
-pub type EnclaveExtrinsicsFactory =
-	ExtrinsicsFactory<EnclaveParentchainSigner, NonceCache, EnclaveNodeMetadataRepository>;
+
+pub type EnclaveExtrinsicsFactory<NodeRuntimeConfig, Tip> = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	NodeRuntimeConfig,
+	Tip,
+>;
+
+pub type IntegriteeEnclaveExtrinsicsFactory = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	IntegriteeRuntimeConfig,
+	IntegriteeTip,
+>;
+pub type TargetAEnclaveExtrinsicsFactory = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	TargetARuntimeConfig,
+	TargetATip,
+>;
+pub type TargetBEnclaveExtrinsicsFactory = ExtrinsicsFactory<
+	EnclaveParentchainSigner,
+	NonceCache,
+	EnclaveNodeMetadataRepository,
+	TargetBRuntimeConfig,
+	TargetBTip,
+>;
 
 pub type EnclaveValidatorAccessor = ValidatorAccessor<
 	LightValidation<ParentchainBlock, EnclaveOCallApi>,
@@ -182,7 +217,7 @@ pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
-	EnclaveExtrinsicsFactory,
+	IntegriteeEnclaveExtrinsicsFactory,
 	IntegriteeParentchainIndirectCallsExecutor,
 >;
 
@@ -224,7 +259,7 @@ pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
-	EnclaveExtrinsicsFactory,
+	TargetAEnclaveExtrinsicsFactory,
 	TargetAParentchainIndirectCallsExecutor,
 >;
 
@@ -266,7 +301,7 @@ pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
 	ParentchainBlock,
 	EnclaveValidatorAccessor,
 	EnclaveStfExecutor,
-	EnclaveExtrinsicsFactory,
+	TargetBEnclaveExtrinsicsFactory,
 	TargetBParentchainIndirectCallsExecutor,
 >;
 
@@ -320,7 +355,7 @@ pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
 	ParentchainBlock,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
 	EnclaveNodeMetadataRepository,
-	EnclaveExtrinsicsFactory,
+	IntegriteeEnclaveExtrinsicsFactory,
 	EnclaveValidatorAccessor,
 >;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
@@ -342,17 +377,26 @@ pub type EnclaveSealHandler = SealHandler<
 	EnclaveStateHandler,
 	EnclaveLightClientSeal,
 >;
-pub type EnclaveOffchainWorkerExecutor = itc_offchain_worker_executor::executor::Executor<
-	ParentchainBlock,
-	EnclaveTopPoolAuthor,
-	EnclaveStfExecutor,
-	EnclaveStateHandler,
-	EnclaveValidatorAccessor,
-	EnclaveExtrinsicsFactory,
-	EnclaveStf,
-	EnclaveTrustedCallSigned,
-	EnclaveGetter,
->;
+
+pub type IntegriteeOffchainWorkerExecutor =
+	EnclaveOffchainWorkerExecutor<IntegriteeEnclaveExtrinsicsFactory>;
+pub type TargetAOffchainWorkerExecutor =
+	EnclaveOffchainWorkerExecutor<TargetAEnclaveExtrinsicsFactory>;
+pub type TargetBOffchainWorkerExecutor =
+	EnclaveOffchainWorkerExecutor<TargetBEnclaveExtrinsicsFactory>;
+
+pub type EnclaveOffchainWorkerExecutor<ExtrinsicsFactory> =
+	itc_offchain_worker_executor::executor::Executor<
+		ParentchainBlock,
+		EnclaveTopPoolAuthor,
+		EnclaveStfExecutor,
+		EnclaveStateHandler,
+		EnclaveValidatorAccessor,
+		ExtrinsicsFactory,
+		EnclaveStf,
+		EnclaveTrustedCallSigned,
+		EnclaveGetter,
+	>;
 
 // Base component instances
 //-------------------------------------------------------------------------------------------------

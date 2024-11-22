@@ -18,9 +18,9 @@ use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
 		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner,
-		EnclaveStfExecutor, EnclaveValidatorAccessor,
-		IntegriteeParentchainTriggeredBlockImportDispatcher,
-		TargetAParentchainTriggeredBlockImportDispatcher,
+		EnclaveStfExecutor, EnclaveValidatorAccessor, IntegriteeEnclaveExtrinsicsFactory,
+		IntegriteeParentchainTriggeredBlockImportDispatcher, TargetAEnclaveExtrinsicsFactory,
+		TargetAParentchainTriggeredBlockImportDispatcher, TargetBEnclaveExtrinsicsFactory,
 		TargetBParentchainTriggeredBlockImportDispatcher,
 		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
@@ -206,7 +206,7 @@ pub(crate) fn get_node_metadata_repository_from_target_b_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<IntegriteeEnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()
@@ -219,7 +219,7 @@ pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_target_a_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<TargetAEnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()
@@ -232,7 +232,7 @@ pub(crate) fn get_extrinsic_factory_from_target_a_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_target_b_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<TargetBEnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()

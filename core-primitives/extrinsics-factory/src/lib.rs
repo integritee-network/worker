@@ -30,22 +30,24 @@ pub mod sgx_reexport_prelude {
 }
 
 use codec::Encode;
+use core::marker::{PhantomData, PhantomPinned};
 use error::Result;
 use itp_node_api::{
 	api_client::{
-		ExtrinsicParams, ParentchainAdditionalParams, ParentchainExtrinsicParams, SignExtrinsic,
+		ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams,
+		ParentchainExtrinsicParams, SignExtrinsic,
 	},
 	metadata::{provider::AccessNodeMetadata, NodeMetadata},
 };
 use itp_nonce_cache::{MutateNonce, Nonce};
 use itp_types::{
-	parentchain::{AccountId, GenericMortality},
+	parentchain::{AccountId, GenericMortality, Hash},
 	OpaqueCall,
 };
 use sp_core::H256;
 use sp_runtime::OpaqueExtrinsic;
 use std::{sync::Arc, vec::Vec};
-use substrate_api_client::ac_compose_macros::compose_extrinsic_offline;
+use substrate_api_client::{ac_compose_macros::compose_extrinsic_offline, ac_primitives::Config};
 
 pub mod error;
 
@@ -56,32 +58,44 @@ pub mod mock;
 ///
 /// Also increases the nonce counter for each extrinsic that is created.
 pub trait CreateExtrinsics {
+	type Config: Config;
+	type ExtrinsicParams: ExtrinsicParams<
+		<Self::Config as Config>::Index,
+		<Self::Config as Config>::Hash,
+	>;
+
 	fn create_extrinsics(
 		&self,
 		calls: &[(OpaqueCall, GenericMortality)],
-		extrinsics_params: Option<ParentchainAdditionalParams>,
+		extrinsics_params: Option<AdditionParamsOf<Self::Config, Self::ExtrinsicParams>>,
 	) -> Result<Vec<OpaqueExtrinsic>>;
 }
 
+pub type AdditionParamsOf<C, E> =
+	<E as ExtrinsicParams<<C as Config>::Index, <C as Config>::Hash>>::AdditionalParams;
+
 /// Extrinsics factory
-pub struct ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
+pub struct ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
 where
 	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+	NodeRuntimeConfig: Config,
 {
 	genesis_hash: H256,
 	signer: Signer,
 	nonce_cache: Arc<NonceCache>,
 	pub node_metadata_repository: Arc<NodeMetadataRepository>,
+	phantom: PhantomData<(NodeRuntimeConfig, Tip)>,
 }
 
-impl<Signer, NonceCache, NodeMetadataRepository>
-	ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
+impl<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
+	ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
 where
 	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+	NodeRuntimeConfig: Config,
 {
 	pub fn new(
 		genesis_hash: H256,
@@ -89,7 +103,13 @@ where
 		nonce_cache: Arc<NonceCache>,
 		node_metadata_repository: Arc<NodeMetadataRepository>,
 	) -> Self {
-		ExtrinsicsFactory { genesis_hash, signer, nonce_cache, node_metadata_repository }
+		ExtrinsicsFactory {
+			genesis_hash,
+			signer,
+			nonce_cache,
+			node_metadata_repository,
+			phantom: Default::default(),
+		}
 	}
 
 	pub fn with_signer(&self, signer: Signer, nonce_cache: Arc<NonceCache>) -> Self {
@@ -98,21 +118,29 @@ where
 			signer,
 			nonce_cache,
 			node_metadata_repository: self.node_metadata_repository.clone(),
+			phantom: Default::default(),
 		}
 	}
 }
 
-impl<Signer, NonceCache, NodeMetadataRepository> CreateExtrinsics
-	for ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository>
+impl<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip> CreateExtrinsics
+	for ExtrinsicsFactory<Signer, NonceCache, NodeMetadataRepository, NodeRuntimeConfig, Tip>
 where
 	Signer: SignExtrinsic<AccountId>,
 	NonceCache: MutateNonce,
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
+	NodeRuntimeConfig: Config<Hash = H256>,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
 {
+	type Config = NodeRuntimeConfig;
+
+	type ExtrinsicParams = GenericExtrinsicParams<NodeRuntimeConfig, Tip>;
+
 	fn create_extrinsics(
 		&self,
 		calls: &[(OpaqueCall, GenericMortality)],
-		extrinsics_params: Option<ParentchainAdditionalParams>,
+		extrinsics_params: Option<AdditionParamsOf<NodeRuntimeConfig, Self::ExtrinsicParams>>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		let mut nonce_lock = self.nonce_cache.load_for_mutation()?;
 		let mut nonce_value = nonce_lock.0;
@@ -126,17 +154,15 @@ where
 			.iter()
 			.map(|(call, mortality)| {
 				let additional_extrinsic_params = extrinsics_params.unwrap_or_else(|| {
-					ParentchainAdditionalParams::new()
-						.era(
-							mortality.era,
-							mortality.mortality_checkpoint.unwrap_or(self.genesis_hash),
-						)
-						.tip(0)
+					GenericAdditionalParams::new().era(
+						mortality.era,
+						mortality.mortality_checkpoint.unwrap_or(self.genesis_hash),
+					)
 				});
-				let extrinsic_params = ParentchainExtrinsicParams::new(
+				let extrinsic_params = GenericExtrinsicParams::<NodeRuntimeConfig, Tip>::new(
 					runtime_spec_version,
 					runtime_transaction_version,
-					nonce_value,
+					nonce_value.into(),
 					self.genesis_hash,
 					additional_extrinsic_params,
 				);
