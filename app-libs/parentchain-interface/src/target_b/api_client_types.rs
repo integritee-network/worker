@@ -73,10 +73,10 @@ pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::TargetBRuntimeConfig;
-	use crate::ParentchainApiTrait;
-	use itp_node_api::api_client::{AccountApi, ApiResult};
-	use itp_types::parentchain::{AccountId, Balance, Hash, Index};
+	use crate::ParentchainRuntimeConfig;
+	use itp_api_client_types::PlainTip;
+	use itp_node_api::api_client::AccountApi;
+	use itp_types::parentchain::Balance;
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
@@ -85,7 +85,7 @@ mod api {
 		Api, GetBalance, GetChainInfo, GetStorage, GetTransactionPayment, SubscribeEvents,
 	};
 
-	pub type TargetBApi = Api<TargetBRuntimeConfig, TungsteniteRpcClient>;
+	pub type TargetBApi = Api<ParentchainRuntimeConfig<PlainTip<Balance>>, TungsteniteRpcClient>;
 
 	// impl ParentchainApiTrait for TargetBApi {}
 }

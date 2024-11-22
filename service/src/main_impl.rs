@@ -54,8 +54,10 @@ use regex::Regex;
 use sgx_types::*;
 use sp_runtime::traits::{Header as HeaderT, IdentifyAccount};
 use substrate_api_client::{
-	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetBalance, GetChainInfo,
-	GetStorage, SubmitAndWatch, SubscribeChain, SubscribeEvents,
+	api::XtStatus,
+	rpc::{HandleSubscription, Request, Subscribe},
+	Api, GetAccountInformation, GetBalance, GetChainInfo, GetStorage, SubmitAndWatch,
+	SubscribeChain, SubscribeEvents,
 };
 
 use teerex_primitives::{AnySigner, MultiEnclave};
@@ -74,7 +76,7 @@ use crate::{
 use enclave_bridge_primitives::ShardIdentifier;
 use ita_parentchain_interface::{
 	integritee::{api_client_types::IntegriteeApi, api_factory::IntegriteeNodeApiFactory},
-	ParentchainApiTrait,
+	ParentchainApiTrait, ParentchainRuntimeConfig,
 };
 use itc_parentchain::primitives::ParentchainId;
 use itp_node_api::api_client::ChainApi;
@@ -512,12 +514,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("our enclave should be registered at this point");
 	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
-	let (we_are_primary_validateer, re_init_parentchain_needed) = match integritee_rpc_api
-		.primary_worker_for_shard(shard, None)
-		.unwrap()
-	{
-		Some(primary_enclave) =>
-			match primary_enclave.instance_signer() {
+	let (we_are_primary_validateer, re_init_parentchain_needed) =
+		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
+			Some(primary_enclave) => match primary_enclave.instance_signer() {
 				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
 					if primary.encode() == tee_accountid.encode() {
 						println!("We are primary worker on this shard and we have been previously running.");
@@ -552,24 +551,24 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-		None => {
-			println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-			enclave.init_shard(shard.encode()).unwrap();
-			if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-				enclave
-					.init_shard_creation_parentchain_header(
-						shard,
-						&ParentchainId::Integritee,
-						&register_enclave_xt_header,
-					)
-					.unwrap();
-				debug!("shard config should be initialized on integritee network now");
-				(true, true)
-			} else {
-				(true, false)
-			}
-		},
-	};
+			None => {
+				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+				enclave.init_shard(shard.encode()).unwrap();
+				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+					enclave
+						.init_shard_creation_parentchain_header(
+							shard,
+							&ParentchainId::Integritee,
+							&register_enclave_xt_header,
+						)
+						.unwrap();
+					debug!("shard config should be initialized on integritee network now");
+					(true, true)
+				} else {
+					(true, false)
+				}
+			},
+		};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();
 
@@ -878,15 +877,18 @@ where
 	handles
 }
 
-fn init_parentchain<E, ParentchainApi: ParentchainApiTrait>(
+fn init_parentchain<E, Tip, Client>(
 	enclave: &Arc<E>,
-	node_api: &ParentchainApi,
+	node_api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	tee_account_id: &AccountId32,
 	parentchain_id: ParentchainId,
 	shard: &ShardIdentifier,
-) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
+) -> (Arc<ParentchainHandler<Tip, Client, E>>, Header)
 where
 	E: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request + Subscribe,
 {
 	let parentchain_handler = Arc::new(
 		ParentchainHandler::new_with_automatic_light_client_allocation(
@@ -1036,12 +1038,17 @@ fn register_collateral(
 	}
 }
 
-fn send_integritee_extrinsic(
+fn send_integritee_extrinsic<Tip, Client>(
 	extrinsic: Vec<u8>,
-	api: &ParentchainApi,
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	fee_payer: &AccountId32,
 	is_development_mode: bool,
-) -> ServiceResult<Hash> {
+) -> ServiceResult<Hash>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request + Subscribe,
+{
 	let timeout = Duration::from_secs(5 * 60);
 	let (sender, receiver) = mpsc::channel();
 	let local_fee_payer = fee_payer.clone();
@@ -1103,12 +1110,18 @@ fn send_integritee_extrinsic(
 	}
 }
 
-fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
+fn start_parentchain_header_subscription_thread<EnclaveApi, Tip, Client>(
 	shutdown_flag: Arc<AtomicBool>,
-	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
+	parentchain_handler: Arc<ParentchainHandler<Tip, Client, EnclaveApi>>,
 	last_synced_header: Header,
 	shard: ShardIdentifier,
-) -> thread::JoinHandle<()> {
+) -> thread::JoinHandle<()>
+where
+	EnclaveApi: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request + Subscribe,
+{
 	let parentchain_id = *parentchain_handler.parentchain_id();
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
@@ -1131,12 +1144,18 @@ fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
-fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
+fn subscribe_to_parentchain_new_headers<EnclaveApi, Tip, Client>(
 	shutdown_flag: Arc<AtomicBool>,
-	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
+	parentchain_handler: Arc<ParentchainHandler<Tip, Client, EnclaveApi>>,
 	mut last_synced_header: Header,
 	shard: ShardIdentifier,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+	EnclaveApi: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode,
+	Client: Request + Subscribe,
+{
 	// TODO: this should be implemented by parentchain_handler directly, and not via
 	// exposed parentchain_api
 	let mut subscription = parentchain_handler

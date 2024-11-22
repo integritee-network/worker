@@ -77,10 +77,10 @@ use itp_types::parentchain::Header;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::IntegriteeRuntimeConfig;
-	use crate::ParentchainApiTrait;
+	use crate::ParentchainRuntimeConfig;
+	use itp_api_client_types::PlainTip;
 	use itp_node_api::api_client::AccountApi;
-	use itp_types::parentchain::{AccountId, Balance, Hash, Index};
+	use itp_types::parentchain::Balance;
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
@@ -89,7 +89,7 @@ mod api {
 		Api, GetBalance, GetChainInfo, GetStorage, GetTransactionPayment, SubscribeEvents,
 	};
 
-	pub type IntegriteeApi = Api<IntegriteeRuntimeConfig, TungsteniteRpcClient>;
+	pub type IntegriteeApi = Api<ParentchainRuntimeConfig<PlainTip<Balance>>, TungsteniteRpcClient>;
 
 	// impl ParentchainApiTrait for IntegriteeApi {}
 }
