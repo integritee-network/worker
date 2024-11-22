@@ -1013,7 +1013,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 
 #[cfg(feature = "attesteer")]
 fn fetch_marblerun_events_every_hour<E>(
-	api: ParentchainApi,
+	api: IntegriteeApi,
 	enclave: Arc<E>,
 	accountid: AccountId32,
 	is_development_mode: bool,
@@ -1044,7 +1044,7 @@ fn fetch_marblerun_events_every_hour<E>(
 }
 #[cfg(feature = "attesteer")]
 fn register_quotes_from_marblerun(
-	api: &ParentchainApi,
+	api: &IntegriteeApi,
 	enclave: Arc<dyn RemoteAttestation>,
 	accountid: &AccountId32,
 	is_development_mode: bool,
@@ -1052,7 +1052,7 @@ fn register_quotes_from_marblerun(
 	marblerun_base_url: &str,
 ) {
 	let enclave = enclave.as_ref();
-	let events = prometheus_metrics::fetch_marblerun_events(marblerun_base_url)
+	let events = crate::prometheus_metrics::fetch_marblerun_events(marblerun_base_url)
 		.map_err(|e| {
 			info!("Fetching events from Marblerun failed with: {:?}, continuing with 0 events.", e);
 		})
