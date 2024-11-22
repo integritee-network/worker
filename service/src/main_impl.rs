@@ -679,9 +679,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 
 	let maybe_target_a_rpc_api = if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
 		println!("Initializing parentchain TargetA with url: {}", url);
-		let api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
-			.create_api()
-			.unwrap_or_else(|_| panic!("[TargetA] Failed to create parentchain node API"));
+		let api = ita_parentchain_interface::target_a::api_factory::TargetANodeApiFactory::new(
+			url,
+			AccountKeyring::Alice.pair(),
+		)
+		.create_api()
+		.unwrap_or_else(|_| panic!("[TargetA] Failed to create parentchain node API"));
 		let mut handles = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
