@@ -20,35 +20,19 @@
 //! You need to update this if you have a signed extension in your node that
 //! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
 
+use crate::{
+	GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra, ParentchainRuntimeConfig,
+	PlainTip, UncheckedExtrinsicV4,
+};
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
-pub use substrate_api_client::{
-	ac_node_api::{
-		metadata::{InvalidMetadataError, Metadata, MetadataError},
-		EventDetails, Events, StaticEvent,
-	},
-	ac_primitives::{
-		config::{AssetRuntimeConfig, Config},
-		extrinsics::{
-			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
-			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
-		},
-		serde_impls::StorageKey,
-		signer::{SignExtrinsic, StaticExtrinsicSigner},
-	},
-	rpc::Request,
-	storage_key, Api,
-};
 
-pub type TargetATip = PlainTip<Balance>;
 pub type TargetARuntimeConfig = ParentchainRuntimeConfig<TargetATip>;
 
 // Configuration for the ExtrinsicParams.
-//
-// Pay in asset fees.
-//
-// This needs to be used if the node uses the `pallet_asset_tx_payment`.
+
+pub type TargetATip = PlainTip<Balance>;
 pub type TargetAExtrinsicParams = GenericExtrinsicParams<TargetARuntimeConfig, TargetATip>;
 pub type TargetAAdditionalParams = GenericAdditionalParams<TargetARuntimeConfig, Hash>;
 
@@ -61,7 +45,6 @@ pub type TargetAUncheckedExtrinsic<Call> =
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
-use crate::ParentchainRuntimeConfig;
 #[cfg(feature = "std")]
 pub use api::*;
 

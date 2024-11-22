@@ -21,15 +21,31 @@
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
-use crate::integritee::api_client_types::Config;
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use itp_api_client_types::GenericExtrinsicParams;
 use itp_types::parentchain::Hash;
 use sp_core::{crypto::AccountId32, sr25519};
 use sp_runtime::{MultiAddress, MultiSignature};
 use substrate_api_client::ac_primitives::{
 	BlakeTwo256, ExtrinsicSigner, SubstrateBlock, SubstrateHeader, SubstrateOpaqueExtrinsic,
+};
+
+pub use substrate_api_client::{
+	ac_node_api::{
+		metadata::{InvalidMetadataError, Metadata, MetadataError},
+		EventDetails, Events, StaticEvent,
+	},
+	ac_primitives::{
+		config::Config,
+		extrinsics::{
+			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
+			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+		},
+		serde_impls::StorageKey,
+		signer::{SignExtrinsic, StaticExtrinsicSigner},
+	},
+	rpc::Request,
+	storage_key, Api,
 };
 
 #[cfg(feature = "std")]
@@ -64,7 +80,9 @@ pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 	}
 }
 
-// Define the config that matches our parentchains.
+/// Config matching the specs of the typical polkadot chains.
+/// We can define some more if we realize that we need more
+/// granular control than the tip.
 #[derive(Decode, Encode, Clone, Eq, PartialEq, Debug)]
 pub struct ParentchainRuntimeConfig<Tip: Sized> {
 	_phantom: PhantomData<Tip>,
