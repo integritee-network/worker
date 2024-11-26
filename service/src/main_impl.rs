@@ -881,8 +881,8 @@ where
 		parentchain_id,
 		is_development_mode,
 	)
-	.unwrap_or_else(|_| {
-		panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
+	.unwrap_or_else(|e| {
+		panic!("[{:?}] Could not fund parentchain enclave account: {:?}", parentchain_id, e)
 	});
 
 	// we attempt to set shard creation for this parentchain in case it hasn't been done before
