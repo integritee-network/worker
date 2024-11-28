@@ -2022,6 +2022,7 @@ dependencies = [
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
+ "log",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",

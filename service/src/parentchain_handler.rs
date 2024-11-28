@@ -18,6 +18,7 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use humantime::format_duration;
 use ita_parentchain_interface::{integritee::Header, ParentchainRuntimeConfig};
 use itc_parentchain::{
@@ -69,7 +70,7 @@ pub trait HandleParentchain {
 pub(crate) struct ParentchainHandler<Tip, Client, EnclaveApi>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 {
 	parentchain_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	enclave_api: Arc<EnclaveApi>,
@@ -82,7 +83,7 @@ impl<Tip, Client, EnclaveApi> ParentchainHandler<Tip, Client, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request + Subscribe,
 {
 	pub fn new(
@@ -153,7 +154,7 @@ impl<Tip, Client, EnclaveApi> HandleParentchain for ParentchainHandler<Tip, Clie
 where
 	EnclaveApi: Sidechain + EnclaveBase,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request + Subscribe,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {

@@ -22,7 +22,7 @@
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 use itp_types::parentchain::Hash;
 use sp_core::{crypto::AccountId32, sr25519};
 use sp_runtime::{MultiAddress, MultiSignature};
@@ -91,7 +91,7 @@ pub struct ParentchainRuntimeConfig<Tip: Sized> {
 impl<Tip> Config for ParentchainRuntimeConfig<Tip>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 {
 	type Index = u32;
 	type BlockNumber = u32;

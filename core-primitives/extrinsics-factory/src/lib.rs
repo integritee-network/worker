@@ -20,6 +20,7 @@
 #[cfg(all(feature = "std", feature = "sgx"))]
 compile_error!("feature \"std\" and feature \"sgx\" cannot be enabled at the same time");
 
+extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 
@@ -30,7 +31,7 @@ pub mod sgx_reexport_prelude {
 }
 
 use codec::Encode;
-use core::marker::PhantomData;
+use core::{fmt::Debug, marker::PhantomData};
 use error::Result;
 use itp_node_api::{
 	api_client::{ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams, SignExtrinsic},
@@ -117,7 +118,7 @@ where
 	NodeMetadataRepository: AccessNodeMetadata<MetadataType = NodeMetadata>,
 	NodeRuntimeConfig: Config<Hash = H256>,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 {
 	type Config = NodeRuntimeConfig;
 
@@ -152,6 +153,16 @@ where
 					self.genesis_hash,
 					additional_extrinsic_params,
 				);
+
+				log::trace!(
+					"[ExtrinsicsFactory] SignedExtra: {:?}",
+					extrinsic_params.signed_extra()
+				);
+				log::trace!(
+					"[ExtrinsicsFactory] AdditionalParams: {:?}",
+					extrinsic_params.additional_signed()
+				);
+
 				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
 				nonce_value += 1;
 				xt

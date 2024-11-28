@@ -54,7 +54,7 @@ pub type Result<T> = std::result::Result<T, NodeApiFactoryError>;
 
 /// Node API factory implementation.
 pub struct NodeApiFactory<NodeConfig, Client> {
-	node_url: String,
+	pub node_url: String,
 	signer: sr25519::Pair,
 	_phantom: PhantomData<(NodeConfig, Client)>,
 }

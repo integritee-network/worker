@@ -31,6 +31,7 @@ use crate::{
 	},
 };
 use codec::{Compact, Decode, Encode};
+use core::fmt::Debug;
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::{
@@ -185,7 +186,7 @@ fn init_shard<NodeRuntimeConfig, Tip>(
 where
 	NodeRuntimeConfig: Config<Hash = H256>,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
@@ -317,7 +318,7 @@ fn add_shard_vault_proxy_int<NodeRuntimeConfig, Tip>(
 where
 	NodeRuntimeConfig: Config<Hash = H256>,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler

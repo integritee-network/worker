@@ -31,7 +31,11 @@ use sp_core::{
 };
 use sp_keyring::AccountKeyring;
 use sp_runtime::{traits::SignedExtension, MultiAddress, Saturating};
-use std::{fmt::Display, thread, time::Duration};
+use std::{
+	fmt::{Debug, Display},
+	thread,
+	time::Duration,
+};
 use substrate_api_client::{
 	ac_compose_macros::{compose_extrinsic, compose_extrinsic_with_nonce},
 	ac_primitives::{Bytes, Config as ParentchainNodeConfig},
@@ -83,7 +87,7 @@ pub trait ParentchainAccountInfo {
 pub struct ParentchainAccountInfoProvider<Tip, Client>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	parentchain_id: ParentchainId,
@@ -94,7 +98,7 @@ where
 impl<Tip, Client> ParentchainAccountInfo for ParentchainAccountInfoProvider<Tip, Client>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	fn free_balance(&self) -> ServiceResult<Balance> {
@@ -124,7 +128,7 @@ where
 impl<Tip, Client> ParentchainAccountInfoProvider<Tip, Client>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	pub fn new(
@@ -147,7 +151,7 @@ pub fn setup_reasonable_account_funding<Tip, Client>(
 ) -> ServiceResult<()>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request + Subscribe + Clone,
 {
 	loop {
@@ -179,7 +183,7 @@ fn estimate_funds_needed_to_run_for_a_while<Tip, Client>(
 ) -> ServiceResult<Balance>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	let existential_deposit = api.get_existential_deposit()?;
@@ -236,7 +240,7 @@ pub fn estimate_fee<Tip, Client>(
 ) -> Result<u128, Error>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	let reg_fee_details = api.get_fee_details(&encoded_extrinsic.into(), None)?;
@@ -260,7 +264,7 @@ fn bootstrap_funds_from_alice<Tip, Client>(
 ) -> Result<(), Error>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request + Subscribe,
 {
 	let mut api = api;
@@ -303,7 +307,7 @@ pub fn shard_vault_initial_funds<Tip, Client>(
 ) -> Result<Balance, Error>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	let proxy_deposit_base: Balance = api.get_constant("Proxy", "ProxyDepositBase")?;
@@ -320,7 +324,7 @@ pub fn estimate_transfer_fee<Tip, Client>(
 ) -> Result<Balance, Error>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	let encoded_xt: Bytes = api

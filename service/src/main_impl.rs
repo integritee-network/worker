@@ -825,7 +825,7 @@ fn init_vault<E, Tip, Client>(
 ) where
 	E: EnclaveBase,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
 	let funding_balance = shard_vault_initial_funds(&node_api).unwrap();
@@ -872,7 +872,7 @@ fn init_target_parentchain<E, Tip, Client>(
 where
 	E: EnclaveBase + Sidechain,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode + Send + Sync + 'static,
+	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
 	Client: Request + Subscribe + Clone + Send + Sync + 'static,
 {
 	setup_reasonable_account_funding(
@@ -945,7 +945,7 @@ fn init_parentchain<E, Tip, Client>(
 where
 	E: EnclaveBase + Sidechain,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request + Subscribe + Clone,
 {
 	let parentchain_handler = Arc::new(
@@ -1104,7 +1104,7 @@ fn send_integritee_extrinsic<Tip, Client>(
 ) -> ServiceResult<Hash>
 where
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode + Send + Sync + 'static,
+	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
 	Client: Request + Subscribe + Clone + Send + Sync + 'static,
 {
 	let timeout = Duration::from_secs(5 * 60);
@@ -1177,7 +1177,7 @@ fn start_parentchain_header_subscription_thread<EnclaveApi, Tip, Client>(
 where
 	EnclaveApi: EnclaveBase + Sidechain,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode + Send + Sync + 'static,
+	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
 	Client: Request + Subscribe + Send + Sync + 'static,
 {
 	let parentchain_id = *parentchain_handler.parentchain_id();
@@ -1211,7 +1211,7 @@ fn subscribe_to_parentchain_new_headers<EnclaveApi, Tip, Client>(
 where
 	EnclaveApi: EnclaveBase + Sidechain,
 	u128: From<Tip>,
-	Tip: Copy + Default + Encode,
+	Tip: Copy + Default + Encode + Debug,
 	Client: Request + Subscribe,
 {
 	// TODO: this should be implemented by parentchain_handler directly, and not via
