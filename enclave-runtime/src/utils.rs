@@ -308,12 +308,13 @@ pub(crate) fn get_stf_enclave_signer_from_solo_or_parachain() -> Result<Arc<Encl
 	Ok(stf_enclave_signer)
 }
 
-pub(crate) fn try_mortality(blocks_to_live: u64, ocall_api: &OcallApi) -> GenericMortality {
+pub(crate) fn try_mortality(
+	blocks_to_live: u64,
+	parentchain_id: &ParentchainId,
+	ocall_api: &OcallApi,
+) -> GenericMortality {
 	let response: Option<WorkerResponse<ParentchainHeader, Vec<u8>>> = ocall_api
-		.worker_request(
-			[WorkerRequest::LatestParentchainHeaderUnverified].into(),
-			&ParentchainId::Integritee,
-		)
+		.worker_request([WorkerRequest::LatestParentchainHeaderUnverified].into(), parentchain_id)
 		.ok()
 		.iter()
 		.filter_map(|r| r.first().cloned())

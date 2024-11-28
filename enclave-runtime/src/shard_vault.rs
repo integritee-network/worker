@@ -224,7 +224,7 @@ where
 	));
 
 	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let mortality = try_mortality(64, &ocall_api);
+	let mortality = try_mortality(64, &parentchain_id, &ocall_api);
 	let xts = enclave_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
@@ -248,7 +248,7 @@ where
 	));
 
 	info!("[{:?}] add proxy call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let mortality = try_mortality(64, &ocall_api);
+	let mortality = try_mortality(64, &parentchain_id, &ocall_api);
 	let xts = vault_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	ocall_api.send_to_parentchain(xts, &parentchain_id, false)?;
@@ -351,7 +351,7 @@ where
 	));
 
 	info!("proxied add proxy call: 0x{}", hex::encode(call.0.clone()));
-	let mortality = try_mortality(64, &ocall_api);
+	let mortality = try_mortality(64, &parentchain_id, &ocall_api);
 	let xts = enclave_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false)?;

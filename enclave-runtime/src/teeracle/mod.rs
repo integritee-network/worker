@@ -38,7 +38,10 @@ use ita_oracle::{
 use itp_component_container::ComponentGetter;
 use itp_extrinsics_factory::CreateExtrinsics;
 use itp_node_api::metadata::{pallet_teeracle::TeeracleCallIndexes, provider::AccessNodeMetadata};
-use itp_types::{parentchain::GenericMortality, OpaqueCall};
+use itp_types::{
+	parentchain::{GenericMortality, ParentchainId},
+	OpaqueCall,
+};
 use itp_utils::write_slice_and_whitespace_pad;
 use log::*;
 use sgx_types::sgx_status_t;
@@ -50,7 +53,7 @@ fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueE
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<(OpaqueCall, GenericMortality)> = Vec::new();
-	let mortality = try_mortality(16, &ocall_api);
+	let mortality = try_mortality(16, &ParentchainId::Integritee, &ocall_api);
 	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api);
 
 	match get_longitude(weather_info, open_meteo_weather_oracle) {
@@ -212,7 +215,7 @@ fn update_market_data_internal(
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<(OpaqueCall, GenericMortality)> = Vec::new();
-	let mortality = try_mortality(16, &ocall_api);
+	let mortality = try_mortality(16, &ParentchainId::Integritee, &ocall_api);
 	// Get the exchange rate
 	let trading_pair = TradingPair { crypto_currency, fiat_currency };
 
