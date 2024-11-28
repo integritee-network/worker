@@ -326,6 +326,11 @@ impl pallet_notes::Config for Runtime {
 	type MaxTotalSize = MaxTotalSize;
 }
 
+impl pallet_session_proxy::Config for Runtime {
+	type MomentsPerDay = MomentsPerDay;
+	type Currency = Balances;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -347,6 +352,7 @@ construct_runtime!(
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
+		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 	}
 );
 
@@ -376,6 +382,7 @@ construct_runtime!(
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
+		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 	}
 );
 

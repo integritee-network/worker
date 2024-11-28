@@ -2819,6 +2819,7 @@ dependencies = [
  "pallet-guess-the-number",
  "pallet-notes",
  "pallet-parentchain",
+ "pallet-session-proxy",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",

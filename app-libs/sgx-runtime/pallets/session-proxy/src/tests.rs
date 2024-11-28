@@ -80,7 +80,8 @@ fn add_proxy_works() {
 		set_timestamp(now);
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		let credentials = SessionProxyCredentials { role: SessionProxyRole::Any, expiry: None, seed: [0u8; 32] };
+		let credentials =
+			SessionProxyCredentials { role: SessionProxyRole::Any, expiry: None, seed: [0u8; 32] };
 
 		assert_ok!(SessionProxy::add_proxy(
 			RuntimeOrigin::signed(alice.clone()),
@@ -90,7 +91,11 @@ fn add_proxy_works() {
 		assert_eq!(SessionProxy::session_proxies(alice.clone(), bob.clone()), Some(credentials));
 
 		// make sure overwrite happens if adding again
-		let credentials = SessionProxyCredentials { role: SessionProxyRole::NonTransfer, expiry: None, seed: [0u8; 32] };
+		let credentials = SessionProxyCredentials {
+			role: SessionProxyRole::NonTransfer,
+			expiry: None,
+			seed: [0u8; 32],
+		};
 
 		assert_ok!(SessionProxy::add_proxy(
 			RuntimeOrigin::signed(alice.clone()),
@@ -98,8 +103,6 @@ fn add_proxy_works() {
 			credentials.clone()
 		));
 		assert_eq!(SessionProxy::session_proxies(alice.clone(), bob.clone()), Some(credentials));
-
-
 	})
 }
 
