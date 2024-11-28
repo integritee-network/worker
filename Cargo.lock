@@ -5261,6 +5261,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-session-proxy"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "ita-stf",
+ "itp-randomness",
+ "log 0.4.20",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-sidechain"
 version = "0.11.0"
 source = "git+https://github.com/integritee-network/pallets.git?branch=sdk-v0.13.0-polkadot-v0.9.42#abf29acd41a0fca9cd7025b297b6a9fa272a122f"
