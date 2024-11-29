@@ -23,7 +23,7 @@ pub type StfResult<T> = Result<T, StfError>;
 
 #[derive(Debug, Display, PartialEq, Eq)]
 pub enum StfError {
-	#[display(fmt = "Insufficient privileges {:?}, are you sure you are root?", _0)]
+	#[display(fmt = "Insufficient privileges {:?}?", _0)]
 	MissingPrivileges(AccountId),
 	#[display(fmt = "Valid enclave signer account is required")]
 	RequireEnclaveSignerAccount,

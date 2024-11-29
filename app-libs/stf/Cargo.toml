@@ -29,6 +29,7 @@ itp-types = { default-features = false, path = "../../core-primitives/types" }
 itp-utils = { default-features = false, path = "../../core-primitives/utils" }
 pallet-notes = { default-features = false, path = "../sgx-runtime/pallets/notes" }
 pallet-parentchain = { default-features = false, path = "../sgx-runtime/pallets/parentchain" }
+pallet-session-proxy = { default-features = false, path = "../sgx-runtime/pallets/session-proxy" }
 sp-io = { default-features = false, features = ["disable_oom", "disable_panic_handler", "disable_allocator"], path = "../../core-primitives/substrate-sgx/sp-io" }
 
 # Substrate dependencies
@@ -81,6 +82,7 @@ std = [
     "sp-runtime/std",
     # scs/integritee
     "pallet-parentchain/std",
+    "pallet-session-proxy/std",
     "sp-io/std",
 ]
 test = []

@@ -2855,6 +2855,7 @@ dependencies = [
  "pallet-balances",
  "pallet-notes",
  "pallet-parentchain",
+ "pallet-session-proxy",
  "pallet-sudo",
  "pallet-timestamp",
  "parity-scale-codec",

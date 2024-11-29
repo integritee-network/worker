@@ -17,7 +17,8 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{
-	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, System,
+	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime,
+	SessionProxy, System,
 };
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
@@ -39,12 +40,17 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 use crate::{
 	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
 	helpers::{shielding_target, shielding_target_genesis_hash, wrap_bytes},
+	TrustedCall, TrustedCallSigned,
 };
 use ita_parentchain_specs::MinimalChainSpec;
-use itp_sgx_runtime_primitives::types::Moment;
-use itp_stf_primitives::traits::{GetDecimals, PoolTransactionValidation};
-use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
+use itp_sgx_runtime_primitives::types::{Balance, Moment};
+use itp_stf_primitives::{
+	error::StfError,
+	traits::{GetDecimals, PoolTransactionValidation},
+};
+use itp_types::parentchain::{AccountInfo, BlockNumber, Hash, ParentchainId};
 use pallet_notes::{BucketIndex, BucketRange};
+use pallet_session_proxy::{SessionProxyCredentials, SessionProxyRole};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
@@ -124,6 +130,7 @@ pub enum PublicGetter {
 #[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
 	account_info(AccountId) = 0,
+	account_info_and_session_proxies(AccountId) = 1,
 	notes_for(AccountId, BucketIndex) = 10,
 	guess_the_number(GuessTheNumberTrustedGetter) = 50,
 	#[cfg(feature = "evm")]
@@ -138,6 +145,7 @@ impl TrustedGetter {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
 			TrustedGetter::account_info(sender_account) => sender_account,
+			TrustedGetter::account_info_and_session_proxies(sender_account, ..) => sender_account,
 			TrustedGetter::notes_for(sender_account, ..) => sender_account,
 			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
@@ -150,32 +158,37 @@ impl TrustedGetter {
 	}
 
 	pub fn sign(&self, pair: &KeyPair) -> TrustedGetterSigned {
+		let delegate = if pair.account_id() == *self.sender_account() {
+			None
+		} else {
+			Some(pair.account_id())
+		};
 		let signature = pair.sign(self.encode().as_slice());
-		TrustedGetterSigned { getter: self.clone(), signature }
+		TrustedGetterSigned { getter: self.clone(), delegate, signature }
 	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct TrustedGetterSigned {
 	pub getter: TrustedGetter,
+	pub delegate: Option<AccountId>,
 	pub signature: Signature,
 }
 
 impl TrustedGetterSigned {
-	pub fn new(getter: TrustedGetter, signature: Signature) -> Self {
-		TrustedGetterSigned { getter, signature }
+	pub fn new(getter: TrustedGetter, delegate: Option<AccountId>, signature: Signature) -> Self {
+		TrustedGetterSigned { getter, delegate, signature }
 	}
 
 	pub fn verify_signature(&self) -> bool {
 		let encoded = self.getter.encode();
-
-		if self.signature.verify(encoded.as_slice(), self.getter.sender_account()) {
+		let signer = self.delegate.clone().unwrap_or(self.getter.sender_account().clone());
+		if self.signature.verify(encoded.as_slice(), &signer) {
 			return true
 		};
 
 		// check if the signature is from an extension-dapp signer.
-		self.signature
-			.verify(wrap_bytes(&encoded).as_slice(), self.getter.sender_account())
+		self.signature.verify(wrap_bytes(&encoded).as_slice(), &signer)
 	}
 }
 
@@ -197,6 +210,10 @@ impl ExecuteGetter for Getter {
 
 impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
+		if let Err(e) = ensure_authorization(&self) {
+			warn!("trusted getter not authorized");
+			return None
+		};
 		match self.getter {
 			TrustedGetter::account_info(who) => {
 				let info = System::account(&who);
@@ -204,6 +221,15 @@ impl ExecuteGetter for TrustedGetterSigned {
 				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
 				Some(info.encode())
+			},
+			TrustedGetter::account_info_and_session_proxies(who) => {
+				let account_info = System::account(&who);
+				debug!("TrustedGetter account_data");
+				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), account_info);
+				let session_proxies = SessionProxy::get_all_proxy_credentials_for(who);
+
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
+				Some(AccountInfoAndSessionProxies { account_info, session_proxies }.encode())
 			},
 			TrustedGetter::notes_for(who, bucket_index) => {
 				debug!("TrustedGetter notes_for");
@@ -319,6 +345,37 @@ impl ExecuteGetter for PublicGetter {
 		};
 		key_hashes
 	}
+}
+
+fn ensure_authorization(tgs: &TrustedGetterSigned) -> Result<SessionProxyRole<Balance>, StfError> {
+	let delegator = tgs.getter.sender_account();
+	if let Some(delegate) = tgs.delegate.clone() {
+		let credentials =
+			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
+				.ok_or(StfError::MissingPrivileges(delegate.clone()))?;
+		//todo! verify expiry
+		match credentials.role {
+			SessionProxyRole::Any | SessionProxyRole::NonTransfer | SessionProxyRole::ReadAny =>
+				Ok(credentials.role),
+			SessionProxyRole::ReadBalance =>
+				if let TrustedGetter::account_info(..) = tgs.getter {
+					Ok(credentials.role)
+				} else {
+					Err(StfError::MissingPrivileges(delegate.clone()))
+				},
+			_ => Err(StfError::MissingPrivileges(delegate.clone())),
+		}
+	} else {
+		// signed by account owner
+		Ok(SessionProxyRole::Any)
+	}
+}
+
+/// General public information about the sync status of all parentchains
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct AccountInfoAndSessionProxies {
+	pub account_info: AccountInfo,
+	pub session_proxies: Vec<SessionProxyCredentials<Balance>>,
 }
 
 /// General public information about the sync status of all parentchains

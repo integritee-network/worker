@@ -81,6 +81,9 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
 pub use pallet_notes::Call as NotesCall;
 pub use pallet_parentchain::Call as ParentchainPalletCall;
+pub use pallet_session_proxy::{
+	Call as SessionProxyCall, SessionProxyCredentials, SessionProxyRole,
+};
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_core::crypto::AccountId32;
 #[cfg(any(feature = "std", test))]

@@ -99,6 +99,14 @@ pub mod pallet {
 		}
 	}
 }
+
+impl<T: Config> Pallet<T> {
+	pub fn get_all_proxy_credentials_for(
+		owner: T::AccountId,
+	) -> Vec<SessionProxyCredentials<BalanceOf<T>>> {
+		SessionProxies::<T>::iter_prefix(&owner).map(|(_key, value)| value).collect()
+	}
+}
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
