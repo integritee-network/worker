@@ -49,10 +49,8 @@ macro_rules! get_layer_two_nonce {
 		let info = perform_trusted_operation::<AccountInfo>($cli, $trusted_args, &top);
 		let nonce = info.map(|i| i.nonce).ok().unwrap_or_default();
 		debug!("got system nonce: {:?}", nonce);
-		let pending_tx_count = get_pending_trusted_calls_for($cli, $trusted_args, &$subject).len();
-		let pending_tx_count = Index::try_from(pending_tx_count).unwrap();
-		debug!("got pending tx count: {:?}", pending_tx_count);
-		nonce + pending_tx_count
+		// todo! pending TrustedCalls in pool should be considered too, but: https://github.com/integritee-network/worker/issues/1657
+		nonce
 	}};
 }
 
@@ -142,29 +140,10 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 
 // helper method to get the pending trusted calls for a given account via direct RPC
 pub(crate) fn get_pending_trusted_calls_for(
-	cli: &Cli,
-	trusted_args: &TrustedCli,
-	who: &AccountId,
+	_cli: &Cli,
+	_trusted_args: &TrustedCli,
+	_who: &AccountId,
 ) -> Vec<TrustedOperation<TrustedCallSigned, Getter>> {
-	let shard = read_shard(trusted_args).unwrap();
-	let direct_api = get_worker_api_direct(cli);
-	let rpc_method = "author_pendingTrustedCallsFor".to_owned();
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
-		rpc_method,
-		vec![shard.encode().to_base58(), who.to_hex()],
-	)
-	.unwrap();
-
-	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
-	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).unwrap();
-	let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result).unwrap();
-
-	if rpc_return_value.status == DirectRequestStatus::Error {
-		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
-		direct_api.close().unwrap();
-		return vec![]
-	}
-
-	direct_api.close().unwrap();
-	Decode::decode(&mut rpc_return_value.value.as_slice()).unwrap_or_default()
+	// see: https://github.com/integritee-network/worker/issues/1657
+	unimplemented!()
 }
