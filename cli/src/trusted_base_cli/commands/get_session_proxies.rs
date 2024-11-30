@@ -14,28 +14,34 @@
 	limitations under the License.
 
 */
-
 use crate::{
-	get_layer_two_nonce, trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
-use ita_stf::Index;
+use ita_stf::{AccountInfoAndSessionProxies, Getter, TrustedCallSigned, TrustedGetter};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
-use itp_types::AccountId;
-use log::*;
+
 use sp_core::Pair;
 
 #[derive(Parser)]
-pub struct NonceCommand {
+pub struct GetSessionProxiesCommand {
 	/// AccountId in ss58check format, mnemonic or hex seed
 	account: String,
 }
 
-impl NonceCommand {
+impl GetSessionProxiesCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, &self.account);
-		let subject: AccountId = who.public().into();
-		println!("{}", get_layer_two_nonce!(subject, who, cli, trusted_args));
-		Ok(CliResultOk::None)
+		let who = get_pair_from_str(trusted_args, self.account.as_str());
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
+			TrustedGetter::account_info_and_session_proxies(who.public().into())
+				.sign(&KeyPair::Sr25519(Box::new(who))),
+		));
+		let data =
+			perform_trusted_operation::<AccountInfoAndSessionProxies>(cli, trusted_args, &top)
+				.unwrap();
+		for proxy in &data.session_proxies {
+			println!("{:?}", proxy);
+		}
+		Ok(CliResultOk::AccountInfoAndSessionProxies { value: data })
 	}
 }

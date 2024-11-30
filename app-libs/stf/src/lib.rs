@@ -52,3 +52,5 @@ pub const STF_TX_FEE_UNIT_DIVIDER: Balance = 100; // 0.01 tokens
 pub const STF_BYTE_FEE_UNIT_DIVIDER: Balance = 10_000; // 0.0001 tokens per byte of certain payload
 
 pub const STF_GUESS_FEE_UNIT_DIVIDER: Balance = 10; // 0.1 tokens
+
+pub const STF_SESSION_PROXY_DEPOSIT_DIVIDER: Balance = 2; // 0.5 tokens

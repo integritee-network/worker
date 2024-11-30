@@ -23,11 +23,15 @@ use crate::{
 pub struct BalanceCommand {
 	/// AccountId in ss58check format, mnemonic or hex seed
 	account: String,
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl BalanceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let balance = get_balance(cli, trusted_args, &self.account).unwrap_or_default();
+		let balance = get_balance(cli, trusted_args, &self.account, self.session_proxy.as_ref())
+			.unwrap_or_default();
 		println!("{}", balance);
 		Ok(CliResultOk::Balance { balance })
 	}

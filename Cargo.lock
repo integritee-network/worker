@@ -2583,6 +2583,7 @@ dependencies = [
  "pallet-enclave-bridge",
  "pallet-evm",
  "pallet-notes",
+ "pallet-session-proxy",
  "pallet-sidechain",
  "pallet-teeracle",
  "pallet-teerex",
@@ -2819,6 +2820,7 @@ dependencies = [
  "pallet-guess-the-number",
  "pallet-notes",
  "pallet-parentchain",
+ "pallet-session-proxy",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -2854,6 +2856,7 @@ dependencies = [
  "pallet-balances",
  "pallet-notes",
  "pallet-parentchain",
+ "pallet-session-proxy",
  "pallet-sudo",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -5250,6 +5253,28 @@ dependencies = [
  "frame-system",
  "log 0.4.20",
  "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-session-proxy"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "ita-stf",
+ "itp-randomness",
+ "log 0.4.20",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "serde 1.0.193",

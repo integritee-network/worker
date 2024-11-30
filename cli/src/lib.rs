@@ -46,7 +46,9 @@ pub mod commands;
 
 use crate::commands::Commands;
 use clap::Parser;
-use ita_stf::{guess_the_number::GuessTheNumberInfo, ParentchainsInfo};
+use ita_stf::{
+	guess_the_number::GuessTheNumberInfo, AccountInfoAndSessionProxies, ParentchainsInfo,
+};
 use itp_node_api::api_client::Metadata;
 use itp_types::Moment;
 use its_primitives::types::header::SidechainHeader;
@@ -124,6 +126,9 @@ pub enum CliResultOk {
 	},
 	NoteBucketRange {
 		range: BucketRange<Moment>,
+	},
+	AccountInfoAndSessionProxies {
+		value: AccountInfoAndSessionProxies,
 	},
 	Notes {
 		notes: Vec<TimestampedTrustedNote<Moment>>,

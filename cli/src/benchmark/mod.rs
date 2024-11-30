@@ -34,7 +34,7 @@ use ita_stf::{
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
+	types::{AccountId, KeyPair, TrustedOperation},
 };
 use itp_types::{
 	AccountInfo, Balance, ShardIdentifier, TrustedOperationStatus,
@@ -137,8 +137,8 @@ impl BenchmarkCommand {
 			Ok(key) => key,
 			Err(err_msg) => panic!("{}", err_msg.to_string()),
 		};
-
-		let nonce_start = get_layer_two_nonce!(funding_account_keys, cli, trusted_args);
+		let subject: AccountId = funding_account_keys.public().into();
+		let nonce_start = get_layer_two_nonce!(subject, funding_account_keys, cli, trusted_args);
 		println!("Nonce for account {}: {}", self.funding_account, nonce_start);
 
 		let mut accounts = Vec::new();

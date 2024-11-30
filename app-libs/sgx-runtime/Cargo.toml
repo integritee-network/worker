@@ -17,6 +17,7 @@ itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primiti
 pallet-guess-the-number = { default-features = false, path = "pallets/guess-the-number" }
 pallet-notes = { default-features = false, path = "pallets/notes" }
 pallet-parentchain = { default-features = false, path = "pallets/parentchain" }
+pallet-session-proxy = { default-features = false, path = "pallets/session-proxy" }
 
 # Substrate dependencies
 frame-executive = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -56,6 +57,7 @@ std = [
     "pallet-transaction-payment/std",
     "pallet-parentchain/std",
     "pallet-notes/std",
+    "pallet-session-proxy/std",
     "sp-api/std",
     "sp-core/std",
     "sp-runtime/std",

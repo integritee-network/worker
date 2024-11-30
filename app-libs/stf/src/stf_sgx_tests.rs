@@ -58,6 +58,7 @@ pub fn shield_funds_increments_signer_account_nonce() {
 			ParentchainId::Integritee,
 		),
 		0,
+		None,
 		Signature::Ed25519(Ed25519Signature([0u8; 64])),
 	);
 
