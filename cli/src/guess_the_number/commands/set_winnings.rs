@@ -24,7 +24,7 @@ use crate::{
 };
 use ita_parentchain_interface::integritee::Balance;
 use ita_stf::{
-	guess_the_number::GuessTheNumberTrustedCall, Getter, Index, TrustedCall, TrustedCallSigned,
+	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
 };
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,

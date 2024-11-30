@@ -16,19 +16,14 @@
 */
 
 use crate::{
-	command_utils::{get_worker_api_direct, mrenclave_from_base58},
-	trusted_cli::TrustedCli,
-	trusted_operation::{perform_trusted_operation, read_shard},
-	Cli,
+	command_utils::mrenclave_from_base58, trusted_cli::TrustedCli,
+	trusted_operation::perform_trusted_operation, Cli,
 };
 use base58::{FromBase58, ToBase58};
-use codec::{Decode, Encode};
+use codec::Encode;
 use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
-use itc_rpc_client::direct_client::DirectApi;
-use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, TrustedOperation};
-use itp_types::{AccountInfo, DirectRequestStatus};
-use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use itp_types::AccountInfo;
 use log::*;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
@@ -40,7 +35,6 @@ use substrate_client_keystore::LocalKeystore;
 macro_rules! get_layer_two_nonce {
 	($subject:ident, $signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
 		use ita_stf::{AccountInfo, Getter, TrustedCallSigned, TrustedGetter};
-		use $crate::trusted_command_utils::get_pending_trusted_calls_for;
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::account_info($subject.clone().into())
 				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
@@ -136,14 +130,4 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 			}
 		},
 	}
-}
-
-// helper method to get the pending trusted calls for a given account via direct RPC
-pub(crate) fn get_pending_trusted_calls_for(
-	_cli: &Cli,
-	_trusted_args: &TrustedCli,
-	_who: &AccountId,
-) -> Vec<TrustedOperation<TrustedCallSigned, Getter>> {
-	// see: https://github.com/integritee-network/worker/issues/1657
-	unimplemented!()
 }

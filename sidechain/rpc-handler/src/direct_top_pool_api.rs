@@ -92,8 +92,8 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 		Ok(json!(json_value))
 	});
 
-	let local_author = top_pool_author.clone();
-	let local_ocall_api = ocall_api.clone();
+	let local_author = top_pool_author;
+	let local_ocall_api = ocall_api;
 	io_handler.add_sync_method("author_pendingExtrinsics", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_pendingExtrinsics");
 		local_ocall_api
