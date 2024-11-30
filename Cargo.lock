@@ -2583,6 +2583,7 @@ dependencies = [
  "pallet-enclave-bridge",
  "pallet-evm",
  "pallet-notes",
+ "pallet-session-proxy",
  "pallet-sidechain",
  "pallet-teeracle",
  "pallet-teerex",

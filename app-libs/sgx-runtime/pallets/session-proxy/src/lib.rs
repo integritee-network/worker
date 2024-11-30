@@ -54,7 +54,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		NoSelfProxy,
+		SelfProxyForbidden,
 	}
 
 	#[pallet::storage]
@@ -82,7 +82,7 @@ pub mod pallet {
 			credentials: SessionProxyCredentials<BalanceOf<T>>,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			ensure!(delegator != delegate, Error::<T>::NoSelfProxy);
+			ensure!(delegator != delegate, Error::<T>::SelfProxyForbidden);
 			SessionProxies::<T>::insert(&delegator, &delegate, credentials);
 			Ok(().into())
 		}

@@ -239,13 +239,13 @@ impl TrustedCallVerification for TrustedCallSigned {
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		let signer = self.delegate.clone().unwrap_or(self.call.sender_account().clone());
-		if self.signature.verify(payload.as_slice(), &signer) {
+		let signer = self.delegate.as_ref().unwrap_or(self.call.sender_account());
+		if self.signature.verify(payload.as_slice(), signer) {
 			return true
 		};
 
 		// check if the signature is from an extension-dapp signer.
-		self.signature.verify(wrap_bytes(&payload).as_slice(), &signer)
+		self.signature.verify(wrap_bytes(&payload).as_slice(), signer)
 	}
 }
 

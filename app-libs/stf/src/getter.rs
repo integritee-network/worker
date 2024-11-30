@@ -182,13 +182,13 @@ impl TrustedGetterSigned {
 
 	pub fn verify_signature(&self) -> bool {
 		let encoded = self.getter.encode();
-		let signer = self.delegate.clone().unwrap_or(self.getter.sender_account().clone());
-		if self.signature.verify(encoded.as_slice(), &signer) {
+		let signer = self.delegate.as_ref().unwrap_or(self.getter.sender_account());
+		if self.signature.verify(encoded.as_slice(), signer) {
 			return true
 		};
 
 		// check if the signature is from an extension-dapp signer.
-		self.signature.verify(wrap_bytes(&encoded).as_slice(), &signer)
+		self.signature.verify(wrap_bytes(&encoded).as_slice(), signer)
 	}
 }
 
