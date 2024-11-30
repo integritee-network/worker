@@ -73,6 +73,7 @@ pub(crate) fn get_balance(
 		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(signer))),
 	));
 	let info = perform_trusted_operation::<AccountInfo>(cli, trusted_args, &top).ok();
+	info!("AccountInfo: {:?}", info);
 	info.map(|i| i.data.free)
 }
 
