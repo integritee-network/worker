@@ -40,7 +40,6 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 use crate::{
 	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
 	helpers::{shielding_target, shielding_target_genesis_hash, wrap_bytes},
-	TrustedCall, TrustedCallSigned,
 };
 use ita_parentchain_specs::MinimalChainSpec;
 use itp_sgx_runtime_primitives::types::{Balance, Moment};
@@ -210,7 +209,7 @@ impl ExecuteGetter for Getter {
 
 impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
-		if let Err(e) = ensure_authorization(&self) {
+		if let Err(_) = ensure_authorization(&self) {
 			warn!("trusted getter not authorized");
 			return None
 		};

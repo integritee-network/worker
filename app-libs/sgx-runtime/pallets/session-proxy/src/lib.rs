@@ -3,7 +3,6 @@
 use codec::{Decode, Encode};
 use frame_support::{ensure, pallet_prelude::Get, traits::Currency};
 pub use pallet::*;
-use pallet_timestamp::Pallet as Timestamp;
 use scale_info::TypeInfo;
 use sp_std::{vec, vec::Vec};
 

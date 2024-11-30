@@ -38,19 +38,18 @@ use substrate_client_keystore::LocalKeystore;
 
 #[macro_export]
 macro_rules! get_layer_two_nonce {
-	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
+	($subject:ident, $signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
 		use ita_stf::{AccountInfo, Getter, TrustedCallSigned, TrustedGetter};
 		use $crate::trusted_command_utils::get_pending_trusted_calls_for;
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-			TrustedGetter::account_info($signer_pair.public().into())
+			TrustedGetter::account_info($subject.clone().into())
 				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
 		));
 		// final nonce = current system nonce + pending tx count, panic early
 		let info = perform_trusted_operation::<AccountInfo>($cli, $trusted_args, &top);
 		let nonce = info.map(|i| i.nonce).ok().unwrap_or_default();
 		debug!("got system nonce: {:?}", nonce);
-		let pending_tx_count =
-			get_pending_trusted_calls_for($cli, $trusted_args, &$signer_pair.public().into()).len();
+		let pending_tx_count = get_pending_trusted_calls_for($cli, $trusted_args, &$subject).len();
 		let pending_tx_count = Index::try_from(pending_tx_count).unwrap();
 		debug!("got pending tx count: {:?}", pending_tx_count);
 		nonce + pending_tx_count
@@ -59,11 +58,19 @@ macro_rules! get_layer_two_nonce {
 
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
-pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -> Option<u128> {
-	debug!("arg_who = {:?}", arg_who);
+pub(crate) fn get_balance(
+	cli: &Cli,
+	trusted_args: &TrustedCli,
+	arg_who: &str,
+	arg_session_proxy: Option<&String>,
+) -> Option<u128> {
+	debug!("arg_who = {:?}, session proxy: {:?}", arg_who, arg_session_proxy);
 	let who = get_pair_from_str(trusted_args, arg_who);
+	let signer = arg_session_proxy
+		.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
+		.unwrap_or(who.clone());
 	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(who))),
+		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(signer))),
 	));
 	let info = perform_trusted_operation::<AccountInfo>(cli, trusted_args, &top).ok();
 	info.map(|i| i.data.free)

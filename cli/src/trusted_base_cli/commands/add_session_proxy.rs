@@ -28,8 +28,10 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
+use itp_types::AccountId;
 use log::*;
 use pallet_session_proxy::{SessionProxyCredentials, SessionProxyRole};
+use sp_application_crypto::RuntimeAppPublic;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
 
@@ -47,13 +49,14 @@ pub struct AddSessionProxyCommand {
 
 impl AddSessionProxyCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let signer = get_pair_from_str(trusted_args, &self.account);
-		info!("account ss58 is {}", signer.public().to_ss58check());
+		let delegator = get_pair_from_str(trusted_args, &self.account);
+		info!("account ss58 is {}", delegator.public().to_ss58check());
 		let delegate = get_pair_from_str(trusted_args, &self.seed);
 		println!("send trusted call add-session-proxy for {}", delegate.public().to_ss58check());
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
+		let subject: AccountId = delegator.public().into();
+		let nonce = get_layer_two_nonce!(subject, delegator, cli, trusted_args);
 
 		let role = match self.role.as_str() {
 			"Any" => SessionProxyRole::Any,
@@ -65,14 +68,15 @@ impl AddSessionProxyCommand {
 		// todo! make expiry an argument as soon as it will be enforced in enclave
 		let expiry_time = Utc::now() + Duration::days(10);
 		let expiry = Some(expiry_time.timestamp_millis() as u64);
+		println!("hex seed decoded to: {:?}", hex::decode(&self.seed[2..]).unwrap());
 		let seed = hex::decode(&self.seed[2..]).unwrap().as_slice().try_into().unwrap();
 		let credentials = SessionProxyCredentials { role, expiry, seed };
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::add_session_proxy(
-			signer.public().into(),
+			delegator.public().into(),
 			delegate.public().into(),
 			credentials,
 		)
-		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+		.sign(&KeyPair::Sr25519(Box::new(delegator)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
 		if trusted_args.direct {

@@ -28,6 +28,7 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
+use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
@@ -50,7 +51,8 @@ impl SetBalanceCommand {
 		println!("send trusted call set-balance({}, {})", who.public(), self.amount);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
+		let subject: AccountId = signer.public().into();
+		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_set_balance(
 			signer.public().into(),
 			who.public().into(),

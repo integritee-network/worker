@@ -9,6 +9,7 @@ pub mod get_shard_vault;
 pub mod get_total_issuance;
 
 pub mod add_session_proxy;
+pub mod get_session_proxies;
 pub mod nonce;
 pub mod note_bloat;
 pub mod transfer;

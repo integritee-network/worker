@@ -22,7 +22,8 @@ use crate::{
 		add_session_proxy::AddSessionProxyCommand, balance::BalanceCommand,
 		get_fingerprint::GetFingerprintCommand, get_header::GetSidechainHeaderCommand,
 		get_note_buckets_info::GetNoteBucketsInfoCommand, get_notes::GetNotesCommand,
-		get_parentchains_info::GetParentchainsInfoCommand, get_shard::GetShardCommand,
+		get_parentchains_info::GetParentchainsInfoCommand,
+		get_session_proxies::GetSessionProxiesCommand, get_shard::GetShardCommand,
 		get_shard_vault::GetShardVaultCommand, get_total_issuance::GetTotalIssuanceCommand,
 		nonce::NonceCommand, note_bloat::NoteBloatCommand, transfer::TransferCommand,
 		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
@@ -91,6 +92,9 @@ pub enum TrustedBaseCommand {
 	/// add a delegate (session proxy)
 	AddSessionProxy(AddSessionProxyCommand),
 
+	/// add a delegate (session proxy)
+	GetSessionProxies(GetSessionProxiesCommand),
+
 	/// waste time for benchmarking
 	WasteTime(WasteTimeCommand),
 
@@ -121,6 +125,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::AddSessionProxy(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),

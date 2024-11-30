@@ -30,6 +30,7 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
+use itp_types::AccountId;
 use log::*;
 use sp_core::Pair;
 use std::boxed::Box;
@@ -53,7 +54,8 @@ impl SetWinningsCommand {
 		);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
+		let subject: AccountId = signer.public().into();
+		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::guess_the_number(
 			GuessTheNumberTrustedCall::set_winnings(signer.public().into(), self.winnings),
 		)

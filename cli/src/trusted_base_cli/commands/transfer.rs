@@ -29,6 +29,7 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
+use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
@@ -46,36 +47,46 @@ pub struct TransferCommand {
 
 	/// an optional note for the recipient to pass along with the funds
 	note: Option<String>,
+
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl TransferCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let from = get_pair_from_str(trusted_args, &self.from);
+		let from = get_accountid_from_str(&self.from);
 		let to = get_accountid_from_str(&self.to);
-		info!("from ss58 is {}", from.public().to_ss58check());
+		info!("from ss58 is {}", from.to_ss58check());
 		info!("to ss58 is {}", to.to_ss58check());
+		let signer = self
+			.session_proxy
+			.as_ref()
+			.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
+			.unwrap_or_else(|| get_pair_from_str(trusted_args, &self.from));
+		info!("signer ss58 is {}", signer.public().to_ss58check());
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+		let nonce = get_layer_two_nonce!(from, signer, cli, trusted_args);
 		println!(
             "send trusted call transfer from {} to {}: {}, nonce: {}, signing using mrenclave: {} and shard: {}",
-            from.public(),
+            from,
             to,
             self.amount,
             nonce, mrenclave.to_base58(), shard.0.to_base58()
         );
 		let top: TrustedOperation<TrustedCallSigned, Getter> = if let Some(note) = &self.note {
 			TrustedCall::balance_transfer_with_note(
-				from.public().into(),
+				from.into(),
 				to,
 				self.amount,
 				note.as_bytes().into(),
 			)
-			.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
+			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct)
 		} else {
-			TrustedCall::balance_transfer(from.public().into(), to, self.amount)
-				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
+			TrustedCall::balance_transfer(from.into(), to, self.amount)
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct)
 		};
 

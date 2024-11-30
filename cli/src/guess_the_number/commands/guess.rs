@@ -29,7 +29,7 @@ use ita_stf::{
 };
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
+	types::{AccountId, KeyPair, TrustedOperation},
 };
 use log::*;
 use sp_core::Pair;
@@ -50,7 +50,8 @@ impl GuessCommand {
 		println!("send trusted call guess-the-number ({}, {})", signer.public(), self.guess);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
+		let subject: AccountId = signer.public().into();
+		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::guess_the_number(
 			GuessTheNumberTrustedCall::guess(signer.public().into(), self.guess),
 		)

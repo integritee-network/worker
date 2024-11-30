@@ -526,7 +526,7 @@ where
 				Ok(())
 			},
 			TrustedCall::send_note(from, to, _note) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				let _origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 send_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
 				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())

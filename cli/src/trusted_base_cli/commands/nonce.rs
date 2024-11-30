@@ -21,6 +21,7 @@ use crate::{
 };
 use ita_stf::Index;
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use itp_types::AccountId;
 use log::*;
 use sp_core::Pair;
 
@@ -33,7 +34,8 @@ pub struct NonceCommand {
 impl NonceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let who = get_pair_from_str(trusted_args, &self.account);
-		println!("{}", get_layer_two_nonce!(who, cli, trusted_args));
+		let subject: AccountId = who.public().into();
+		println!("{}", get_layer_two_nonce!(subject, who, cli, trusted_args));
 		Ok(CliResultOk::None)
 	}
 }
