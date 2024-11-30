@@ -31,7 +31,7 @@ use itp_stf_primitives::{
 use itp_types::AccountId;
 use log::*;
 use pallet_session_proxy::{SessionProxyCredentials, SessionProxyRole};
-use sp_application_crypto::RuntimeAppPublic;
+
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
 

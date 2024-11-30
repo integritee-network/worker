@@ -181,7 +181,7 @@ impl TrustedGetterSigned {
 
 	pub fn verify_signature(&self) -> bool {
 		let encoded = self.getter.encode();
-		let signer = self.delegate.as_ref().unwrap_or(self.getter.sender_account());
+		let signer = self.delegate.as_ref().unwrap_or_else(|| self.getter.sender_account());
 		if self.signature.verify(encoded.as_slice(), signer) {
 			return true
 		};
@@ -209,7 +209,7 @@ impl ExecuteGetter for Getter {
 
 impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
-		if let Err(_) = ensure_authorization(&self) {
+		if ensure_authorization(&self).is_err() {
 			warn!("trusted getter not authorized");
 			return None
 		};
@@ -351,7 +351,7 @@ fn ensure_authorization(tgs: &TrustedGetterSigned) -> Result<SessionProxyRole<Ba
 	if let Some(delegate) = tgs.delegate.clone() {
 		let credentials =
 			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
-				.ok_or(StfError::MissingPrivileges(delegate.clone()))?;
+				.ok_or_else(|| StfError::MissingPrivileges(delegate.clone()))?;
 		//todo! verify expiry
 		match credentials.role {
 			SessionProxyRole::Any | SessionProxyRole::NonTransfer | SessionProxyRole::ReadAny =>
@@ -360,9 +360,9 @@ fn ensure_authorization(tgs: &TrustedGetterSigned) -> Result<SessionProxyRole<Ba
 				if let TrustedGetter::account_info(..) = tgs.getter {
 					Ok(credentials.role)
 				} else {
-					Err(StfError::MissingPrivileges(delegate.clone()))
+					Err(StfError::MissingPrivileges(delegate))
 				},
-			_ => Err(StfError::MissingPrivileges(delegate.clone())),
+			_ => Err(StfError::MissingPrivileges(delegate)),
 		}
 	} else {
 		// signed by account owner

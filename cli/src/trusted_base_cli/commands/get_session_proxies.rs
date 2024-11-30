@@ -15,17 +15,12 @@
 
 */
 use crate::{
-	command_utils::format_moment, trusted_cli::TrustedCli,
-	trusted_command_utils::get_pair_from_str, trusted_operation::perform_trusted_operation, Cli,
-	CliResult, CliResultOk,
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
-use ita_stf::{
-	AccountInfoAndSessionProxies, Getter, PublicGetter, TrustedCallSigned, TrustedGetter,
-};
+use ita_stf::{AccountInfoAndSessionProxies, Getter, TrustedCallSigned, TrustedGetter};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
-use itp_types::{Balance, Moment};
-use pallet_notes::BucketRange;
-use pallet_session_proxy::SessionProxyCredentials;
+
 use sp_core::Pair;
 
 #[derive(Parser)]

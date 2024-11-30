@@ -239,7 +239,7 @@ impl TrustedCallVerification for TrustedCallSigned {
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		let signer = self.delegate.as_ref().unwrap_or(self.call.sender_account());
+		let signer = self.delegate.as_ref().unwrap_or_else(|| self.call.sender_account());
 		if self.signature.verify(payload.as_slice(), signer) {
 			return true
 		};
@@ -534,14 +534,11 @@ where
 			TrustedCall::add_session_proxy(delegator, delegate, credentials) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(delegator.clone());
 				std::println!("⣿STF⣿ 🔄 add_proxy delegator ⣿⣿⣿ delegate ⣿⣿⣿");
-				ita_sgx_runtime::SessionProxyCall::<Runtime>::add_proxy {
-					delegate: delegate.clone(),
-					credentials,
-				}
-				.dispatch_bypass_filter(origin)
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("SessionProxy add error: {:?}", e.error))
-				})?;
+				ita_sgx_runtime::SessionProxyCall::<Runtime>::add_proxy { delegate, credentials }
+					.dispatch_bypass_filter(origin)
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("SessionProxy add error: {:?}", e.error))
+					})?;
 				store_note(&delegator, self.call, vec![delegator.clone()])?;
 				Ok(())
 			},
@@ -761,7 +758,7 @@ fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Bala
 	if let Some(delegate) = tcs.delegate.clone() {
 		let credentials =
 			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
-				.ok_or(StfError::MissingPrivileges(delegate.clone()))?;
+				.ok_or_else(|| StfError::MissingPrivileges(delegate.clone()))?;
 		//todo! verify expiry
 		match credentials.role {
 			SessionProxyRole::Any => Ok(credentials.role),
@@ -769,9 +766,9 @@ fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Bala
 				TrustedCall::noop(..) => Ok(credentials.role),
 				TrustedCall::guess_the_number(..) => Ok(credentials.role),
 				TrustedCall::send_note(..) => Ok(credentials.role),
-				_ => Err(StfError::MissingPrivileges(delegate.clone())),
+				_ => Err(StfError::MissingPrivileges(delegate)),
 			},
-			_ => Err(StfError::MissingPrivileges(delegate.clone())),
+			_ => Err(StfError::MissingPrivileges(delegate)),
 		}
 	} else {
 		// signed by account owner

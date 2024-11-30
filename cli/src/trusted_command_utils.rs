@@ -68,7 +68,7 @@ pub(crate) fn get_balance(
 	let who = get_pair_from_str(trusted_args, arg_who);
 	let signer = arg_session_proxy
 		.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
-		.unwrap_or(who.clone());
+		.unwrap_or_else(|| who.clone());
 	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(signer))),
 	));

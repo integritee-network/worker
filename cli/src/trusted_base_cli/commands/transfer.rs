@@ -29,7 +29,6 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
@@ -76,16 +75,11 @@ impl TransferCommand {
             nonce, mrenclave.to_base58(), shard.0.to_base58()
         );
 		let top: TrustedOperation<TrustedCallSigned, Getter> = if let Some(note) = &self.note {
-			TrustedCall::balance_transfer_with_note(
-				from.into(),
-				to,
-				self.amount,
-				note.as_bytes().into(),
-			)
-			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
-			.into_trusted_operation(trusted_args.direct)
+			TrustedCall::balance_transfer_with_note(from, to, self.amount, note.as_bytes().into())
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct)
 		} else {
-			TrustedCall::balance_transfer(from.into(), to, self.amount)
+			TrustedCall::balance_transfer(from, to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct)
 		};
