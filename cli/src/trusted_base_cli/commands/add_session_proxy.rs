@@ -68,7 +68,6 @@ impl AddSessionProxyCommand {
 		// todo! make expiry an argument as soon as it will be enforced in enclave
 		let expiry_time = Utc::now() + Duration::days(10);
 		let expiry = Some(expiry_time.timestamp_millis() as u64);
-		println!("hex seed decoded to: {:?}", hex::decode(&self.seed[2..]).unwrap());
 		let seed = hex::decode(&self.seed[2..]).unwrap().as_slice().try_into().unwrap();
 		let credentials = SessionProxyCredentials { role, expiry, seed };
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::add_session_proxy(
