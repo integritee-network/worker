@@ -74,14 +74,13 @@ ord_parameter_types! {
 }
 parameter_types! {
 	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
-	pub const MaxNoteSize: u32 = 512;
-	pub const MaxBucketSize: u32 = 5120;
-	pub const MaxTotalSize: u32 = 51200;
+	pub const MaxProxiesPerOwner: u8 = 2;
 }
 
 impl dut::Config for Test {
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
+	type MaxProxiesPerOwner = MaxProxiesPerOwner;
 }
 
 parameter_types! {

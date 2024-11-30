@@ -329,9 +329,13 @@ impl pallet_notes::Config for Runtime {
 	type MaxTotalSize = MaxTotalSize;
 }
 
+parameter_types! {
+	pub const MaxProxiesPerOwner: u8 = 10;
+}
 impl pallet_session_proxy::Config for Runtime {
 	type MomentsPerDay = MomentsPerDay;
 	type Currency = Balances;
+	type MaxProxiesPerOwner = MaxProxiesPerOwner;
 }
 
 // The plain sgx-runtime without the `evm-pallet`

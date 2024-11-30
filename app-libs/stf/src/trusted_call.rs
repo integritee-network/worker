@@ -29,7 +29,7 @@ use crate::{
 		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
 		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
-	Getter, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
+	Getter, STF_SESSION_PROXY_DEPOSIT_DIVIDER, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
 };
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
@@ -534,11 +534,18 @@ where
 			TrustedCall::add_session_proxy(delegator, delegate, credentials) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(delegator.clone());
 				std::println!("⣿STF⣿ 🔄 add_proxy delegator ⣿⣿⣿ delegate ⣿⣿⣿");
-				ita_sgx_runtime::SessionProxyCall::<Runtime>::add_proxy { delegate, credentials }
-					.dispatch_bypass_filter(origin)
-					.map_err(|e| {
-						Self::Error::Dispatch(format!("SessionProxy add error: {:?}", e.error))
-					})?;
+				let deposit =
+					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
+						/ STF_SESSION_PROXY_DEPOSIT_DIVIDER;
+				ita_sgx_runtime::SessionProxyCall::<Runtime>::add_proxy {
+					delegate,
+					credentials,
+					deposit,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("SessionProxy add error: {:?}", e.error))
+				})?;
 				store_note(&delegator, self.call, vec![delegator.clone()])?;
 				Ok(())
 			},
@@ -756,7 +763,7 @@ fn shield_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Balance>, StfError> {
 	let delegator = tcs.sender_account();
 	if let Some(delegate) = tcs.delegate.clone() {
-		let credentials =
+		let (credentials, _) =
 			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
 				.ok_or_else(|| StfError::MissingPrivileges(delegate.clone()))?;
 		//todo! verify expiry

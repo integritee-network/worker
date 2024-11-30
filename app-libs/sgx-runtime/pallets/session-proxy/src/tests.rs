@@ -82,27 +82,38 @@ fn add_proxy_works() {
 		let bob = AccountKeyring::Bob.to_account_id();
 		let credentials =
 			SessionProxyCredentials { role: SessionProxyRole::Any, expiry: None, seed: [0u8; 32] };
+		let deposit = Balance::from(10u32);
 
 		assert_ok!(SessionProxy::add_proxy(
 			RuntimeOrigin::signed(alice.clone()),
 			bob.clone(),
-			credentials.clone()
+			credentials.clone(),
+			deposit
 		));
-		assert_eq!(SessionProxy::session_proxies(alice.clone(), bob.clone()), Some(credentials));
+		assert_eq!(
+			SessionProxy::session_proxies(alice.clone(), bob.clone()),
+			Some((credentials, deposit))
+		);
+		assert_eq!(Balances::reserved_balance(alice.clone()), deposit);
 
-		// make sure overwrite happens if adding again
+		// make sure overwrite happens if adding again but updates deposit
 		let credentials = SessionProxyCredentials {
 			role: SessionProxyRole::NonTransfer,
 			expiry: None,
 			seed: [0u8; 32],
 		};
-
+		let new_deposit = Balance::from(5u32);
 		assert_ok!(SessionProxy::add_proxy(
 			RuntimeOrigin::signed(alice.clone()),
 			bob.clone(),
-			credentials.clone()
+			credentials.clone(),
+			new_deposit
 		));
-		assert_eq!(SessionProxy::session_proxies(alice.clone(), bob.clone()), Some(credentials));
+		assert_eq!(
+			SessionProxy::session_proxies(alice.clone(), bob.clone()),
+			Some((credentials, new_deposit))
+		);
+		assert_eq!(Balances::reserved_balance(alice.clone()), new_deposit);
 	})
 }
 
@@ -120,8 +131,16 @@ fn remove_proxy_works() {
 		assert_ok!(SessionProxy::add_proxy(
 			RuntimeOrigin::signed(alice.clone()),
 			bob.clone(),
-			credentials.clone()
+			credentials.clone(),
+			9999
 		));
-		assert_eq!(SessionProxy::session_proxies(alice.clone(), bob.clone()), Some(credentials));
+		assert_eq!(
+			SessionProxy::session_proxies(alice.clone(), bob.clone()),
+			Some((credentials, 9999))
+		);
+
+		assert_ok!(SessionProxy::remove_proxy(RuntimeOrigin::signed(alice.clone()), bob.clone(),));
+		// unreserve should happen
+		assert_eq!(Balances::reserved_balance(alice.clone()), 0);
 	})
 }

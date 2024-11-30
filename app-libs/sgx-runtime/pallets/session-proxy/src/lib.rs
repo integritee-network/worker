@@ -1,7 +1,11 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
-use frame_support::{ensure, pallet_prelude::Get, traits::Currency};
+use frame_support::{
+	ensure,
+	pallet_prelude::Get,
+	traits::{Currency, ReservableCurrency},
+};
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_std::{vec, vec::Vec};
@@ -35,6 +39,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+	use std::cmp::Ordering;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 	#[pallet::pallet]
@@ -48,12 +53,16 @@ pub mod pallet {
 		#[pallet::constant]
 		type MomentsPerDay: Get<Self::Moment>;
 
-		type Currency: Currency<Self::AccountId>;
+		type Currency: ReservableCurrency<Self::AccountId>;
+
+		#[pallet::constant]
+		type MaxProxiesPerOwner: Get<u8>;
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		SelfProxyForbidden,
+		TooManyProxies,
 	}
 
 	#[pallet::storage]
@@ -64,7 +73,7 @@ pub mod pallet {
 		T::AccountId,
 		Blake2_128Concat,
 		T::AccountId,
-		SessionProxyCredentials<BalanceOf<T>>,
+		(SessionProxyCredentials<BalanceOf<T>>, BalanceOf<T>),
 		OptionQuery,
 	>;
 
@@ -79,10 +88,29 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			delegate: T::AccountId,
 			credentials: SessionProxyCredentials<BalanceOf<T>>,
+			deposit: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
 			ensure!(delegator != delegate, Error::<T>::SelfProxyForbidden);
-			SessionProxies::<T>::insert(&delegator, &delegate, credentials);
+			if let Some(old_deposit) =
+				Self::session_proxies(&delegator, &delegate).map(|(_, deposit)| deposit)
+			{
+				//updating an existing delegate with potentially different deposit
+				match deposit.cmp(&old_deposit) {
+					Ordering::Greater => T::Currency::reserve(&delegator, deposit - old_deposit)?,
+					Ordering::Less => _ = T::Currency::unreserve(&delegator, old_deposit - deposit),
+					_ => (),
+				}
+			} else {
+				// adding a new delegate
+				let num_proxies_pre = SessionProxies::<T>::iter_prefix(&delegator).count();
+				ensure!(
+					num_proxies_pre < T::MaxProxiesPerOwner::get() as usize,
+					Error::<T>::TooManyProxies
+				);
+				T::Currency::reserve(&delegator, deposit)?;
+			};
+			SessionProxies::<T>::insert(&delegator, &delegate, (credentials, deposit));
 			Ok(().into())
 		}
 
@@ -93,7 +121,10 @@ pub mod pallet {
 			delegate: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			let delegator = ensure_signed(origin)?;
-			SessionProxies::<T>::remove(&delegator, &delegate);
+			if let Some((_, deposit)) = SessionProxies::<T>::get(&delegator, &delegate) {
+				T::Currency::unreserve(&delegator, deposit);
+				SessionProxies::<T>::remove(&delegator, &delegate);
+			}
 			Ok(().into())
 		}
 	}
@@ -103,7 +134,9 @@ impl<T: Config> Pallet<T> {
 	pub fn get_all_proxy_credentials_for(
 		owner: T::AccountId,
 	) -> Vec<SessionProxyCredentials<BalanceOf<T>>> {
-		SessionProxies::<T>::iter_prefix(&owner).map(|(_key, value)| value).collect()
+		SessionProxies::<T>::iter_prefix(&owner)
+			.map(|(_key, (value, _deposit))| value)
+			.collect()
 	}
 }
 #[cfg(test)]

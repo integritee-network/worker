@@ -349,7 +349,7 @@ impl ExecuteGetter for PublicGetter {
 fn ensure_authorization(tgs: &TrustedGetterSigned) -> Result<SessionProxyRole<Balance>, StfError> {
 	let delegator = tgs.getter.sender_account();
 	if let Some(delegate) = tgs.delegate.clone() {
-		let credentials =
+		let (credentials, _) =
 			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
 				.ok_or_else(|| StfError::MissingPrivileges(delegate.clone()))?;
 		//todo! verify expiry
