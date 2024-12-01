@@ -23,7 +23,7 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use chrono::{Duration, Utc};
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},

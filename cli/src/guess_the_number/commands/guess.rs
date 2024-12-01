@@ -25,7 +25,7 @@ use crate::{
 
 use crate::trusted_operation::send_direct_request;
 use ita_stf::{
-	guess_the_number::GuessTheNumberTrustedCall, Getter, Index, TrustedCall, TrustedCallSigned,
+	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
 };
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,

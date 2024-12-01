@@ -23,7 +23,7 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use ita_parentchain_interface::integritee::Balance;
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
