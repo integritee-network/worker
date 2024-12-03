@@ -17,11 +17,12 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
-use itp_node_api::api_client::{AccountApi, ParentchainApi, TEEREX};
+use ita_parentchain_interface::{Config, ParentchainRuntimeConfig};
+use itp_node_api::api_client::{AccountApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
 use itp_types::{
-	parentchain::{AccountId, Balance, ParentchainId},
-	Moment,
+	parentchain::{AccountId, Balance, Index, ParentchainId},
+	AccountData, Moment, Nonce,
 };
 use log::*;
 use sp_core::{
@@ -29,11 +30,18 @@ use sp_core::{
 	Pair,
 };
 use sp_keyring::AccountKeyring;
-use sp_runtime::{MultiAddress, Saturating};
-use std::{fmt::Display, thread, time::Duration};
+use sp_runtime::{traits::SignedExtension, MultiAddress, Saturating};
+use std::{
+	fmt::{Debug, Display},
+	thread,
+	time::Duration,
+};
 use substrate_api_client::{
-	ac_compose_macros::compose_extrinsic, ac_primitives::Bytes, extrinsic::BalancesExtrinsics,
-	GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, SystemApi, XtStatus,
+	ac_compose_macros::{compose_extrinsic, compose_extrinsic_with_nonce},
+	ac_primitives::{Bytes, Config as ParentchainNodeConfig},
+	extrinsic::BalancesExtrinsics,
+	rpc::{Request, Subscribe},
+	Api, GetBalance, GetStorage, GetTransactionPayment, SubmitAndWatch, SystemApi, XtStatus,
 };
 use teerex_primitives::SgxAttestationMethod;
 
@@ -76,13 +84,23 @@ pub trait ParentchainAccountInfo {
 	fn decimals(&self) -> ServiceResult<u64>;
 }
 
-pub struct ParentchainAccountInfoProvider {
+pub struct ParentchainAccountInfoProvider<Tip, Client>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	parentchain_id: ParentchainId,
-	node_api: ParentchainApi,
+	node_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	account_and_role: AccountAndRole,
 }
 
-impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
+impl<Tip, Client> ParentchainAccountInfo for ParentchainAccountInfoProvider<Tip, Client>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	fn free_balance(&self) -> ServiceResult<Balance> {
 		self.node_api
 			.get_free_balance(&self.account_and_role.account_id())
@@ -107,10 +125,15 @@ impl ParentchainAccountInfo for ParentchainAccountInfoProvider {
 	}
 }
 
-impl ParentchainAccountInfoProvider {
+impl<Tip, Client> ParentchainAccountInfoProvider<Tip, Client>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	pub fn new(
 		parentchain_id: ParentchainId,
-		node_api: ParentchainApi,
+		node_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 		account_and_role: AccountAndRole,
 	) -> Self {
 		ParentchainAccountInfoProvider { parentchain_id, node_api, account_and_role }
@@ -120,14 +143,19 @@ impl ParentchainAccountInfoProvider {
 /// evaluate if the enclave should have more funds and how much more
 /// in --dev mode: let Alice pay for missing funds
 /// in production mode: wait for manual transfer before continuing
-pub fn setup_reasonable_account_funding(
-	api: &ParentchainApi,
+pub fn setup_reasonable_account_funding<Tip, Client>(
+	api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
-) -> ServiceResult<()> {
+) -> ServiceResult<()>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request + Subscribe + Clone,
+{
 	loop {
-		let needed = estimate_funds_needed_to_run_for_a_while(api, accountid, parentchain_id)?;
+		let needed = estimate_funds_needed_to_run_for_a_while(&api, accountid, parentchain_id)?;
 		let free = api.get_free_balance(accountid)?;
 		let missing_funds = needed.saturating_sub(free);
 
@@ -137,7 +165,7 @@ pub fn setup_reasonable_account_funding(
 
 		if is_development_mode {
 			info!("[{:?}] Alice will grant {:?} to {:?}", parentchain_id, missing_funds, accountid);
-			bootstrap_funds_from_alice(api, accountid, missing_funds)?;
+			bootstrap_funds_from_alice(api.clone(), accountid, missing_funds)?;
 		} else {
 			error!(
 				"[{:?}] Enclave account needs funding. please send at least {:?} to {:?}",
@@ -148,11 +176,16 @@ pub fn setup_reasonable_account_funding(
 	}
 }
 
-fn estimate_funds_needed_to_run_for_a_while(
-	api: &ParentchainApi,
+fn estimate_funds_needed_to_run_for_a_while<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	parentchain_id: ParentchainId,
-) -> ServiceResult<Balance> {
+) -> ServiceResult<Balance>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	let existential_deposit = api.get_existential_deposit()?;
 	info!("[{:?}] Existential deposit is = {:?}", parentchain_id, existential_deposit);
 
@@ -163,11 +196,14 @@ fn estimate_funds_needed_to_run_for_a_while(
 	info!("[{:?}] a single transfer costs {:?}", parentchain_id, transfer_fee);
 	min_required_funds += 1000 * transfer_fee;
 
-	// Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
+	// // Check if this is an integritee chain and Compose a register_sgx_enclave extrinsic
 	if let Ok(ra_renewal) = api.get_constant::<Moment>("Teerex", "MaxAttestationRenewalPeriod") {
 		info!("[{:?}] this chain has the teerex pallet. estimating RA fees", parentchain_id);
-		let encoded_xt: Bytes = compose_extrinsic!(
+		let nonce = api.get_nonce_of(accountid)?;
+
+		let encoded_xt: Bytes = compose_extrinsic_with_nonce!(
 			api,
+			nonce,
 			TEEREX,
 			"register_sgx_enclave",
 			vec![0u8; SGX_RA_PROOF_MAX_LEN],
@@ -198,7 +234,15 @@ fn estimate_funds_needed_to_run_for_a_while(
 	Ok(min_required_funds)
 }
 
-pub fn estimate_fee(api: &ParentchainApi, encoded_extrinsic: Vec<u8>) -> Result<u128, Error> {
+pub fn estimate_fee<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+	encoded_extrinsic: Vec<u8>,
+) -> Result<u128, Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	let reg_fee_details = api.get_fee_details(&encoded_extrinsic.into(), None)?;
 	match reg_fee_details {
 		Some(details) => match details.inclusion_fee {
@@ -213,11 +257,18 @@ pub fn estimate_fee(api: &ParentchainApi, encoded_extrinsic: Vec<u8>) -> Result<
 }
 
 /// Alice sends some funds to the account. only for dev chains testing
-fn bootstrap_funds_from_alice(
-	api: &ParentchainApi,
+fn bootstrap_funds_from_alice<Tip, Client>(
+	api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	funding_amount: u128,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request + Subscribe,
+{
+	let mut api = api;
+
 	let alice = AccountKeyring::Alice.pair();
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 
@@ -234,26 +285,31 @@ fn bootstrap_funds_from_alice(
 		return Err(Error::ApplicationSetup)
 	}
 
-	let mut alice_signer_api = api.clone();
-	alice_signer_api.set_signer(alice.into());
+	api.set_signer(alice.into());
 
 	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
-	let xt = alice_signer_api
-		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
-	let xt_report = alice_signer_api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
+	let xt = api.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
+	let xt_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 		xt_report.extrinsic_hash, xt_report.status
 	);
 	// Verify funds have arrived.
-	let free_balance = alice_signer_api.get_free_balance(accountid);
+	let free_balance = api.get_free_balance(accountid);
 	trace!("TEE's NEW free balance = {:?}", free_balance);
 
 	Ok(())
 }
 
 /// precise estimation of necessary funds to register a hardcoded number of proxies
-pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error> {
+pub fn shard_vault_initial_funds<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+) -> Result<Balance, Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	let proxy_deposit_base: Balance = api.get_constant("Proxy", "ProxyDepositBase")?;
 	let proxy_deposit_factor: Balance = api.get_constant("Proxy", "ProxyDepositFactor")?;
 	let transfer_fee = estimate_transfer_fee(api)?;
@@ -263,12 +319,23 @@ pub fn shard_vault_initial_funds(api: &ParentchainApi) -> Result<Balance, Error>
 }
 
 /// precise estimation of a single transfer fee
-pub fn estimate_transfer_fee(api: &ParentchainApi) -> Result<Balance, Error> {
+pub fn estimate_transfer_fee<Tip, Client>(
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+) -> Result<Balance, Error>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
 	let encoded_xt: Bytes = api
 		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
 		.encode()
 		.into();
-	let tx_fee = api.get_fee_details(&encoded_xt, None).unwrap().unwrap().inclusion_fee.unwrap();
+	let tx_fee = api
+		.get_fee_details(&encoded_xt, None)?
+		.expect("the node must understand our extrinsic encoding")
+		.inclusion_fee
+		.unwrap();
 	let transfer_fee = tx_fee.base_fee + tx_fee.len_fee + tx_fee.adjusted_weight_fee;
 	Ok(transfer_fee)
 }

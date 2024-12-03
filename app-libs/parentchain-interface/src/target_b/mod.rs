@@ -15,6 +15,9 @@
 
 */
 
+pub mod api_client_types;
+#[cfg(feature = "std")]
+pub mod api_factory;
 mod event_filter;
 mod event_handler;
 
@@ -24,6 +27,7 @@ use crate::{
 	indirect_calls::timestamp_set::TimestampSetArgs,
 	TargetB,
 };
+use api_client_types::TargetBSignedExtra;
 use codec::{Decode, Encode};
 pub use event_filter::FilterableEvents;
 pub use event_handler::ParentchainEventHandler;
@@ -33,13 +37,12 @@ use itc_parentchain_indirect_calls_executor::{
 	filter_metadata::FilterIntoDataFrom,
 	IndirectDispatch,
 };
-use itp_api_client_types::ParentchainSignedExtra;
 use itp_node_api::metadata::pallet_timestamp::TimestampCallIndexes;
 use itp_stf_primitives::traits::IndirectExecutor;
 use log::*;
 
 /// Parses the extrinsics corresponding to the parentchain.
-pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
+pub type TargetBExtrinsicParser = ExtrinsicParser<TargetBSignedExtra>;
 
 /// The default indirect call (extrinsic-triggered) of the Target-A-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]
@@ -62,7 +65,7 @@ pub struct ExtrinsicFilter {}
 
 impl<NodeMetadata: TimestampCallIndexes> FilterIntoDataFrom<NodeMetadata> for ExtrinsicFilter {
 	type Output = IndirectCall;
-	type ParseParentchainMetadata = ParentchainExtrinsicParser;
+	type ParseParentchainMetadata = TargetBExtrinsicParser;
 
 	fn filter_into_from_metadata(
 		encoded_data: &[u8],
