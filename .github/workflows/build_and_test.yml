@@ -96,7 +96,7 @@ jobs:
           docker image save integritee-worker-${{ env.IMAGE_SUFFIX }} | gzip > integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload worker image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
@@ -107,7 +107,7 @@ jobs:
           echo "$mrenclave_hex" > mrenclave-${{ env.IMAGE_SUFFIX }}.hex
 
       - name: Upload Enclave Digest File
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
           path: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
@@ -185,7 +185,7 @@ jobs:
           docker image save integritee-cli-client-${{ env.IMAGE_SUFFIX }} | gzip > integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
 
       - name: Upload CLI client image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
@@ -335,13 +335,13 @@ jobs:
           echo "LOG_DIR=./logs-$version" >> $GITHUB_ENV
 
       - name: Download Worker Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: .
 
       - name: Download CLI client Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: integritee-cli-client-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: .
@@ -399,7 +399,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: logs-${{ matrix.test }}-${{ matrix.flavor_id }}
           path: ${{ env.LOG_DIR }}
@@ -528,13 +528,13 @@ jobs:
           docker images --all
 
       - name: Upload image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
           path: integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
 
       - name: Upload cli image
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.flavor_id }}-cli-${{ github.ref_name }}.tar.gz
           path: ${{ matrix.flavor_id }}-cli-${{ github.ref_name }}.tar.gz
@@ -561,25 +561,25 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Download Teeracle Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: integritee-worker-teeracle-${{ github.ref_name }}.tar.gz
           path: .
 
       - name: Download Sidechain Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: integritee-worker-sidechain-${{ github.ref_name }}.tar.gz
           path: .
 
       - name: Download Sidechain Cli Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: sidechain-cli-${{ github.ref_name }}.tar.gz
           path: .
 
       - name: Download Teeracle Cli Image
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: teeracle-cli-${{ github.ref_name }}.tar.gz
           path: .
@@ -588,13 +588,13 @@ jobs:
       # Temporary comment out until we decide what to release
       #
       # - name: Download Integritee Client
-      #   uses: actions/download-artifact@v3
+      #   uses: actions/download-artifact@v4
       #   with:
       #     name: integritee-client-sidechain-${{ github.sha }}
       #     path: integritee-client-tmp
 
       # - name: Download Enclave Signed
-      #   uses: actions/download-artifact@v3
+      #   uses: actions/download-artifact@v4
       #   with:
       #     name: enclave-signed-sidechain-${{ github.sha }}
       #     path: enclave-signed-tmp
