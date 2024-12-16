@@ -22,11 +22,12 @@ use crate::{
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
+use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
@@ -48,7 +49,8 @@ impl NoteBloatCommand {
 		println!("send trusted call note-bloat({}kB)", self.kilobytes);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(signer, cli, trusted_args);
+		let subject: AccountId = signer.public().into();
+		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::note_bloat(signer.public().into(), self.kilobytes)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)

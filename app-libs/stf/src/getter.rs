@@ -17,7 +17,8 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{
-	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, System,
+	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime,
+	SessionProxy, System,
 };
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
@@ -41,10 +42,14 @@ use crate::{
 	helpers::{shielding_target, shielding_target_genesis_hash, wrap_bytes},
 };
 use ita_parentchain_specs::MinimalChainSpec;
-use itp_sgx_runtime_primitives::types::Moment;
-use itp_stf_primitives::traits::{GetDecimals, PoolTransactionValidation};
-use itp_types::parentchain::{BlockNumber, Hash, ParentchainId};
+use itp_sgx_runtime_primitives::types::{Balance, Moment};
+use itp_stf_primitives::{
+	error::StfError,
+	traits::{GetDecimals, PoolTransactionValidation},
+};
+use itp_types::parentchain::{AccountInfo, BlockNumber, Hash, ParentchainId};
 use pallet_notes::{BucketIndex, BucketRange};
+use pallet_session_proxy::{SessionProxyCredentials, SessionProxyRole};
 #[cfg(feature = "evm")]
 use sp_core::{H160, H256};
 use sp_runtime::transaction_validity::{
@@ -124,6 +129,7 @@ pub enum PublicGetter {
 #[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
 	account_info(AccountId) = 0,
+	account_info_and_session_proxies(AccountId) = 1,
 	notes_for(AccountId, BucketIndex) = 10,
 	guess_the_number(GuessTheNumberTrustedGetter) = 50,
 	#[cfg(feature = "evm")]
@@ -138,6 +144,7 @@ impl TrustedGetter {
 	pub fn sender_account(&self) -> &AccountId {
 		match self {
 			TrustedGetter::account_info(sender_account) => sender_account,
+			TrustedGetter::account_info_and_session_proxies(sender_account, ..) => sender_account,
 			TrustedGetter::notes_for(sender_account, ..) => sender_account,
 			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
@@ -150,32 +157,37 @@ impl TrustedGetter {
 	}
 
 	pub fn sign(&self, pair: &KeyPair) -> TrustedGetterSigned {
+		let delegate = if pair.account_id() == *self.sender_account() {
+			None
+		} else {
+			Some(pair.account_id())
+		};
 		let signature = pair.sign(self.encode().as_slice());
-		TrustedGetterSigned { getter: self.clone(), signature }
+		TrustedGetterSigned { getter: self.clone(), delegate, signature }
 	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct TrustedGetterSigned {
 	pub getter: TrustedGetter,
+	pub delegate: Option<AccountId>,
 	pub signature: Signature,
 }
 
 impl TrustedGetterSigned {
-	pub fn new(getter: TrustedGetter, signature: Signature) -> Self {
-		TrustedGetterSigned { getter, signature }
+	pub fn new(getter: TrustedGetter, delegate: Option<AccountId>, signature: Signature) -> Self {
+		TrustedGetterSigned { getter, delegate, signature }
 	}
 
 	pub fn verify_signature(&self) -> bool {
 		let encoded = self.getter.encode();
-
-		if self.signature.verify(encoded.as_slice(), self.getter.sender_account()) {
+		let signer = self.delegate.as_ref().unwrap_or_else(|| self.getter.sender_account());
+		if self.signature.verify(encoded.as_slice(), signer) {
 			return true
 		};
 
 		// check if the signature is from an extension-dapp signer.
-		self.signature
-			.verify(wrap_bytes(&encoded).as_slice(), self.getter.sender_account())
+		self.signature.verify(wrap_bytes(&encoded).as_slice(), signer)
 	}
 }
 
@@ -197,6 +209,10 @@ impl ExecuteGetter for Getter {
 
 impl ExecuteGetter for TrustedGetterSigned {
 	fn execute(self) -> Option<Vec<u8>> {
+		if ensure_authorization(&self).is_err() {
+			warn!("trusted getter not authorized");
+			return None
+		};
 		match self.getter {
 			TrustedGetter::account_info(who) => {
 				let info = System::account(&who);
@@ -204,6 +220,15 @@ impl ExecuteGetter for TrustedGetterSigned {
 				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), info);
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
 				Some(info.encode())
+			},
+			TrustedGetter::account_info_and_session_proxies(who) => {
+				let account_info = System::account(&who);
+				debug!("TrustedGetter account_data");
+				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), account_info);
+				let session_proxies = SessionProxy::get_all_proxy_credentials_for(who);
+
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
+				Some(AccountInfoAndSessionProxies { account_info, session_proxies }.encode())
 			},
 			TrustedGetter::notes_for(who, bucket_index) => {
 				debug!("TrustedGetter notes_for");
@@ -321,6 +346,37 @@ impl ExecuteGetter for PublicGetter {
 	}
 }
 
+fn ensure_authorization(tgs: &TrustedGetterSigned) -> Result<SessionProxyRole<Balance>, StfError> {
+	let delegator = tgs.getter.sender_account();
+	if let Some(delegate) = tgs.delegate.clone() {
+		let (credentials, _) =
+			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
+				.ok_or_else(|| StfError::MissingPrivileges(delegate.clone()))?;
+		//todo! verify expiry
+		match credentials.role {
+			SessionProxyRole::Any | SessionProxyRole::NonTransfer | SessionProxyRole::ReadAny =>
+				Ok(credentials.role),
+			SessionProxyRole::ReadBalance =>
+				if let TrustedGetter::account_info(..) = tgs.getter {
+					Ok(credentials.role)
+				} else {
+					Err(StfError::MissingPrivileges(delegate))
+				},
+			_ => Err(StfError::MissingPrivileges(delegate)),
+		}
+	} else {
+		// signed by account owner
+		Ok(SessionProxyRole::Any)
+	}
+}
+
+/// General public information about the sync status of all parentchains
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct AccountInfoAndSessionProxies {
+	pub account_info: AccountInfo,
+	pub session_proxies: Vec<SessionProxyCredentials<Balance>>,
+}
+
 /// General public information about the sync status of all parentchains
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub struct ParentchainsInfo {
@@ -361,11 +417,11 @@ mod tests {
 		// see: https://github.com/polkadot-js/extension/pull/743
 		let dapp_extension_signed_getter: Vec<u8> = vec![
 			1, 0, 6, 72, 250, 19, 15, 144, 30, 85, 114, 224, 117, 219, 65, 218, 30, 241, 136, 74,
-			157, 10, 202, 233, 233, 100, 255, 63, 64, 102, 81, 215, 65, 60, 1, 192, 224, 67, 233,
-			49, 104, 156, 159, 245, 26, 136, 60, 88, 123, 174, 171, 67, 215, 124, 223, 112, 16,
-			133, 35, 138, 241, 36, 68, 27, 41, 63, 14, 103, 132, 201, 130, 216, 43, 81, 123, 71,
-			149, 215, 191, 100, 58, 182, 123, 229, 188, 245, 130, 66, 202, 126, 51, 137, 140, 56,
-			44, 176, 239, 51, 131,
+			157, 10, 202, 233, 233, 100, 255, 63, 64, 102, 81, 215, 65, 60, 0, 1, 192, 224, 67,
+			233, 49, 104, 156, 159, 245, 26, 136, 60, 88, 123, 174, 171, 67, 215, 124, 223, 112,
+			16, 133, 35, 138, 241, 36, 68, 27, 41, 63, 14, 103, 132, 201, 130, 216, 43, 81, 123,
+			71, 149, 215, 191, 100, 58, 182, 123, 229, 188, 245, 130, 66, 202, 126, 51, 137, 140,
+			56, 44, 176, 239, 51, 131,
 		];
 		let getter = Getter::decode(&mut dapp_extension_signed_getter.as_slice()).unwrap();
 

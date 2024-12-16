@@ -23,11 +23,12 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use ita_parentchain_interface::integritee::Balance;
-use ita_stf::{Getter, Index, TrustedCall, TrustedCallSigned};
+use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
+use itp_types::AccountId;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
@@ -59,7 +60,8 @@ impl UnshieldFundsCommand {
 		);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+		let subject: AccountId = from.public().into();
+		let nonce = get_layer_two_nonce!(subject, from, cli, trusted_args);
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::balance_unshield(from.public().into(), to, self.amount, shard)
 				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)

@@ -81,6 +81,9 @@ pub use pallet_balances::Call as BalancesCall;
 pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
 pub use pallet_notes::Call as NotesCall;
 pub use pallet_parentchain::Call as ParentchainPalletCall;
+pub use pallet_session_proxy::{
+	Call as SessionProxyCall, SessionProxyCredentials, SessionProxyRole,
+};
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_core::crypto::AccountId32;
 #[cfg(any(feature = "std", test))]
@@ -326,6 +329,15 @@ impl pallet_notes::Config for Runtime {
 	type MaxTotalSize = MaxTotalSize;
 }
 
+parameter_types! {
+	pub const MaxProxiesPerOwner: u8 = 10;
+}
+impl pallet_session_proxy::Config for Runtime {
+	type MomentsPerDay = MomentsPerDay;
+	type Currency = Balances;
+	type MaxProxiesPerOwner = MaxProxiesPerOwner;
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -347,6 +359,7 @@ construct_runtime!(
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
+		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 	}
 );
 
@@ -376,6 +389,7 @@ construct_runtime!(
 		GuessTheNumber: pallet_guess_the_number::{Pallet, Call, Storage, Event<T>} = 30,
 
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
+		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 	}
 );
 

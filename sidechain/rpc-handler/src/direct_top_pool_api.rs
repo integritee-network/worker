@@ -29,7 +29,6 @@ use codec::{Decode, Encode};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
 use itp_rpc::RpcReturnValue;
-use itp_stf_primitives::types::AccountId;
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{DirectRequestStatus, Request, ShardIdentifier, TrustedOperationStatus};
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
@@ -93,8 +92,8 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 		Ok(json!(json_value))
 	});
 
-	let local_author = top_pool_author.clone();
-	let local_ocall_api = ocall_api.clone();
+	let local_author = top_pool_author;
+	let local_ocall_api = ocall_api;
 	io_handler.add_sync_method("author_pendingExtrinsics", move |params: Params| {
 		debug!("worker_api_direct rpc was called: author_pendingExtrinsics");
 		local_ocall_api
@@ -125,47 +124,6 @@ pub fn add_top_pool_direct_rpc_methods<R, TCS, G, OCallApi>(
 			},
 			Err(e) => {
 				let error_msg: String = format!("Could not retrieve pending calls due to: {}", e);
-				Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
-			},
-		}
-	});
-
-	let local_author = top_pool_author;
-	let local_ocall_api = ocall_api;
-	io_handler.add_sync_method("author_pendingTrustedCallsFor", move |params: Params| {
-		debug!("worker_api_direct rpc was called: author_pendingTrustedCallsFor");
-		local_ocall_api
-			.update_metrics(vec![EnclaveMetric::RpcRequestsIncrement])
-			.unwrap_or_else(|e| error!("failed to update prometheus metric: {:?}", e));
-		match params.parse::<(String, String)>() {
-			Ok((shard_base58, account_hex)) => {
-				let shard = match decode_shard_from_base58(shard_base58.as_str()) {
-					Ok(id) => id,
-					Err(msg) => {
-						let error_msg: String =
-							format!("Could not retrieve pending trusted calls due to: {}", msg);
-						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
-					},
-				};
-				let account = match AccountId::from_hex(account_hex.as_str()) {
-					Ok(acc) => acc,
-					Err(msg) => {
-						let error_msg: String =
-							format!("Could not retrieve pending trusted calls due to: {:?}", msg);
-						return Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
-					},
-				};
-				let trusted_calls = local_author.get_pending_trusted_calls_for(shard, &account);
-				let json_value = RpcReturnValue {
-					do_watch: false,
-					value: trusted_calls.encode(),
-					status: DirectRequestStatus::Ok,
-				};
-				Ok(json!(json_value.to_hex()))
-			},
-			Err(e) => {
-				let error_msg: String =
-					format!("Could not retrieve pending trusted calls due to: {}", e);
 				Ok(json!(compute_hex_encoded_return_error(error_msg.as_str())))
 			},
 		}

@@ -29,7 +29,7 @@ use crate::{
 		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
 		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
-	Getter, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
+	Getter, STF_SESSION_PROXY_DEPOSIT_DIVIDER, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
 };
 use codec::{Compact, Decode, Encode};
 use frame_support::{ensure, traits::UnfilteredDispatchable};
@@ -39,7 +39,7 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-	ParentchainIntegritee, Runtime, System,
+	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
@@ -80,6 +80,8 @@ pub enum TrustedCall {
 	balance_transfer_with_note(AccountId, AccountId, Balance, Vec<u8>) = 5,
 	note_bloat(AccountId, u32) = 10,
 	waste_time(AccountId, u32) = 11,
+	send_note(AccountId, AccountId, Vec<u8>) = 20,
+	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
@@ -139,6 +141,8 @@ impl TrustedCall {
 			Self::balance_shield(sender_account, ..) => sender_account,
 			Self::balance_transfer_with_note(sender_account, ..) => sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
+			Self::send_note(sender_account, ..) => sender_account,
+			Self::add_session_proxy(sender_account, ..) => sender_account,
 			Self::note_bloat(sender_account, ..) => sender_account,
 			Self::waste_time(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -162,12 +166,22 @@ impl TrustedCallSigning<TrustedCallSigned> for TrustedCall {
 		mrenclave: &[u8; 32],
 		shard: &ShardIdentifier,
 	) -> TrustedCallSigned {
+		let delegate = if pair.account_id() == *self.sender_account() {
+			None
+		} else {
+			Some(pair.account_id())
+		};
 		let mut payload = self.encode();
 		payload.append(&mut nonce.encode());
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		TrustedCallSigned { call: self.clone(), nonce, signature: pair.sign(payload.as_slice()) }
+		TrustedCallSigned {
+			call: self.clone(),
+			nonce,
+			delegate,
+			signature: pair.sign(payload.as_slice()),
+		}
 	}
 }
 
@@ -175,12 +189,18 @@ impl TrustedCallSigning<TrustedCallSigned> for TrustedCall {
 pub struct TrustedCallSigned {
 	pub call: TrustedCall,
 	pub nonce: Index,
+	pub delegate: Option<AccountId>,
 	pub signature: Signature,
 }
 
 impl TrustedCallSigned {
-	pub fn new(call: TrustedCall, nonce: Index, signature: Signature) -> Self {
-		TrustedCallSigned { call, nonce, signature }
+	pub fn new(
+		call: TrustedCall,
+		nonce: Index,
+		delegate: Option<AccountId>,
+		signature: Signature,
+	) -> Self {
+		TrustedCallSigned { call, nonce, delegate, signature }
 	}
 
 	pub fn into_trusted_operation(
@@ -199,6 +219,7 @@ impl Default for TrustedCallSigned {
 		Self {
 			call: TrustedCall::noop(AccountId32::unchecked_from([0u8; 32].into())),
 			nonce: 0,
+			delegate: None,
 			signature: MultiSignature::Ed25519(ed25519::Signature::unchecked_from([0u8; 64])),
 		}
 	}
@@ -218,13 +239,13 @@ impl TrustedCallVerification for TrustedCallSigned {
 		payload.append(&mut mrenclave.encode());
 		payload.append(&mut shard.encode());
 
-		if self.signature.verify(payload.as_slice(), self.call.sender_account()) {
+		let signer = self.delegate.as_ref().unwrap_or_else(|| self.call.sender_account());
+		if self.signature.verify(payload.as_slice(), signer) {
 			return true
 		};
 
 		// check if the signature is from an extension-dapp signer.
-		self.signature
-			.verify(wrap_bytes(&payload).as_slice(), self.call.sender_account())
+		self.signature.verify(wrap_bytes(&payload).as_slice(), signer)
 	}
 }
 
@@ -250,7 +271,10 @@ where
 		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
+		let _role = ensure_authorization(&self)?;
+		// todo! spending limits according to role https://github.com/integritee-network/worker/issues/1656
 		let sender = self.call.sender_account().clone();
+
 		let call_hash = blake2_256(&self.call.encode());
 		let system_nonce = System::account_nonce(&sender);
 		ensure!(self.nonce == system_nonce, Self::Error::InvalidNonce(self.nonce, system_nonce));
@@ -501,6 +525,30 @@ where
 				std::println!("⣿STF⣿ finished wasting time");
 				Ok(())
 			},
+			TrustedCall::send_note(from, to, _note) => {
+				let _origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				std::println!("⣿STF⣿ 🔄 send_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
+				store_note(&from, self.call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::add_session_proxy(delegator, delegate, credentials) => {
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(delegator.clone());
+				std::println!("⣿STF⣿ 🔄 add_proxy delegator ⣿⣿⣿ delegate ⣿⣿⣿");
+				let deposit =
+					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
+						/ STF_SESSION_PROXY_DEPOSIT_DIVIDER;
+				ita_sgx_runtime::SessionProxyCall::<Runtime>::add_proxy {
+					delegate,
+					credentials,
+					deposit,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("SessionProxy add error: {:?}", e.error))
+				})?;
+				store_note(&delegator, self.call, vec![delegator.clone()])?;
+				Ok(())
+			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -712,6 +760,29 @@ fn shield_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 	Ok(())
 }
 
+fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Balance>, StfError> {
+	let delegator = tcs.sender_account();
+	if let Some(delegate) = tcs.delegate.clone() {
+		let (credentials, _) =
+			pallet_session_proxy::Pallet::<Runtime>::session_proxies(&delegator, &delegate)
+				.ok_or_else(|| StfError::MissingPrivileges(delegate.clone()))?;
+		//todo! verify expiry
+		match credentials.role {
+			SessionProxyRole::Any => Ok(credentials.role),
+			SessionProxyRole::NonTransfer => match tcs.call {
+				TrustedCall::noop(..) => Ok(credentials.role),
+				TrustedCall::guess_the_number(..) => Ok(credentials.role),
+				TrustedCall::send_note(..) => Ok(credentials.role),
+				_ => Err(StfError::MissingPrivileges(delegate)),
+			},
+			_ => Err(StfError::MissingPrivileges(delegate)),
+		}
+	} else {
+		// signed by account owner
+		Ok(SessionProxyRole::Any)
+	}
+}
+
 #[cfg(any(feature = "test", test))]
 fn is_root<Runtime, AccountId>(account: &AccountId) -> bool
 where
@@ -776,10 +847,10 @@ mod tests {
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0,
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 73, 110, 99, 111, 103, 110, 105, 116, 101, 101, 84, 101,
 			115, 116, 110, 101, 116, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 51, 1,
-			0, 0, 0, 1, 54, 194, 196, 95, 0, 150, 174, 244, 180, 4, 197, 64, 98, 123, 229, 37, 222,
-			44, 232, 93, 170, 211, 231, 95, 157, 7, 88, 164, 204, 179, 171, 14, 68, 138, 43, 37,
-			155, 15, 245, 130, 224, 239, 138, 44, 83, 46, 63, 200, 86, 5, 182, 47, 195, 144, 170,
-			1, 108, 60, 4, 72, 201, 22, 212, 143,
+			0, 0, 0, 0, 1, 54, 194, 196, 95, 0, 150, 174, 244, 180, 4, 197, 64, 98, 123, 229, 37,
+			222, 44, 232, 93, 170, 211, 231, 95, 157, 7, 88, 164, 204, 179, 171, 14, 68, 138, 43,
+			37, 155, 15, 245, 130, 224, 239, 138, 44, 83, 46, 63, 200, 86, 5, 182, 47, 195, 144,
+			170, 1, 108, 60, 4, 72, 201, 22, 212, 143,
 		];
 		let call = TrustedCallSigned::decode(&mut dapp_extension_signed_call.as_slice()).unwrap();
 

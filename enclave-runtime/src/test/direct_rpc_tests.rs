@@ -73,6 +73,7 @@ pub fn get_state_request_works() {
 
 	let getter = Getter::trusted(TrustedGetterSigned::new(
 		TrustedGetter::account_info(AccountId::new([0u8; 32])),
+		None,
 		MultiSignature::Ed25519(Signature::from_raw([0u8; 64])),
 	));
 

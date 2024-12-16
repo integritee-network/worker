@@ -63,7 +63,8 @@ impl EvmCreateCommands {
 			sender_evm_substrate_addr.to_ss58check()
 		);
 
-		let nonce = get_layer_two_nonce!(from, cli, trusted_args);
+		let subject: AccountId = from.public().into();
+		let nonce = get_layer_two_nonce!(subject, from, cli, trusted_args);
 		let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
 
 		let top = TrustedCall::evm_create(

@@ -16,19 +16,14 @@
 */
 
 use crate::{
-	command_utils::{get_worker_api_direct, mrenclave_from_base58},
-	trusted_cli::TrustedCli,
-	trusted_operation::{perform_trusted_operation, read_shard},
-	Cli,
+	command_utils::mrenclave_from_base58, trusted_cli::TrustedCli,
+	trusted_operation::perform_trusted_operation, Cli,
 };
 use base58::{FromBase58, ToBase58};
-use codec::{Decode, Encode};
+use codec::Encode;
 use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
-use itc_rpc_client::direct_client::DirectApi;
-use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, TrustedOperation};
-use itp_types::{AccountInfo, DirectRequestStatus};
-use itp_utils::{FromHexPrefixed, ToHexPrefixed};
+use itp_types::AccountInfo;
 use log::*;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
@@ -38,34 +33,39 @@ use substrate_client_keystore::LocalKeystore;
 
 #[macro_export]
 macro_rules! get_layer_two_nonce {
-	($signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
+	($subject:ident, $signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
 		use ita_stf::{AccountInfo, Getter, TrustedCallSigned, TrustedGetter};
-		use $crate::trusted_command_utils::get_pending_trusted_calls_for;
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-			TrustedGetter::account_info($signer_pair.public().into())
+			TrustedGetter::account_info($subject.clone().into())
 				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
 		));
 		// final nonce = current system nonce + pending tx count, panic early
 		let info = perform_trusted_operation::<AccountInfo>($cli, $trusted_args, &top);
 		let nonce = info.map(|i| i.nonce).ok().unwrap_or_default();
 		debug!("got system nonce: {:?}", nonce);
-		let pending_tx_count =
-			get_pending_trusted_calls_for($cli, $trusted_args, &$signer_pair.public().into()).len();
-		let pending_tx_count = Index::try_from(pending_tx_count).unwrap();
-		debug!("got pending tx count: {:?}", pending_tx_count);
-		nonce + pending_tx_count
+		// todo! pending TrustedCalls in pool should be considered too, but: https://github.com/integritee-network/worker/issues/1657
+		nonce
 	}};
 }
 
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
-pub(crate) fn get_balance(cli: &Cli, trusted_args: &TrustedCli, arg_who: &str) -> Option<u128> {
-	debug!("arg_who = {:?}", arg_who);
+pub(crate) fn get_balance(
+	cli: &Cli,
+	trusted_args: &TrustedCli,
+	arg_who: &str,
+	arg_session_proxy: Option<&String>,
+) -> Option<u128> {
+	debug!("arg_who = {:?}, session proxy: {:?}", arg_who, arg_session_proxy);
 	let who = get_pair_from_str(trusted_args, arg_who);
+	let signer = arg_session_proxy
+		.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
+		.unwrap_or_else(|| who.clone());
 	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(who))),
+		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(signer))),
 	));
 	let info = perform_trusted_operation::<AccountInfo>(cli, trusted_args, &top).ok();
+	info!("AccountInfo: {:?}", info);
 	info.map(|i| i.data.free)
 }
 
@@ -130,33 +130,4 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 			}
 		},
 	}
-}
-
-// helper method to get the pending trusted calls for a given account via direct RPC
-pub(crate) fn get_pending_trusted_calls_for(
-	cli: &Cli,
-	trusted_args: &TrustedCli,
-	who: &AccountId,
-) -> Vec<TrustedOperation<TrustedCallSigned, Getter>> {
-	let shard = read_shard(trusted_args).unwrap();
-	let direct_api = get_worker_api_direct(cli);
-	let rpc_method = "author_pendingTrustedCallsFor".to_owned();
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(
-		rpc_method,
-		vec![shard.encode().to_base58(), who.to_hex()],
-	)
-	.unwrap();
-
-	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
-	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str).unwrap();
-	let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result).unwrap();
-
-	if rpc_return_value.status == DirectRequestStatus::Error {
-		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
-		direct_api.close().unwrap();
-		return vec![]
-	}
-
-	direct_api.close().unwrap();
-	Decode::decode(&mut rpc_return_value.value.as_slice()).unwrap_or_default()
 }

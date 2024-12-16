@@ -1,6 +1,6 @@
 [package]
 name = "integritee-cli"
-version = "0.15.3"
+version = "0.15.5"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
@@ -60,6 +60,7 @@ itp-types = { path = "../core-primitives/types" }
 itp-utils = { path = "../core-primitives/utils" }
 its-primitives = { path = "../sidechain/primitives" }
 pallet-notes = { path = "../app-libs/sgx-runtime/pallets/notes" }
+pallet-session-proxy = { path = "../app-libs/sgx-runtime/pallets/session-proxy" }
 
 [features]
 default = []

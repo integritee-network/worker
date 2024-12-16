@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "enclave-runtime"
-version = "0.15.3"
+version = "0.15.5"
 dependencies = [
  "array-bytes 6.2.2",
  "cid",
@@ -1682,8 +1682,6 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
- "sp-version",
- "substrate-api-client",
 ]
 
 [[package]]
@@ -1709,6 +1707,7 @@ dependencies = [
  "pallet-guess-the-number",
  "pallet-notes",
  "pallet-parentchain",
+ "pallet-session-proxy",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -1743,6 +1742,7 @@ dependencies = [
  "pallet-balances",
  "pallet-notes",
  "pallet-parentchain",
+ "pallet-session-proxy",
  "pallet-sudo",
  "pallet-timestamp",
  "parity-scale-codec",
@@ -2022,7 +2022,6 @@ dependencies = [
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
- "log",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
@@ -3047,6 +3046,24 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-session-proxy"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-randomness",
+ "log",
+ "pallet-balances",
+ "pallet-timestamp",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

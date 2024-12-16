@@ -8,6 +8,7 @@ members = [
     "app-libs/sgx-runtime/pallets/notes",
     "app-libs/sgx-runtime/pallets/parentchain",
     "app-libs/sgx-runtime/pallets/guess-the-number",
+    "app-libs/sgx-runtime/pallets/session-proxy",
     "app-libs/stf",
     "cli",
     "core/direct-rpc-server",
