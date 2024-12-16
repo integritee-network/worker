@@ -2,7 +2,7 @@
 
 each worker runs a provisioning server for other workers of the same MRENCLAVE and shard to get recent stf state and secrets from.
 
-Light client storage can also be provisioned to avoid re-synching the entire parentchains with each worker
+Light client storage can also be provisioned to avoid re-syncing the entire parent chains with each worker
 
 enclave instances are short-lived on both sides, just for a single request.
 
@@ -13,7 +13,7 @@ participant enclave_server
 participant enclave_client
 participant untrusted_client
 enclave_server ->> enclave_server: generate shielding & state encryption key
-enclave_server ->> enclave_server: init_shard & sync parentchains
+enclave_server ->> enclave_server: init_shard & sync parent chains
 untrusted_client ->> untrusted_server: connect TCP
 untrusted_client ->> enclave_client: request_state_provisioning
 activate enclave_client
