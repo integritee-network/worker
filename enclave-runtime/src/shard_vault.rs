@@ -251,7 +251,8 @@ where
 	let mortality = try_mortality(64, &parentchain_id, &ocall_api);
 	let xts = vault_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
-	ocall_api.send_to_parentchain(xts, &parentchain_id, false)?;
+	ocall_api.send_to_parentchain(xts, &parentchain_id, true)?;
+	info!("[{:?}] add proxy call got included", parentchain_id);
 	Ok(())
 }
 

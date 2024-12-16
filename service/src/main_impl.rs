@@ -828,7 +828,7 @@ fn init_vault<E, Tip, Client>(
 	Tip: Copy + Default + Encode + Debug,
 	Client: Request,
 {
-	let funding_balance = shard_vault_initial_funds(&node_api).unwrap();
+	let funding_balance = shard_vault_initial_funds(&node_api, shielding_target).unwrap();
 	if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
 		// verify if proxy is set up on chain
 		let nonce = node_api.get_account_nonce(&AccountId::from(shard_vault)).unwrap();

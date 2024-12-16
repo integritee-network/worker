@@ -165,7 +165,7 @@ where
 
 		if is_development_mode {
 			info!("[{:?}] Alice will grant {:?} to {:?}", parentchain_id, missing_funds, accountid);
-			bootstrap_funds_from_alice(api.clone(), accountid, missing_funds)?;
+			bootstrap_funds_from_alice(api.clone(), accountid, missing_funds, parentchain_id)?;
 		} else {
 			error!(
 				"[{:?}] Enclave account needs funding. please send at least {:?} to {:?}",
@@ -190,7 +190,7 @@ where
 	info!("[{:?}] Existential deposit is = {:?}", parentchain_id, existential_deposit);
 
 	let mut min_required_funds: Balance = existential_deposit;
-	min_required_funds += shard_vault_initial_funds(api)?;
+	min_required_funds += shard_vault_initial_funds(api, parentchain_id)?;
 
 	let transfer_fee = estimate_transfer_fee(api)?;
 	info!("[{:?}] a single transfer costs {:?}", parentchain_id, transfer_fee);
@@ -261,6 +261,7 @@ fn bootstrap_funds_from_alice<Tip, Client>(
 	api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	accountid: &AccountId32,
 	funding_amount: u128,
+	parentchain_id: ParentchainId,
 ) -> Result<(), Error>
 where
 	u128: From<Tip>,
@@ -273,13 +274,14 @@ where
 	let alice_acc = AccountId32::from(*alice.public().as_array_ref());
 
 	let alice_free = api.get_free_balance(&alice_acc)?;
-	trace!("    Alice's free balance = {:?}", alice_free);
+	trace!("[{:?}]    Alice's free balance = {:?}", parentchain_id, alice_free);
 	let nonce = api.get_nonce_of(&alice_acc)?;
-	trace!("    Alice's Account Nonce is {}", nonce);
+	trace!("[{:?}]    Alice's Account Nonce is {}", parentchain_id, nonce);
 
 	if funding_amount > alice_free {
 		println!(
-            "funding amount is too high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
+            "[{:?}] funding amount is too high: please change EXISTENTIAL_DEPOSIT_FACTOR_FOR_INIT_FUNDS ({:?})",
+			parentchain_id,
             funding_amount
         );
 		return Err(Error::ApplicationSetup)
@@ -287,16 +289,16 @@ where
 
 	api.set_signer(alice.into());
 
-	println!("[+] send extrinsic: bootstrap funding Enclave from Alice's funds");
+	println!("[{:?}] send extrinsic: bootstrap funding Enclave from Alice's funds", parentchain_id);
 	let xt = api.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
 	let xt_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
-		"[<] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
-		xt_report.extrinsic_hash, xt_report.status
+		"[{:?}] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+		parentchain_id, xt_report.extrinsic_hash, xt_report.status
 	);
 	// Verify funds have arrived.
 	let free_balance = api.get_free_balance(accountid);
-	trace!("TEE's NEW free balance = {:?}", free_balance);
+	trace!("[{:?}] TEE's NEW free balance = {:?}", parentchain_id, free_balance);
 
 	Ok(())
 }
@@ -304,6 +306,7 @@ where
 /// precise estimation of necessary funds to register a hardcoded number of proxies
 pub fn shard_vault_initial_funds<Tip, Client>(
 	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+	parentchain_id: ParentchainId,
 ) -> Result<Balance, Error>
 where
 	u128: From<Tip>,
@@ -314,7 +317,10 @@ where
 	let proxy_deposit_factor: Balance = api.get_constant("Proxy", "ProxyDepositFactor")?;
 	let transfer_fee = estimate_transfer_fee(api)?;
 	let existential_deposit = api.get_existential_deposit()?;
-	info!("Proxy Deposit is {:?} base + {:?} per proxy", proxy_deposit_base, proxy_deposit_factor);
+	info!(
+		"[{:?}] Proxy Deposit is {:?} base + {:?} per proxy",
+		parentchain_id, proxy_deposit_base, proxy_deposit_factor
+	);
 	Ok(proxy_deposit_base + 10 * proxy_deposit_factor + 500 * transfer_fee + existential_deposit)
 }
 

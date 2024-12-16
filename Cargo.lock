@@ -2794,6 +2794,7 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
+ "sp-version",
  "substrate-api-client",
 ]
 
@@ -3267,6 +3268,7 @@ dependencies = [
  "itp-node-api",
  "itp-nonce-cache",
  "itp-types",
+ "log 0.4.20",
  "parity-scale-codec",
  "sgx_tstd",
  "sgx_types",
