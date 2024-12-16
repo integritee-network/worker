@@ -249,10 +249,7 @@ trait GetSgxReport {
 
 impl<T: EnclaveAttestationOCallApi> GetSgxReport for T {
 	fn get_report_of_self(&self) -> SgxResult<sgx_report_body_t> {
-		// (1) get ti + eg
-		let init_quote_result = self.sgx_init_quote()?;
-
-		let target_info = init_quote_result.0;
+		let target_info: sgx_target_info_t = sgx_target_info_t::default();
 		let report_data: sgx_report_data_t = sgx_report_data_t::default();
 
 		let rep = match rsgx_create_report(&target_info, &report_data) {
