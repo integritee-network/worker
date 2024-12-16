@@ -36,7 +36,7 @@ use itp_types::{
 	parentchain::{Hash, Header, IdentifyParentchain, ParentchainId},
 	ShardIdentifier,
 };
-use itp_utils::write_slice_and_whitespace_pad;
+use itp_utils::{hex::hex_encode, write_slice_and_whitespace_pad};
 use log::*;
 use sgx_types::sgx_status_t;
 use std::slice;
@@ -94,7 +94,12 @@ fn init_shard_creation_parentchain_header_internal(
 				.into(),
 		))
 	}
-	debug!("initializing shard creation header: {:?}", parentchain_id);
+	debug!(
+		"[{:?}] initializing shard creation header: number: {} hash: {}",
+		parentchain_id,
+		header.number,
+		hex_encode(header.hash().encode().as_ref())
+	);
 
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	if !state_handler
