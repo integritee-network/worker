@@ -22,6 +22,17 @@
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
+use itp_node_api::api_client::{AccountApi, ChainApi};
+use itp_types::parentchain::{AccountId, Balance, Hash, Header, Index};
+use sp_runtime::{
+	generic::{Block, UncheckedExtrinsic},
+	MultiAddress,
+};
+use sp_version::GetRuntimeVersionAt;
+use substrate_api_client::{
+	ac_primitives::Properties, extrinsic::BalancesExtrinsics, GetAccountInformation, GetBalance,
+	GetStorage, GetTransactionPayment, SubmitAndWatch, SubscribeEvents, SystemApi,
+};
 
 #[cfg(feature = "std")]
 pub mod event_subscriber;
@@ -53,4 +64,19 @@ pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 			None
 		},
 	}
+}
+
+/// a trait to aggreagate all traits we need in the service
+pub trait ParentchainApiTrait:
+	AccountApi<AccountId = AccountId, Balance = Balance, Index = Index>
+	+ GetBalance<Balance = Balance>
+	+ GetStorage
+	+ SystemApi<Properties = Properties>
+	+ BalancesExtrinsics<Address = MultiAddress<AccountId, Index>, Balance = Balance>
+	+ ChainApi
+	+ GetAccountInformation<Index = Index>
+	+ SubscribeEvents
+	+ GetTransactionPayment<Balance = Balance>
+	+ SubmitAndWatch<Hash = Hash> //+ GetRuntimeVersionAt<Block<Header, UncheckedExtrinsic<A>>>
+{
 }

@@ -2794,6 +2794,7 @@ dependencies = [
  "sgx_tstd",
  "sp-core",
  "sp-runtime",
+ "sp-version",
  "substrate-api-client",
 ]
 
