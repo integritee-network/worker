@@ -41,10 +41,7 @@ use its_primitives::{
 use log::*;
 pub use sp_consensus_slots::Slot;
 use sp_core::ByteArray;
-use sp_runtime::{
-	app_crypto::Pair,
-	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
-};
+use sp_runtime::{app_crypto::Pair, traits::Header as ParentchainBlockHeaderTrait};
 use std::{fmt::Debug, time::Duration};
 
 pub mod error;
@@ -52,17 +49,17 @@ pub mod slot;
 
 type AuthorityId<P> = <P as Pair>::Public;
 
-pub fn verify_sidechain_block<AuthorityPair, ParentchainBlock, SignedSidechainBlock>(
+pub fn verify_sidechain_block<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock>(
 	signed_block: SignedSidechainBlock,
 	slot_duration: Duration,
 	last_block: &Option<<SignedSidechainBlock as SignedBlock>::Block>,
-	parentchain_header: &ParentchainBlock::Header,
+	parentchain_header: &ParentchainBlockHeader,
 	authorities: &[AuthorityId<AuthorityPair>],
 ) -> Result<SignedSidechainBlock, ConsensusError>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
-	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
+	ParentchainBlockHeader: ParentchainBlockHeaderTrait<Hash = BlockHash>,
 	SignedSidechainBlock: 'static + SignedSidechainBlockTrait<Public = AuthorityPair::Public>,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
 {
@@ -84,7 +81,7 @@ where
 		None => ensure_first_block(signed_block.block())?,
 	}
 
-	if let Err(e) = verify_author::<AuthorityPair, ParentchainBlock::Header, SignedSidechainBlock>(
+	if let Err(e) = verify_author::<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock>(
 		&slot,
 		signed_block.block(),
 		parentchain_header,
@@ -111,7 +108,7 @@ where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
-	ParentchainHeader: ParentchainHeaderTrait<Hash = BlockHash>,
+	ParentchainHeader: ParentchainBlockHeaderTrait<Hash = BlockHash>,
 {
 	ensure!(
 		parentchain_head.hash() == block.block_data().layer_one_head(),
@@ -206,7 +203,7 @@ mod tests {
 	use core::assert_matches::assert_matches;
 	use frame_support::assert_ok;
 	use itc_parentchain_test::ParentchainHeaderBuilder;
-	use itp_types::{AccountId, Block as ParentchainBlock};
+	use itp_types::{AccountId, Header as ParentchainBlockHeader};
 	use its_primitives::types::{block::SignedBlock, header::SidechainHeader as Header};
 	use its_test::{
 		sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait},
@@ -326,7 +323,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let curr_block = block2(signer, last_block.hash());
 
-		assert_ok!(verify_sidechain_block::<Pair, ParentchainBlock, _>(
+		assert_ok!(verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 			curr_block,
 			SLOT_DURATION,
 			&Some(last_block),
@@ -344,7 +341,7 @@ mod tests {
 		let parentchain_header = ParentchainHeaderBuilder::default().build();
 		let curr_block = block1(signer);
 
-		assert_ok!(verify_sidechain_block::<Pair, ParentchainBlock, _>(
+		assert_ok!(verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 			curr_block,
 			SLOT_DURATION,
 			&None,
@@ -368,7 +365,7 @@ mod tests {
 		let curr_block = block2(signer, last_block.hash());
 
 		assert_matches!(
-			verify_sidechain_block::<Pair, ParentchainBlock, _>(
+			verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 				curr_block,
 				SLOT_DURATION,
 				&Some(last_block),
@@ -390,7 +387,7 @@ mod tests {
 		let last_block = SidechainBlockBuilder::default().build();
 		let curr_block = block2(signer, Default::default());
 
-		assert_ancestry_mismatch_err(verify_sidechain_block::<Pair, ParentchainBlock, _>(
+		assert_ancestry_mismatch_err(verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 			curr_block,
 			SLOT_DURATION,
 			&Some(last_block),
@@ -409,7 +406,7 @@ mod tests {
 		let curr_block = block2(signer, Default::default());
 
 		assert_matches!(
-			verify_sidechain_block::<Pair, ParentchainBlock, _>(
+			verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 				curr_block,
 				SLOT_DURATION,
 				&None,
@@ -434,7 +431,7 @@ mod tests {
 		let curr_block = block3(signer, last_block.hash(), 1);
 
 		assert_matches!(
-			verify_sidechain_block::<Pair, ParentchainBlock, _>(
+			verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 				curr_block,
 				SLOT_DURATION,
 				&Some(last_block),
@@ -478,7 +475,7 @@ mod tests {
 			.build_signed();
 
 		assert_matches!(
-			verify_sidechain_block::<Pair, ParentchainBlock, _>(
+			verify_sidechain_block::<Pair, ParentchainBlockHeader, _>(
 				signed_block_to_verify,
 				SLOT_DURATION,
 				&Some(last_block),

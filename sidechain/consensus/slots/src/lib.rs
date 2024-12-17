@@ -42,7 +42,7 @@ use its_primitives::traits::{
 };
 use log::*;
 pub use slots::*;
-use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
+use sp_runtime::traits::Header as ParentchainBlockHeaderTrait;
 use std::{fmt::Debug, time::Duration, vec::Vec};
 
 #[cfg(feature = "std")]
@@ -76,7 +76,7 @@ pub struct SlotResult<SignedSidechainBlock: SignedSidechainBlockTrait> {
 ///
 /// The implementation should not make any assumptions of the slot being bound to the time or
 /// similar. The only valid assumption is that the slot number is always increasing.
-pub trait SlotWorker<ParentchainBlock: ParentchainBlockTrait> {
+pub trait SlotWorker<ParentchainBlockHeader: ParentchainBlockHeaderTrait> {
 	/// Output generated after a slot
 	type Output: SignedSidechainBlockTrait + Send + 'static;
 
@@ -86,7 +86,7 @@ pub trait SlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// the slot. Otherwise `None` is returned.
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<ParentchainBlock>,
+		slot_info: SlotInfo<ParentchainBlockHeader>,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Option<SlotResult<Self::Output>>;
 }
@@ -96,7 +96,7 @@ pub trait SlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 /// It manages the timeslots of individual per shard `SlotWorker`s. It gives each shard an equal
 /// amount of time to produce it's result, equally distributing leftover time from a previous shard's
 /// slot share to all subsequent slots.
-pub trait PerShardSlotWorkerScheduler<ParentchainBlock: ParentchainBlockTrait> {
+pub trait PerShardSlotWorkerScheduler<ParentchainBlockHeader: ParentchainBlockHeaderTrait> {
 	/// Output generated after a slot
 	type Output: Send + 'static;
 
@@ -109,7 +109,7 @@ pub trait PerShardSlotWorkerScheduler<ParentchainBlock: ParentchainBlockTrait> {
 	/// the slot. Otherwise `None` is returned.
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<ParentchainBlock>,
+		slot_info: SlotInfo<ParentchainBlockHeader>,
 		shard: Vec<Self::ShardIdentifier>,
 	) -> Self::Output;
 }
@@ -117,9 +117,9 @@ pub trait PerShardSlotWorkerScheduler<ParentchainBlock: ParentchainBlockTrait> {
 /// A skeleton implementation for `SlotWorker` which tries to claim a slot at
 /// its beginning and tries to produce a block if successfully claimed, timing
 /// out if block production takes too long.
-pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
+pub trait SimpleSlotWorker<ParentchainBlockHeader: ParentchainBlockHeaderTrait> {
 	/// The type of proposer to use to build blocks.
-	type Proposer: Proposer<ParentchainBlock, Self::Output>;
+	type Proposer: Proposer<ParentchainBlockHeader, Self::Output>;
 
 	/// Data associated with a slot claim.
 	type Claim: Send + 'static;
@@ -137,7 +137,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// use the provided slot number as a canonical source of time.
 	fn epoch_data(
 		&self,
-		header: &ParentchainBlock::Header,
+		header: &ParentchainBlockHeader,
 		shard: ShardIdentifierFor<Self::Output>,
 		slot: Slot,
 	) -> Result<Self::EpochData, ConsensusError>;
@@ -149,7 +149,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// Tries to claim the given slot, returning an object with claim data if successful.
 	fn claim_slot(
 		&self,
-		header: &ParentchainBlock::Header,
+		header: &ParentchainBlockHeader,
 		slot: Slot,
 		epoch_data: &Self::EpochData,
 	) -> Option<Self::Claim>;
@@ -157,12 +157,15 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// Creates the proposer for the current slot
 	fn proposer(
 		&mut self,
-		header: ParentchainBlock::Header,
+		header: ParentchainBlockHeader,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError>;
 
 	/// Remaining duration for proposing.
-	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<ParentchainBlock>) -> Duration;
+	fn proposing_remaining_duration(
+		&self,
+		slot_info: &SlotInfo<ParentchainBlockHeader>,
+	) -> Duration;
 
 	/// Trigger the import of the given parentchain block.
 	///
@@ -170,32 +173,32 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// None is returned.
 	fn import_integritee_parentchain_blocks_until(
 		&self,
-		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
-	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+		last_imported_parentchain_header: &<ParentchainBlockHeader as ParentchainBlockHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlockHeader>, ConsensusError>;
 
 	fn import_target_a_parentchain_blocks_until(
 		&self,
-		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
-	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+		last_imported_parentchain_header: &<ParentchainBlockHeader as ParentchainBlockHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlockHeader>, ConsensusError>;
 
 	fn import_target_b_parentchain_blocks_until(
 		&self,
-		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
-	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+		last_imported_parentchain_header: &<ParentchainBlockHeader as ParentchainBlockHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlockHeader>, ConsensusError>;
 
 	/// Peek the parentchain import queue for the latest block in queue.
 	/// Does not perform the import or mutate the queue.
 	fn peek_latest_integritee_parentchain_header(
 		&self,
-	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+	) -> Result<Option<ParentchainBlockHeader>, ConsensusError>;
 
 	fn peek_latest_target_a_parentchain_header(
 		&self,
-	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+	) -> Result<Option<ParentchainBlockHeader>, ConsensusError>;
 
 	fn peek_latest_target_b_parentchain_header(
 		&self,
-	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
+	) -> Result<Option<ParentchainBlockHeader>, ConsensusError>;
 
 	/// Implements [`SlotWorker::on_slot`]. This is an adaption from
 	/// substrate's sc-consensus-slots implementation. There, the slot worker handles all the
@@ -205,7 +208,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// this function from the outside at each slot.
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<ParentchainBlock>,
+		slot_info: SlotInfo<ParentchainBlockHeader>,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Option<SlotResult<Self::Output>> {
 		let (_timestamp, slot) = (slot_info.timestamp, slot_info.slot);
@@ -394,22 +397,26 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	}
 }
 
-impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlock> + Send>
-	SlotWorker<ParentchainBlock> for T
+impl<
+		ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+		T: SimpleSlotWorker<ParentchainBlockHeader> + Send,
+	> SlotWorker<ParentchainBlockHeader> for T
 {
 	type Output = T::Output;
 
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<ParentchainBlock>,
+		slot_info: SlotInfo<ParentchainBlockHeader>,
 		shard: ShardIdentifierFor<T::Output>,
 	) -> Option<SlotResult<Self::Output>> {
 		SimpleSlotWorker::on_slot(self, slot_info, shard)
 	}
 }
 
-impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlock>>
-	PerShardSlotWorkerScheduler<ParentchainBlock> for T
+impl<
+		ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+		T: SimpleSlotWorker<ParentchainBlockHeader>,
+	> PerShardSlotWorkerScheduler<ParentchainBlockHeader> for T
 {
 	type Output = Vec<SlotResult<T::Output>>;
 
@@ -417,7 +424,7 @@ impl<ParentchainBlock: ParentchainBlockTrait, T: SimpleSlotWorker<ParentchainBlo
 
 	fn on_slot(
 		&mut self,
-		slot_info: SlotInfo<ParentchainBlock>,
+		slot_info: SlotInfo<ParentchainBlockHeader>,
 		shards: Vec<Self::ShardIdentifier>,
 	) -> Self::Output {
 		let mut remaining_shards = shards.len();

@@ -30,6 +30,9 @@ use crate::{
 	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
 };
 use codec::Decode;
+use ita_parentchain_interface::integritee::api_client_types::{
+	Block as IntegriteeBlock, SignedBlock as IntegriteeSignedBlock,
+};
 use ita_stf::{
 	test_genesis::{endowed_account, second_endowed_account, unendowed_account},
 	Balance, Getter, TrustedCall, TrustedCallSigned,
@@ -168,13 +171,13 @@ pub fn produce_sidechain_block_and_import_it() {
 
 	info!("Executing AURA on slot..");
 	let (blocks, opaque_calls) =
-		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _, _, _>(
+		exec_aura_on_slot::<_, IntegriteeBlock, SignedSidechainBlock, _, _, _, _, _>(
 			slot_info,
 			signer,
 			ocall_api,
 			parentchain_block_import_trigger.clone(),
-			None::<Arc<TestParentchainBlockImportTrigger>>,
-			None::<Arc<TestParentchainBlockImportTrigger>>,
+			None,
+			None,
 			proposer_environment,
 			shards,
 		)

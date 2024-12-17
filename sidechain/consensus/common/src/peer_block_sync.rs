@@ -82,12 +82,13 @@ impl<
 		BlockImporter,
 		SidechainOCallApi,
 		ImportConfirmationHandler,
-	> where
+	>
+where
 	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
-	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
+	BlockImporter: BlockImport<ParentchainBlock::Header, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 	ImportConfirmationHandler: ConfirmBlockImport<
 		<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType,
@@ -164,7 +165,7 @@ where
 	<<SignedSidechainBlock as its_primitives::traits::SignedBlock>::Block as BlockTrait>::HeaderType:
 	HeaderTrait<ShardIdentifier = H256>,
 	<<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::BlockDataType as BlockData>::Public: Encode + Debug,
-	BlockImporter: BlockImport<ParentchainBlock, SignedSidechainBlock>,
+	BlockImporter: BlockImport<ParentchainBlock::Header, SignedSidechainBlock>,
 	SidechainOCallApi: EnclaveSidechainOCallApi,
 	ImportConfirmationHandler: ConfirmBlockImport<<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as BlockTrait>::HeaderType, ParentchainBlock>,
 {
@@ -252,7 +253,7 @@ mod tests {
 	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait};
 
-	type TestBlockImport = BlockImportMock<ParentchainBlock, SignedSidechainBlock>;
+	type TestBlockImport = BlockImportMock<ParentchainBlock::Header, SignedSidechainBlock>;
 	type TestOCallApi = SidechainOCallApiMock<SignedSidechainBlock>;
 	type TestPeerBlockSync = PeerBlockSync<
 		ParentchainBlock,
@@ -268,7 +269,7 @@ mod tests {
 		let signed_sidechain_block = SidechainBlockBuilder::default().build_signed();
 
 		let block_importer_mock = Arc::new(
-			BlockImportMock::<ParentchainBlock, _>::default()
+			BlockImportMock::<ParentchainBlock::Header, _>::default()
 				.with_import_result_once(Ok(parentchain_header.clone())),
 		);
 
@@ -289,7 +290,7 @@ mod tests {
 	#[test]
 	fn error_is_propagated_if_import_returns_error_other_than_ancestry_mismatch() {
 		let block_importer_mock = Arc::new(
-			BlockImportMock::<ParentchainBlock, _>::default()
+			BlockImportMock::<ParentchainBlock::Header, _>::default()
 				.with_import_result_once(Err(Error::InvalidAuthority("auth".to_string()))),
 		);
 
@@ -312,10 +313,11 @@ mod tests {
 
 	#[test]
 	fn blocks_are_fetched_from_peer_if_initial_import_yields_ancestry_mismatch() {
-		let block_importer_mock =
-			Arc::new(BlockImportMock::<ParentchainBlock, _>::default().with_import_result_once(
-				Err(Error::BlockAncestryMismatch(1, H256::random(), "".to_string())),
-			));
+		let block_importer_mock = Arc::new(
+			BlockImportMock::<ParentchainBlock::Header, _>::default().with_import_result_once(Err(
+				Error::BlockAncestryMismatch(1, H256::random(), "".to_string()),
+			)),
+		);
 
 		let sidechain_ocall_api = Arc::new(
 			SidechainOCallApiMock::<SignedSidechainBlock>::default().with_peer_fetch_blocks(vec![

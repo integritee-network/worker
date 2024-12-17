@@ -30,6 +30,7 @@ use substrate_api_client::ac_primitives::{
 	BlakeTwo256, ExtrinsicSigner, SubstrateBlock, SubstrateHeader, SubstrateOpaqueExtrinsic,
 };
 
+use itp_api_client_types::{AssetTip, GenericSignedExtra, PlainTip};
 pub use substrate_api_client::{
 	ac_node_api::{
 		metadata::{InvalidMetadataError, Metadata, MetadataError},
@@ -38,8 +39,8 @@ pub use substrate_api_client::{
 	ac_primitives::{
 		config::Config,
 		extrinsics::{
-			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
-			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+			CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
+			GenericExtrinsicParams, UncheckedExtrinsicV4,
 		},
 		serde_impls::StorageKey,
 		signer::{SignExtrinsic, StaticExtrinsicSigner},
@@ -47,7 +48,6 @@ pub use substrate_api_client::{
 	rpc::Request,
 	storage_key, Api,
 };
-
 #[cfg(feature = "std")]
 pub mod event_subscriber;
 pub mod extrinsic_parser;

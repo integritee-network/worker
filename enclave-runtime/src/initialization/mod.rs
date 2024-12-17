@@ -20,12 +20,13 @@ pub mod parentchain;
 use crate::{
 	error::{Error, Result as EnclaveResult},
 	initialization::global_components::{
-		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor, EnclaveLightClientSeal,
-		EnclaveRpcConnectionRegistry, EnclaveRpcResponder, EnclaveShieldingKeyRepository,
-		EnclaveSidechainApi, EnclaveSidechainBlockImportQueueWorker, EnclaveSidechainBlockImporter,
-		EnclaveSidechainBlockSyncer, EnclaveStateFileIo, EnclaveStateHandler,
-		EnclaveStateInitializer, EnclaveStateObserver, EnclaveStateSnapshotRepository,
-		EnclaveStfEnclaveSigner, EnclaveTopPool, EnclaveTopPoolAuthor,
+		EnclaveBlockImportConfirmationHandler, EnclaveGetterExecutor,
+		EnclaveIntegriteeLightClientSeal, EnclaveRpcConnectionRegistry, EnclaveRpcResponder,
+		EnclaveShieldingKeyRepository, EnclaveSidechainApi, EnclaveSidechainBlockImportQueueWorker,
+		EnclaveSidechainBlockImporter, EnclaveSidechainBlockSyncer, EnclaveStateFileIo,
+		EnclaveStateHandler, EnclaveStateInitializer, EnclaveStateObserver,
+		EnclaveStateSnapshotRepository, EnclaveStfEnclaveSigner, EnclaveTargetALightClientSeal,
+		EnclaveTargetBLightClientSeal, EnclaveTopPool, EnclaveTopPoolAuthor,
 		GLOBAL_ATTESTATION_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 		GLOBAL_OCALL_API_COMPONENT, GLOBAL_RPC_WS_HANDLER_COMPONENT,
 		GLOBAL_SHIELDING_KEY_REPOSITORY_COMPONENT, GLOBAL_SIDECHAIN_BLOCK_COMPOSER_COMPONENT,
@@ -102,19 +103,19 @@ pub(crate) fn init_enclave(
 	let state_key_repository = Arc::new(get_aes_repository(base_dir.clone())?);
 	GLOBAL_STATE_KEY_REPOSITORY_COMPONENT.initialize(state_key_repository.clone());
 
-	let integritee_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+	let integritee_light_client_seal = Arc::new(EnclaveIntegriteeLightClientSeal::new(
 		base_dir.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::Integritee,
 	)?);
 	GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(integritee_light_client_seal);
 
-	let target_a_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+	let target_a_light_client_seal = Arc::new(EnclaveTargetALightClientSeal::new(
 		base_dir.join(TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::TargetA,
 	)?);
 	GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL.initialize(target_a_light_client_seal);
 
-	let target_b_light_client_seal = Arc::new(EnclaveLightClientSeal::new(
+	let target_b_light_client_seal = Arc::new(EnclaveTargetBLightClientSeal::new(
 		base_dir.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH),
 		ParentchainId::TargetB,
 	)?);

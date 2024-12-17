@@ -30,20 +30,17 @@ use its_primitives::traits::{
 use its_state::{LastBlockExt, SidechainState, SidechainSystemExt};
 use log::*;
 use sp_core::Pair;
-use sp_runtime::{
-	traits::{Block as ParentchainBlockTrait, Header},
-	MultiSignature,
-};
+use sp_runtime::{traits::Header as ParentchainBlockHeaderTrait, MultiSignature};
 use std::{format, marker::PhantomData, sync::Arc, vec::Vec};
 
 /// Compose a sidechain block and corresponding confirmation extrinsic for the parentchain
 ///
-pub trait ComposeBlock<Externalities, ParentchainBlock: ParentchainBlockTrait> {
+pub trait ComposeBlock<Externalities, ParentchainBlockHeader: ParentchainBlockHeaderTrait> {
 	type SignedSidechainBlock: SignedSidechainBlockTrait;
 
 	fn compose_block(
 		&self,
-		latest_parentchain_header: &<ParentchainBlock as ParentchainBlockTrait>::Header,
+		latest_parentchain_header: &ParentchainBlockHeader,
 		top_call_hashes: Vec<H256>,
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,
@@ -52,16 +49,16 @@ pub trait ComposeBlock<Externalities, ParentchainBlock: ParentchainBlockTrait> {
 }
 
 /// Block composer implementation for the sidechain
-pub struct BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository> {
+pub struct BlockComposer<ParentchainBlockHeader, SignedSidechainBlock, Signer, StateKeyRepository> {
 	signer: Signer,
 	state_key_repository: Arc<StateKeyRepository>,
-	_phantom: PhantomData<(ParentchainBlock, SignedSidechainBlock)>,
+	_phantom: PhantomData<(ParentchainBlockHeader, SignedSidechainBlock)>,
 }
 
-impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
+impl<ParentchainBlockHeader, SignedSidechainBlock, Signer, StateKeyRepository>
+	BlockComposer<ParentchainBlockHeader, SignedSidechainBlock, Signer, StateKeyRepository>
 where
-	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	ParentchainBlockHeader: ParentchainBlockHeaderTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
@@ -82,11 +79,11 @@ type HeaderTypeOf<T> = <<T as SignedSidechainBlockTrait>::Block as SidechainBloc
 type BlockDataTypeOf<T> =
 	<<T as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::BlockDataType;
 
-impl<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository, Externalities>
-	ComposeBlock<Externalities, ParentchainBlock>
-	for BlockComposer<ParentchainBlock, SignedSidechainBlock, Signer, StateKeyRepository>
+impl<ParentchainBlockHeader, SignedSidechainBlock, Signer, StateKeyRepository, Externalities>
+	ComposeBlock<Externalities, ParentchainBlockHeader>
+	for BlockComposer<ParentchainBlockHeader, SignedSidechainBlock, Signer, StateKeyRepository>
 where
-	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
+	ParentchainBlockHeader: ParentchainBlockHeaderTrait<Hash = H256>,
 	SignedSidechainBlock:
 		SignedSidechainBlockTrait<Public = Signer::Public, Signature = MultiSignature>,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
@@ -110,7 +107,7 @@ where
 
 	fn compose_block(
 		&self,
-		latest_parentchain_header: &ParentchainBlock::Header,
+		latest_parentchain_header: &ParentchainBlockHeader,
 		top_call_hashes: Vec<H256>,
 		shard: ShardIdentifier,
 		state_hash_apriori: H256,

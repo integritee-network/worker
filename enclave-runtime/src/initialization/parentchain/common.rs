@@ -19,11 +19,13 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOffchainWorkerExecutor,
-			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveValidatorAccessor,
-			IntegriteeEnclaveExtrinsicsFactory, IntegriteeParentchainBlockImportDispatcher,
-			IntegriteeParentchainBlockImportQueue, IntegriteeParentchainBlockImporter,
-			IntegriteeParentchainEventImportQueue,
+			EnclaveExtrinsicsFactory, EnclaveIntegriteeOffchainWorkerExecutor,
+			EnclaveIntegriteeValidatorAccessor, EnclaveNodeMetadataRepository,
+			EnclaveParentchainSigner, EnclaveStfExecutor, EnclaveTargetAOffchainWorkerExecutor,
+			EnclaveTargetAValidatorAccessor, EnclaveTargetBOffchainWorkerExecutor,
+			EnclaveTargetBValidatorAccessor, IntegriteeEnclaveExtrinsicsFactory,
+			IntegriteeParentchainBlockImportDispatcher, IntegriteeParentchainBlockImportQueue,
+			IntegriteeParentchainBlockImporter, IntegriteeParentchainEventImportQueue,
 			IntegriteeParentchainImmediateBlockImportDispatcher,
 			IntegriteeParentchainIndirectCallsExecutor,
 			IntegriteeParentchainTriggeredBlockImportDispatcher, TargetAEnclaveExtrinsicsFactory,
@@ -55,7 +57,7 @@ use sp_core::H256;
 use std::sync::Arc;
 
 pub(crate) fn create_integritee_parentchain_block_importer(
-	validator_access: Arc<EnclaveValidatorAccessor>,
+	validator_access: Arc<EnclaveIntegriteeValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<IntegriteeEnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
@@ -90,7 +92,7 @@ pub(crate) fn create_integritee_parentchain_block_importer(
 }
 
 pub(crate) fn create_target_a_parentchain_block_importer(
-	validator_access: Arc<EnclaveValidatorAccessor>,
+	validator_access: Arc<EnclaveTargetAValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<TargetAEnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
@@ -125,7 +127,7 @@ pub(crate) fn create_target_a_parentchain_block_importer(
 }
 
 pub(crate) fn create_target_b_parentchain_block_importer(
-	validator_access: Arc<EnclaveValidatorAccessor>,
+	validator_access: Arc<EnclaveTargetBValidatorAccessor>,
 	stf_executor: Arc<EnclaveStfExecutor>,
 	extrinsics_factory: Arc<TargetBEnclaveExtrinsicsFactory>,
 	node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
@@ -177,13 +179,13 @@ pub(crate) fn create_extrinsics_factory<NodeRuntimeConfig: Config, Tip>(
 pub(crate) fn create_integritee_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: IntegriteeParentchainBlockImporter,
-	validator_access: Arc<EnclaveValidatorAccessor>,
+	validator_access: Arc<EnclaveIntegriteeValidatorAccessor>,
 	extrinsics_factory: Arc<IntegriteeEnclaveExtrinsicsFactory>,
 ) -> Result<Arc<IntegriteeParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+	let offchain_worker_executor = Arc::new(EnclaveIntegriteeOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
 		state_handler,
@@ -207,13 +209,13 @@ pub(crate) fn create_integritee_offchain_immediate_import_dispatcher(
 pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: TargetAParentchainBlockImporter,
-	validator_access: Arc<EnclaveValidatorAccessor>,
+	validator_access: Arc<EnclaveTargetAValidatorAccessor>,
 	extrinsics_factory: Arc<TargetAEnclaveExtrinsicsFactory>,
 ) -> Result<Arc<TargetAParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+	let offchain_worker_executor = Arc::new(EnclaveTargetAOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
 		state_handler,
@@ -237,13 +239,13 @@ pub(crate) fn create_target_a_offchain_immediate_import_dispatcher(
 pub(crate) fn create_target_b_offchain_immediate_import_dispatcher(
 	stf_executor: Arc<EnclaveStfExecutor>,
 	block_importer: TargetBParentchainBlockImporter,
-	validator_access: Arc<EnclaveValidatorAccessor>,
+	validator_access: Arc<EnclaveTargetBValidatorAccessor>,
 	extrinsics_factory: Arc<TargetBEnclaveExtrinsicsFactory>,
 ) -> Result<Arc<TargetBParentchainBlockImportDispatcher>> {
 	let state_handler = GLOBAL_STATE_HANDLER_COMPONENT.get()?;
 	let top_pool_author = GLOBAL_TOP_POOL_AUTHOR_COMPONENT.get()?;
 
-	let offchain_worker_executor = Arc::new(EnclaveOffchainWorkerExecutor::new(
+	let offchain_worker_executor = Arc::new(EnclaveTargetBOffchainWorkerExecutor::new(
 		top_pool_author,
 		stf_executor,
 		state_handler,

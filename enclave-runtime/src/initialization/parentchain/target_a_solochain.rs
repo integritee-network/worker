@@ -20,7 +20,7 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
-			EnclaveValidatorAccessor, TargetAEnclaveExtrinsicsFactory,
+			EnclaveTargetAValidatorAccessor, TargetAEnclaveExtrinsicsFactory,
 			TargetAParentchainBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
@@ -32,6 +32,7 @@ use crate::{
 		},
 	},
 };
+use ita_parentchain_interface::target_a::api_client_types::Block as TargetABlock;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 use itp_component_container::ComponentGetter;
@@ -44,7 +45,7 @@ pub struct TargetASolochainHandler {
 	pub genesis_header: SolochainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
-	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
+	pub validator_accessor: Arc<EnclaveTargetAValidatorAccessor>,
 	pub extrinsics_factory: Arc<TargetAEnclaveExtrinsicsFactory>,
 	pub import_dispatcher: Arc<TargetAParentchainBlockImportDispatcher>,
 }
@@ -63,12 +64,12 @@ impl TargetASolochainHandler {
 		let genesis_header = params.genesis_header.clone();
 
 		let validator = itc_parentchain::light_client::io::read_or_init_grandpa_validator::<
-			SolochainBlock,
+			TargetABlock,
 			EnclaveOCallApi,
 			_,
 		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::TargetA)?;
 		let validator_accessor =
-			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
+			Arc::new(EnclaveTargetAValidatorAccessor::new(validator, light_client_seal));
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 

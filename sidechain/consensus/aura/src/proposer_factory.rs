@@ -30,23 +30,25 @@ use its_primitives::traits::{
 	SignedBlock as SignedSidechainBlockTrait,
 };
 use its_state::{SidechainState, SidechainSystemExt};
-use sp_runtime::{
-	traits::{Block, NumberFor},
-	MultiSignature,
-};
+use sp_runtime::{traits::Header, MultiSignature};
 use std::{marker::PhantomData, sync::Arc};
 
 ///! `ProposerFactory` instance containing all the data to create the `SlotProposer` for the
 /// next `Slot`.
-pub struct ProposerFactory<ParentchainBlock: Block, TopPoolAuthor, StfExecutor, BlockComposer> {
+pub struct ProposerFactory<
+	ParentchainBlockHeader: Header,
+	TopPoolAuthor,
+	StfExecutor,
+	BlockComposer,
+> {
 	top_pool_author: Arc<TopPoolAuthor>,
 	stf_executor: Arc<StfExecutor>,
 	block_composer: Arc<BlockComposer>,
-	_phantom: PhantomData<ParentchainBlock>,
+	_phantom: PhantomData<ParentchainBlockHeader>,
 }
 
-impl<ParentchainBlock: Block, TopPoolAuthor, StfExecutor, BlockComposer>
-	ProposerFactory<ParentchainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
+impl<ParentchainBlockHeader: Header, TopPoolAuthor, StfExecutor, BlockComposer>
+	ProposerFactory<ParentchainBlockHeader, TopPoolAuthor, StfExecutor, BlockComposer>
 {
 	pub fn new(
 		top_pool_executor: Arc<TopPoolAuthor>,
@@ -63,36 +65,38 @@ impl<ParentchainBlock: Block, TopPoolAuthor, StfExecutor, BlockComposer>
 }
 
 impl<
-		ParentchainBlock: Block<Hash = H256>,
+		ParentchainBlockHeader: Header<Hash = H256>,
 		SignedSidechainBlock,
 		TopPoolAuthor,
 		StfExecutor,
 		BlockComposer,
-	> Environment<ParentchainBlock, SignedSidechainBlock>
-	for ProposerFactory<ParentchainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
+	> Environment<ParentchainBlockHeader, SignedSidechainBlock>
+	for ProposerFactory<ParentchainBlockHeader, TopPoolAuthor, StfExecutor, BlockComposer>
 where
-	NumberFor<ParentchainBlock>: BlockNumberOps,
+	ParentchainBlockHeader::Number: BlockNumberOps,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
 		+ 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType:
 		HeaderTrait<ShardIdentifier = H256>,
-	TopPoolAuthor:
-		AuthorApi<H256, ParentchainBlock::Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
+	TopPoolAuthor: AuthorApi<H256, ParentchainBlockHeader::Hash, TrustedCallSigned, Getter>
+		+ Send
+		+ Sync
+		+ 'static,
 	StfExecutor: StateUpdateProposer<TrustedCallSigned, Getter> + Send + Sync + 'static,
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	<ExternalitiesFor<StfExecutor> as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
 	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
-			ParentchainBlock,
+			ParentchainBlockHeader,
 			SignedSidechainBlock = SignedSidechainBlock,
 		> + Send
 		+ Sync
 		+ 'static,
 {
 	type Proposer = SlotProposer<
-		ParentchainBlock,
+		ParentchainBlockHeader,
 		SignedSidechainBlock,
 		TopPoolAuthor,
 		StfExecutor,
@@ -102,7 +106,7 @@ where
 
 	fn init(
 		&mut self,
-		parent_header: ParentchainBlock::Header,
+		parent_header: ParentchainBlockHeader,
 		shard: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> Result<Self::Proposer, Self::Error> {
 		Ok(SlotProposer {

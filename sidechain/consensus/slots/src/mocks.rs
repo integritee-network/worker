@@ -18,17 +18,17 @@
 use crate::{slots::Slot, SimpleSlotWorker, SlotInfo, SlotResult};
 use its_consensus_common::{Proposal, Proposer, Result};
 use its_primitives::{traits::ShardIdentifierFor, types::SignedBlock as SignedSidechainBlock};
-use sp_runtime::traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait};
+use sp_runtime::traits::Header as ParentchainBlockHeaderTrait;
 use std::{marker::PhantomData, thread, time::Duration};
 
 #[derive(Default)]
-pub(crate) struct ProposerMock<ParentchainBlock> {
-	_phantom: PhantomData<ParentchainBlock>,
+pub(crate) struct ProposerMock<ParentchainBlockHeader> {
+	_phantom: PhantomData<ParentchainBlockHeader>,
 }
 
 impl<B> Proposer<B, SignedSidechainBlock> for ProposerMock<B>
 where
-	B: ParentchainBlockTrait,
+	B: ParentchainBlockHeaderTrait,
 {
 	fn propose(&self, _max_duration: Duration) -> Result<Proposal<SignedSidechainBlock>> {
 		todo!()
@@ -38,7 +38,7 @@ where
 #[derive(Default)]
 pub(crate) struct SimpleSlotWorkerMock<B>
 where
-	B: ParentchainBlockTrait,
+	B: ParentchainBlockHeaderTrait,
 {
 	pub slot_infos: Vec<SlotInfo<B>>,
 	pub slot_time_spent: Option<Duration>,
@@ -46,7 +46,7 @@ where
 
 impl<B> SimpleSlotWorker<B> for SimpleSlotWorkerMock<B>
 where
-	B: ParentchainBlockTrait,
+	B: ParentchainBlockHeaderTrait,
 {
 	type Proposer = ProposerMock<B>;
 
@@ -62,7 +62,7 @@ where
 
 	fn epoch_data(
 		&self,
-		_header: &B::Header,
+		_header: &B,
 		_shard: ShardIdentifierFor<Self::Output>,
 		_slot: Slot,
 	) -> Result<Self::EpochData> {
@@ -75,7 +75,7 @@ where
 
 	fn claim_slot(
 		&self,
-		_header: &B::Header,
+		_header: &B,
 		_slot: Slot,
 		_epoch_data: &Self::EpochData,
 	) -> Option<Self::Claim> {
@@ -84,7 +84,7 @@ where
 
 	fn proposer(
 		&mut self,
-		_header: B::Header,
+		_header: B,
 		_shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer> {
 		todo!()
@@ -96,34 +96,34 @@ where
 
 	fn import_integritee_parentchain_blocks_until(
 		&self,
-		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
-	) -> Result<Option<B::Header>> {
+		_last_imported_parentchain_header: &<B as ParentchainBlockHeaderTrait>::Hash,
+	) -> Result<Option<B>> {
 		todo!()
 	}
 
-	fn peek_latest_integritee_parentchain_header(&self) -> Result<Option<B::Header>> {
+	fn peek_latest_integritee_parentchain_header(&self) -> Result<Option<B>> {
 		todo!()
 	}
 
 	fn import_target_a_parentchain_blocks_until(
 		&self,
-		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
-	) -> Result<Option<B::Header>> {
+		_last_imported_parentchain_header: &<B as ParentchainBlockHeaderTrait>::Hash,
+	) -> Result<Option<B>> {
 		todo!()
 	}
 
-	fn peek_latest_target_a_parentchain_header(&self) -> Result<Option<B::Header>> {
+	fn peek_latest_target_a_parentchain_header(&self) -> Result<Option<B>> {
 		todo!()
 	}
 
 	fn import_target_b_parentchain_blocks_until(
 		&self,
-		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
-	) -> Result<Option<B::Header>> {
+		_last_imported_parentchain_header: &<B as ParentchainBlockHeaderTrait>::Hash,
+	) -> Result<Option<B>> {
 		todo!()
 	}
 
-	fn peek_latest_target_b_parentchain_header(&self) -> Result<Option<B::Header>> {
+	fn peek_latest_target_b_parentchain_header(&self) -> Result<Option<B>> {
 		todo!()
 	}
 

@@ -22,9 +22,11 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
+use scale_info::TypeInfo;
 pub use substrate_api_client::{
 	ac_node_api::{
 		metadata::{InvalidMetadataError, Metadata, MetadataError},
@@ -33,8 +35,8 @@ pub use substrate_api_client::{
 	ac_primitives::{
 		config::{AssetRuntimeConfig, Config, DefaultRuntimeConfig},
 		extrinsics::{
-			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
-			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+			CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
+			GenericExtrinsicParams, UncheckedExtrinsicV4,
 		},
 		serde_impls::StorageKey,
 		signer::{SignExtrinsic, StaticExtrinsicSigner},
@@ -60,8 +62,8 @@ pub type ParentchainAssetTip = AssetTip<Balance>;
 pub type ParentchainExtrinsicParams =
 	GenericExtrinsicParams<DefaultRuntimeConfig, ParentchainPlainTip>;
 pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
+use sp_runtime::generic::Era;
 pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
-
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
@@ -81,3 +83,77 @@ pub use substrate_api_client::{
 	api::Error as ApiClientError,
 	rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
 };
+
+#[derive(Decode, Encode, Copy, Clone, Eq, PartialEq, Debug, TypeInfo)]
+pub struct GenericSignedExtra<Tip, Index> {
+	pub era: Era,
+	#[codec(compact)]
+	pub nonce: Index,
+	pub tip: Tip,
+	pub mode: bool,
+}
+
+impl<Tip, Index> GenericSignedExtra<Tip, Index> {
+	pub fn new(era: Era, nonce: Index, tip: Tip) -> Self {
+		Self { era, nonce, tip, mode: false }
+	}
+}
+
+#[derive(Copy, Clone, Debug, Default, Decode, Encode, Eq, PartialEq, TypeInfo)]
+pub struct PlainTip<Balance> {
+	#[codec(compact)]
+	tip: Balance,
+}
+
+impl<Balance> PlainTip<Balance> {
+	/// Create a new tip of the amount provided.
+	pub fn new(amount: Balance) -> Self {
+		PlainTip { tip: amount }
+	}
+}
+
+impl<Balance> From<Balance> for PlainTip<Balance> {
+	fn from(n: Balance) -> Self {
+		PlainTip::new(n)
+	}
+}
+
+impl From<PlainTip<u128>> for u128 {
+	fn from(tip: PlainTip<u128>) -> Self {
+		tip.tip
+	}
+}
+
+/// Default tip payment for substrate nodes that use the asset payment pallet.
+#[derive(Copy, Clone, Debug, Default, Decode, Encode, Eq, PartialEq, TypeInfo)]
+pub struct AssetTip<Balance> {
+	#[codec(compact)]
+	tip: Balance,
+	asset: Option<u32>,
+}
+
+impl<Balance> AssetTip<Balance> {
+	/// Create a new tip of the amount provided.
+	pub fn new(amount: Balance) -> Self {
+		AssetTip { tip: amount, asset: None }
+	}
+
+	/// Designate the tip as being of a particular asset class.
+	/// If this is not set, then the native currency is used.
+	pub fn of_asset(mut self, asset: u32) -> Self {
+		self.asset = Some(asset);
+		self
+	}
+}
+
+impl<Balance> From<Balance> for AssetTip<Balance> {
+	fn from(n: Balance) -> Self {
+		AssetTip::new(n)
+	}
+}
+
+impl From<AssetTip<u128>> for u128 {
+	fn from(tip: AssetTip<u128>) -> Self {
+		tip.tip
+	}
+}
