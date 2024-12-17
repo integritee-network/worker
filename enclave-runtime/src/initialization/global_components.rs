@@ -32,11 +32,18 @@ use crate::{
 };
 use ita_parentchain_interface::{
 	integritee,
-	integritee::api_client_types::{IntegriteeRuntimeConfig, IntegriteeTip},
+	integritee::api_client_types::{
+		Block as IntegriteeBlock, IntegriteeRuntimeConfig, IntegriteeTip,
+		SignedBlock as IntegriteeSignedBlock,
+	},
 	target_a,
-	target_a::api_client_types::{TargetARuntimeConfig, TargetATip},
+	target_a::api_client_types::{
+		Block as TargetABlock, SignedBlock as TargetASignedBlock, TargetARuntimeConfig, TargetATip,
+	},
 	target_b,
-	target_b::api_client_types::{TargetBRuntimeConfig, TargetBTip},
+	target_b::api_client_types::{
+		Block as TargetBBlock, SignedBlock as TargetBSignedBlock, TargetBRuntimeConfig, TargetBTip,
+	},
 };
 use ita_sgx_runtime::Runtime;
 use ita_stf::{Getter, State as StfState, Stf, TrustedCallSigned};
@@ -84,7 +91,6 @@ use itp_top_pool_author::{
 	api::SidechainApi,
 	author::{Author, AuthorTopFilter},
 };
-use itp_types::{Block as ParentchainBlock, SignedBlock as SignedParentchainBlock};
 use its_block_header_cache::SidechainBlockHeaderCache;
 use its_primitives::{
 	traits::{Block as SidechainBlockTrait, SignedBlock as SignedSidechainBlockTrait},
@@ -146,11 +152,15 @@ pub type EnclaveRpcWsHandler =
 	RpcWsHandler<RpcWatchExtractor<Hash>, EnclaveRpcConnectionRegistry, Hash>;
 pub type EnclaveWebSocketServer = TungsteniteWsServer<EnclaveRpcWsHandler, FromFileConfigProvider>;
 pub type EnclaveRpcResponder = RpcResponder<EnclaveRpcConnectionRegistry, Hash, RpcResponseChannel>;
-pub type EnclaveSidechainApi = SidechainApi<ParentchainBlock, EnclaveTrustedCallSigned>;
+pub type EnclaveSidechainApi = SidechainApi<IntegriteeBlock, EnclaveTrustedCallSigned>;
 
 // Parentchain types relevant for all parentchains
-pub type EnclaveLightClientSeal =
-	LightClientStateSealSync<ParentchainBlock, LightValidationState<ParentchainBlock>>;
+pub type EnclaveIntegriteeLightClientSeal =
+	LightClientStateSealSync<IntegriteeBlock, LightValidationState<IntegriteeBlock>>;
+pub type EnclaveTargetALightClientSeal =
+	LightClientStateSealSync<TargetABlock, LightValidationState<TargetABlock>>;
+pub type EnclaveTargetBLightClientSeal =
+	LightClientStateSealSync<TargetBBlock, LightValidationState<TargetBBlock>>;
 
 pub type EnclaveExtrinsicsFactory<NodeRuntimeConfig, Tip> = ExtrinsicsFactory<
 	EnclaveParentchainSigner,
@@ -182,15 +192,25 @@ pub type TargetBEnclaveExtrinsicsFactory = ExtrinsicsFactory<
 	TargetBTip,
 >;
 
-pub type EnclaveValidatorAccessor = ValidatorAccessor<
-	LightValidation<ParentchainBlock, EnclaveOCallApi>,
-	ParentchainBlock,
-	EnclaveLightClientSeal,
+pub type EnclaveIntegriteeValidatorAccessor = ValidatorAccessor<
+	LightValidation<IntegriteeBlock, EnclaveOCallApi>,
+	IntegriteeBlock,
+	EnclaveIntegriteeLightClientSeal,
+>;
+pub type EnclaveTargetAValidatorAccessor = ValidatorAccessor<
+	LightValidation<TargetABlock, EnclaveOCallApi>,
+	TargetABlock,
+	EnclaveTargetALightClientSeal,
+>;
+pub type EnclaveTargetBValidatorAccessor = ValidatorAccessor<
+	LightValidation<TargetBBlock, EnclaveOCallApi>,
+	TargetBBlock,
+	EnclaveTargetBLightClientSeal,
 >;
 
-pub type IntegriteeParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
-pub type TargetAParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
-pub type TargetBParentchainBlockImportQueue = ImportQueue<SignedParentchainBlock>;
+pub type IntegriteeParentchainBlockImportQueue = ImportQueue<IntegriteeSignedBlock>;
+pub type TargetAParentchainBlockImportQueue = ImportQueue<TargetASignedBlock>;
+pub type TargetBParentchainBlockImportQueue = ImportQueue<TargetBSignedBlock>;
 
 /// Import queue for the events
 ///
@@ -214,8 +234,8 @@ pub type IntegriteeParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 >;
 
 pub type IntegriteeParentchainBlockImporter = ParentchainBlockImporter<
-	ParentchainBlock,
-	EnclaveValidatorAccessor,
+	IntegriteeBlock,
+	EnclaveIntegriteeValidatorAccessor,
 	EnclaveStfExecutor,
 	IntegriteeEnclaveExtrinsicsFactory,
 	IntegriteeParentchainIndirectCallsExecutor,
@@ -256,8 +276,8 @@ pub type TargetAParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 >;
 
 pub type TargetAParentchainBlockImporter = ParentchainBlockImporter<
-	ParentchainBlock,
-	EnclaveValidatorAccessor,
+	TargetABlock,
+	EnclaveTargetAValidatorAccessor,
 	EnclaveStfExecutor,
 	TargetAEnclaveExtrinsicsFactory,
 	TargetAParentchainIndirectCallsExecutor,
@@ -298,8 +318,8 @@ pub type TargetBParentchainIndirectCallsExecutor = IndirectCallsExecutor<
 >;
 
 pub type TargetBParentchainBlockImporter = ParentchainBlockImporter<
-	ParentchainBlock,
-	EnclaveValidatorAccessor,
+	TargetBBlock,
+	EnclaveTargetBValidatorAccessor,
 	EnclaveStfExecutor,
 	TargetBEnclaveExtrinsicsFactory,
 	TargetBParentchainIndirectCallsExecutor,
@@ -322,7 +342,7 @@ pub type TargetBParentchainBlockImportDispatcher = BlockImportDispatcher<
 /// Sidechain types
 pub type EnclaveTopPool = BasicPool<
 	EnclaveSidechainApi,
-	ParentchainBlock,
+	IntegriteeBlock,
 	EnclaveRpcResponder,
 	TrustedOperation<EnclaveTrustedCallSigned, EnclaveGetter>,
 >;
@@ -336,10 +356,10 @@ pub type EnclaveTopPoolAuthor = Author<
 	EnclaveGetter,
 >;
 pub type EnclaveSidechainBlockComposer =
-	BlockComposer<ParentchainBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
+	BlockComposer<IntegriteeBlock, SignedSidechainBlock, Pair, EnclaveStateKeyRepository>;
 pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 	Pair,
-	ParentchainBlock,
+	IntegriteeBlock,
 	SignedSidechainBlock,
 	EnclaveOCallApi,
 	EnclaveStateHandler,
@@ -352,21 +372,21 @@ pub type EnclaveSidechainBlockImporter = SidechainBlockImporter<
 >;
 pub type EnclaveSidechainBlockImportQueue = ImportQueue<SignedSidechainBlock>;
 pub type EnclaveBlockImportConfirmationHandler = BlockImportConfirmationHandler<
-	ParentchainBlock,
+	IntegriteeBlock,
 	<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
 	EnclaveNodeMetadataRepository,
 	IntegriteeEnclaveExtrinsicsFactory,
-	EnclaveValidatorAccessor,
+	EnclaveIntegriteeValidatorAccessor,
 >;
 pub type EnclaveSidechainBlockSyncer = PeerBlockSync<
-	ParentchainBlock,
+	IntegriteeBlock,
 	SignedSidechainBlock,
 	EnclaveSidechainBlockImporter,
 	EnclaveOCallApi,
 	EnclaveBlockImportConfirmationHandler,
 >;
 pub type EnclaveSidechainBlockImportQueueWorker = BlockImportQueueWorker<
-	ParentchainBlock,
+	IntegriteeBlock,
 	SignedSidechainBlock,
 	EnclaveSidechainBlockImportQueue,
 	EnclaveSidechainBlockSyncer,
@@ -375,16 +395,16 @@ pub type EnclaveSealHandler = SealHandler<
 	EnclaveShieldingKeyRepository,
 	EnclaveStateKeyRepository,
 	EnclaveStateHandler,
-	EnclaveLightClientSeal,
+	EnclaveIntegriteeLightClientSeal,
 >;
 
 pub type EnclaveOffchainWorkerExecutor<ExtrinsicsFactory> =
 	itc_offchain_worker_executor::executor::Executor<
-		ParentchainBlock,
+		IntegriteeBlock,
 		EnclaveTopPoolAuthor,
 		EnclaveStfExecutor,
 		EnclaveStateHandler,
-		EnclaveValidatorAccessor,
+		EnclaveIntegriteeValidatorAccessor,
 		ExtrinsicsFactory,
 		EnclaveStf,
 		EnclaveTrustedCallSigned,
@@ -410,17 +430,17 @@ pub static GLOBAL_SIGNING_KEY_REPOSITORY_COMPONENT: ComponentContainer<
 
 /// Light client db seal for the Integritee parentchain
 pub static GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
-	EnclaveLightClientSeal,
+	EnclaveIntegriteeLightClientSeal,
 > = ComponentContainer::new("Integritee Parentchain EnclaveLightClientSealSync");
 
 /// Light client db seal for the Target A parentchain.
 pub static GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
-	EnclaveLightClientSeal,
+	EnclaveTargetALightClientSeal,
 > = ComponentContainer::new("Target A EnclaveLightClientSealSync");
 
 /// Light client db seal for the Target A parentchain.
 pub static GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL: ComponentContainer<
-	EnclaveLightClientSeal,
+	EnclaveTargetBLightClientSeal,
 > = ComponentContainer::new("Target B EnclaveLightClientSealSync");
 
 /// O-Call API

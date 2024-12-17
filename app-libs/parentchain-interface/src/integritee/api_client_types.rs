@@ -47,6 +47,7 @@ pub type IntegriteeUncheckedExtrinsic<Call> =
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 pub type Block = generic::Block<Header, IntegriteeUncheckedExtrinsic<([u8; 2])>>;
+pub type SignedBlock = generic::SignedBlock<Block>;
 
 #[cfg(feature = "std")]
 pub use api::*;

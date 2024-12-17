@@ -27,6 +27,7 @@ use crate::{
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
+use sp_runtime::generic;
 
 pub type TargetARuntimeConfig = ParentchainRuntimeConfig<TargetATip>;
 
@@ -44,9 +45,12 @@ pub type TargetAUncheckedExtrinsic<Call> =
 
 /// Signature type of the [UncheckedExtrinsicV4].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
+pub type Block = generic::Block<Header, TargetAUncheckedExtrinsic<([u8; 2])>>;
+pub type SignedBlock = generic::SignedBlock<Block>;
 
 #[cfg(feature = "std")]
 pub use api::*;
+use itp_types::parentchain::Header;
 
 #[cfg(feature = "std")]
 mod api {
