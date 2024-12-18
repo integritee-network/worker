@@ -35,7 +35,6 @@ use itc_parentchain_block_import_dispatcher::triggered_dispatcher::TriggerParent
 use itp_ocall_api::EnclaveOnChainOCallApi;
 use itp_time_utils::duration_now;
 
-use itp_types::parentchain::{Hash, Header};
 use itp_utils::hex::hex_encode;
 use its_block_verification::slot::slot_author;
 use its_consensus_common::{Environment, Error as ConsensusError, Proposer};
@@ -49,7 +48,7 @@ use sp_core::crypto::UncheckedFrom;
 use sp_runtime::{
 	app_crypto::{sp_core::H256, Pair},
 	generic::SignedBlock as SignedParentchainBlock,
-	traits::{Block as ParentchainBlockTrait, Header as ParentchainBlockHeaderTrait},
+	traits::{Block as ParentchainBlockTrait, Header as ParentchainHeaderTrait},
 };
 use std::{string::ToString, sync::Arc, time::Duration, vec::Vec};
 
@@ -66,7 +65,7 @@ mod test;
 /// Aura consensus struct.
 pub struct Aura<
 	AuthorityPair,
-	IntegriteeBlock,
+	ParentchainBlock,
 	SidechainBlock,
 	Environment,
 	OcallApi,
@@ -81,12 +80,12 @@ pub struct Aura<
 	maybe_parentchain_target_b_import_trigger: Option<Arc<TargetBImportTrigger>>,
 	environment: Environment,
 	claim_strategy: SlotClaimStrategy,
-	_phantom: PhantomData<(AuthorityPair, IntegriteeBlock, SidechainBlock)>,
+	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, SidechainBlock)>,
 }
 
 impl<
 		AuthorityPair,
-		IntegriteeBlock,
+		ParentchainBlock,
 		SidechainBlock,
 		Environment,
 		OcallApi,
@@ -96,7 +95,7 @@ impl<
 	>
 	Aura<
 		AuthorityPair,
-		IntegriteeBlock,
+		ParentchainBlock,
 		SidechainBlock,
 		Environment,
 		OcallApi,
@@ -151,43 +150,38 @@ type ShardIdentifierFor<SignedSidechainBlock> =
 
 impl<
 		AuthorityPair,
-		IntegriteeBlock,
-		TargetABlock,
-		TargetBBlock,
+		ParentchainBlock,
 		SignedSidechainBlock,
 		E,
 		OcallApi,
 		IntegriteeImportTrigger,
 		TargetAImportTrigger,
 		TargetBImportTrigger,
-	> SimpleSlotWorker<IntegriteeBlock::Header>
+	> SimpleSlotWorker<ParentchainBlock>
 	for Aura<
 		AuthorityPair,
-		IntegriteeBlock,
+		ParentchainBlock,
 		SignedSidechainBlock,
 		E,
 		OcallApi,
 		IntegriteeImportTrigger,
 		TargetAImportTrigger,
 		TargetBImportTrigger,
-	>
-where
+	> where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: UncheckedFrom<[u8; 32]>,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
-	IntegriteeBlock: ParentchainBlockTrait<Hash = BlockHash, Header = Header>,
-	TargetABlock: ParentchainBlockTrait<Hash = BlockHash, Header = Header>,
-	TargetBBlock: ParentchainBlockTrait<Hash = BlockHash, Header = Header>,
-	E: Environment<Header, SignedSidechainBlock, Error = ConsensusError>,
-	E::Proposer: Proposer<Header, SignedSidechainBlock>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
+	E: Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError>,
+	E::Proposer: Proposer<ParentchainBlock, SignedSidechainBlock>,
 	SignedSidechainBlock: SignedBlock + Send + 'static,
 	OcallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	IntegriteeImportTrigger:
-		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<IntegriteeBlock>>,
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 	TargetAImportTrigger:
-		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<TargetABlock>>,
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 	TargetBImportTrigger:
-		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<TargetBBlock>>,
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 {
 	type Proposer = E::Proposer;
 	type Claim = AuthorityPair::Public;
@@ -200,11 +194,11 @@ where
 
 	fn epoch_data(
 		&self,
-		header: &IntegriteeBlock::Header,
+		header: &ParentchainBlock::Header,
 		shard: ShardIdentifierFor<Self::Output>,
 		_slot: Slot,
 	) -> Result<Self::EpochData, ConsensusError> {
-		authorities::<_, AuthorityPair, SignedSidechainBlock, IntegriteeBlock::Header>(
+		authorities::<_, AuthorityPair, SignedSidechainBlock, ParentchainBlock::Header>(
 			&self.ocall_api,
 			header,
 			shard,
@@ -218,7 +212,7 @@ where
 	// While the header is not used in aura, it is used in different consensus systems, so it should be left there.
 	fn claim_slot(
 		&self,
-		_header: &IntegriteeBlock::Header,
+		_header: &ParentchainBlock::Header,
 		slot: Slot,
 		epoch_data: &Self::EpochData,
 	) -> Option<Self::Claim> {
@@ -242,16 +236,13 @@ where
 
 	fn proposer(
 		&mut self,
-		header: IntegriteeBlock::Header,
+		header: ParentchainBlock::Header,
 		shard: ShardIdentifierFor<Self::Output>,
 	) -> Result<Self::Proposer, ConsensusError> {
 		self.environment.init(header, shard)
 	}
 
-	fn proposing_remaining_duration(
-		&self,
-		slot_info: &SlotInfo<IntegriteeBlock::Header>,
-	) -> Duration {
+	fn proposing_remaining_duration(&self, slot_info: &SlotInfo<ParentchainBlock>) -> Duration {
 		proposing_remaining_duration(slot_info, duration_now())
 	}
 
@@ -261,8 +252,8 @@ where
 
 	fn import_integritee_parentchain_blocks_until(
 		&self,
-		parentchain_header_hash: &<IntegriteeBlock::Header as ParentchainBlockHeaderTrait>::Hash,
-	) -> Result<Option<IntegriteeBlock::Header>, ConsensusError> {
+		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		log::trace!(target: self.logging_target(), "import Integritee blocks until {}", hex_encode(parentchain_header_hash.encode().as_ref()));
 		let maybe_parentchain_block = self
 			.parentchain_integritee_import_trigger
@@ -276,8 +267,8 @@ where
 
 	fn import_target_a_parentchain_blocks_until(
 		&self,
-		parentchain_header_hash: &Hash,
-	) -> Result<Option<Header>, ConsensusError> {
+		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		log::trace!(target: self.logging_target(), "import TargetA blocks until {}", hex_encode(parentchain_header_hash.encode().as_ref()));
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_a_import_trigger
@@ -293,8 +284,8 @@ where
 
 	fn import_target_b_parentchain_blocks_until(
 		&self,
-		parentchain_header_hash: &Hash,
-	) -> Result<Option<Header>, ConsensusError> {
+		parentchain_header_hash: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		log::trace!(target: self.logging_target(), "import TargetB blocks until {}", hex_encode(parentchain_header_hash.encode().as_ref()));
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_b_import_trigger
@@ -308,7 +299,9 @@ where
 		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
 	}
 
-	fn peek_latest_integritee_parentchain_header(&self) -> Result<Option<Header>, ConsensusError> {
+	fn peek_latest_integritee_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		let maybe_parentchain_block = self
 			.parentchain_integritee_import_trigger
 			.peek_latest()
@@ -317,7 +310,9 @@ where
 		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
 	}
 
-	fn peek_latest_target_a_parentchain_header(&self) -> Result<Option<Header>, ConsensusError> {
+	fn peek_latest_target_a_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_a_import_trigger
 			.clone()
@@ -328,7 +323,9 @@ where
 		Ok(maybe_parentchain_block.map(|b| b.block.header().clone()))
 	}
 
-	fn peek_latest_target_b_parentchain_header(&self) -> Result<Option<Header>, ConsensusError> {
+	fn peek_latest_target_b_parentchain_header(
+		&self,
+	) -> Result<Option<ParentchainBlock::Header>, ConsensusError> {
 		let maybe_parentchain_block = self
 			.maybe_parentchain_target_b_import_trigger
 			.clone()
@@ -341,8 +338,8 @@ where
 }
 
 /// unit-testable remaining duration fn.
-fn proposing_remaining_duration<ParentchainBlockHeader: ParentchainBlockHeaderTrait>(
-	slot_info: &SlotInfo<ParentchainBlockHeader>,
+fn proposing_remaining_duration<ParentchainBlock: ParentchainBlockTrait>(
+	slot_info: &SlotInfo<ParentchainBlock>,
 	now: Duration,
 ) -> Duration {
 	// if a `now` before slot begin is passed such that `slot_remaining` would be bigger than `slot.slot_duration`
@@ -367,7 +364,7 @@ where
 	ValidateerFetcher: ValidateerFetch + EnclaveOnChainOCallApi,
 	P: Pair,
 	P::Public: UncheckedFrom<[u8; 32]>,
-	ParentchainHeader: ParentchainBlockHeaderTrait<Hash = H256>,
+	ParentchainHeader: ParentchainHeaderTrait<Hash = H256>,
 	SignedSidechainBlock: its_primitives::traits::SignedBlock,
 {
 	Ok(ocall_api
@@ -420,7 +417,7 @@ mod tests {
 		get_aura(Default::default(), Default::default())
 	}
 
-	fn now_slot(slot: Slot, header: &ParentchainHeader) -> SlotInfo<ParentchainBlock::Header> {
+	fn now_slot(slot: Slot, header: &ParentchainHeader) -> SlotInfo<ParentchainBlock> {
 		let now = duration_now();
 		SlotInfo {
 			slot,
@@ -433,7 +430,7 @@ mod tests {
 		}
 	}
 
-	fn now_slot_with_default_header(slot: Slot) -> SlotInfo<ParentchainBlock::Header> {
+	fn now_slot_with_default_header(slot: Slot) -> SlotInfo<ParentchainBlock> {
 		now_slot(slot, &ParentchainHeaderBuilder::default().build())
 	}
 

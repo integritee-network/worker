@@ -98,8 +98,7 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	>
-where
+	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -184,7 +183,7 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	> BlockImport<ParentchainBlock::Header, SignedSidechainBlock>
+	> BlockImport<ParentchainBlock, SignedSidechainBlock>
 	for BlockImporter<
 		Authority,
 		ParentchainBlock,
@@ -196,8 +195,7 @@ impl<
 		ParentchainBlockImporter,
 		TCS,
 		G,
-	>
-where
+	> where
 	Authority: Pair,
 	Authority::Public: std::fmt::Debug + UncheckedFrom<[u8; 32]>,
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -220,8 +218,7 @@ where
 	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
 {
-	type Verifier =
-		AuraVerifier<Authority, ParentchainBlock::Header, SignedSidechainBlock, OCallApi>;
+	type Verifier = AuraVerifier<Authority, ParentchainBlock, SignedSidechainBlock, OCallApi>;
 	type SidechainState = SgxExternalities;
 	type StateCrypto = <StateKeyRepository as AccessKey>::KeyType;
 	type Context = OCallApi;
@@ -230,7 +227,7 @@ where
 		&self,
 		maybe_last_sidechain_block: Option<SignedSidechainBlock::Block>,
 	) -> Self::Verifier {
-		AuraVerifier::<Authority, ParentchainBlock::Header, _, _>::new(
+		AuraVerifier::<Authority, ParentchainBlock, _, _>::new(
 			SLOT_DURATION,
 			maybe_last_sidechain_block,
 		)

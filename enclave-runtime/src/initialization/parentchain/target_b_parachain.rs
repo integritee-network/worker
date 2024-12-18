@@ -26,7 +26,7 @@ use crate::{
 	initialization::{
 		global_components::{
 			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
-			EnclaveTargetBValidatorAccessor, TargetBEnclaveExtrinsicsFactory,
+			EnclaveValidatorAccessor, TargetBEnclaveExtrinsicsFactory,
 			TargetBParentchainBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 			GLOBAL_TARGET_B_PARENTCHAIN_NONCE_CACHE,
@@ -38,7 +38,6 @@ use crate::{
 		},
 	},
 };
-use ita_parentchain_interface::target_b::api_client_types::Block as TargetBBlock;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 pub use itc_parentchain::primitives::{ParachainBlock, ParachainHeader, ParachainParams};
 use itp_component_container::ComponentGetter;
@@ -52,7 +51,7 @@ pub struct TargetBParachainHandler {
 	pub genesis_header: ParachainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
-	pub validator_accessor: Arc<EnclaveTargetBValidatorAccessor>,
+	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<TargetBEnclaveExtrinsicsFactory>,
 	pub import_dispatcher: Arc<TargetBParentchainBlockImportDispatcher>,
 }
@@ -71,12 +70,12 @@ impl TargetBParachainHandler {
 
 		let light_client_seal = GLOBAL_TARGET_B_PARENTCHAIN_LIGHT_CLIENT_SEAL.get()?;
 		let validator = itc_parentchain::light_client::io::read_or_init_parachain_validator::<
-			TargetBBlock,
+			ParachainBlock,
 			EnclaveOCallApi,
 			_,
 		>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::TargetB)?;
 		let validator_accessor =
-			Arc::new(EnclaveTargetBValidatorAccessor::new(validator, light_client_seal));
+			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 

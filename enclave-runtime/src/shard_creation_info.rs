@@ -125,15 +125,13 @@ fn init_shard_creation_parentchain_header_internal(
 }
 
 fn get_genesis_hash(parentchain_id: ParentchainId) -> EnclaveResult<Hash> {
-	match parentchain_id {
-		ParentchainId::Integritee =>
-			get_validator_accessor_from_integritee_solo_or_parachain()?.genesis_hash(),
-		ParentchainId::TargetA =>
-			get_validator_accessor_from_target_a_solo_or_parachain()?.genesis_hash(),
-		ParentchainId::TargetB =>
-			get_validator_accessor_from_target_b_solo_or_parachain()?.genesis_hash(),
-	}
-	.ok_or_else(|| Error::Other("genesis hash missing for parentchain".into()))
+	let va = match parentchain_id {
+		ParentchainId::Integritee => get_validator_accessor_from_integritee_solo_or_parachain(),
+		ParentchainId::TargetA => get_validator_accessor_from_target_a_solo_or_parachain(),
+		ParentchainId::TargetB => get_validator_accessor_from_target_b_solo_or_parachain(),
+	}?;
+	va.genesis_hash()
+		.ok_or_else(|| Error::Other("genesis hash missing for parentchain".into()))
 }
 /// reads the shard vault account id form state if it has been initialized previously
 pub(crate) fn get_shard_creation_info_internal(

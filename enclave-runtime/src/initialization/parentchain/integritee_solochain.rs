@@ -19,8 +19,8 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveIntegriteeValidatorAccessor, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, IntegriteeParentchainBlockImportDispatcher,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT,
@@ -32,7 +32,6 @@ use crate::{
 		},
 	},
 };
-use ita_parentchain_interface::integritee::api_client_types::Block as IntegriteeBlock;
 use itc_parentchain::light_client::{concurrent_access::ValidatorAccess, LightClientState};
 use itp_component_container::ComponentGetter;
 use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
@@ -47,7 +46,7 @@ pub struct IntegriteeSolochainHandler {
 	pub genesis_header: SolochainHeader,
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
-	pub validator_accessor: Arc<EnclaveIntegriteeValidatorAccessor>,
+	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
 	pub extrinsics_factory: Arc<IntegriteeEnclaveExtrinsicsFactory>,
 	pub import_dispatcher: Arc<IntegriteeParentchainBlockImportDispatcher>,
 }
@@ -67,12 +66,12 @@ impl IntegriteeSolochainHandler {
 
 		let validator =
 			itc_parentchain::light_client::io::read_or_init_grandpa_validator::<
-				IntegriteeBlock,
+				SolochainBlock,
 				EnclaveOCallApi,
 				_,
 			>(params, ocall_api.clone(), &*light_client_seal, ParentchainId::Integritee)?;
 		let validator_accessor =
-			Arc::new(EnclaveIntegriteeValidatorAccessor::new(validator, light_client_seal));
+			Arc::new(EnclaveValidatorAccessor::new(validator, light_client_seal));
 
 		let genesis_hash = validator_accessor.execute_on_validator(|v| v.genesis_hash())?;
 

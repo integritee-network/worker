@@ -25,22 +25,22 @@ use its_primitives::{
 };
 use its_validateer_fetch::ValidateerFetch;
 use sp_core::crypto::UncheckedFrom;
-use sp_runtime::{app_crypto::Pair, traits::Header as ParentchainBlockHeaderTrait};
+use sp_runtime::{app_crypto::Pair, traits::Block as ParentchainBlockTrait};
 use std::{fmt::Debug, time::Duration};
 
 #[derive(Default)]
-pub struct AuraVerifier<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock, Context>
+pub struct AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 where
 	SignedSidechainBlock: SignedSidechainBlockTrait + 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
 {
 	slot_duration: Duration,
 	last_sidechain_block: Option<SignedSidechainBlock::Block>,
-	_phantom: PhantomData<(AuthorityPair, ParentchainBlockHeader, Context)>,
+	_phantom: PhantomData<(AuthorityPair, ParentchainBlock, Context)>,
 }
 
-impl<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock, Context>
-	AuraVerifier<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock, Context>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
+	AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 where
 	SignedSidechainBlock: SignedSidechainBlockTrait + 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
@@ -53,14 +53,14 @@ where
 	}
 }
 
-impl<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock, Context>
-	Verifier<ParentchainBlockHeader, SignedSidechainBlock>
-	for AuraVerifier<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock, Context>
+impl<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
+	Verifier<ParentchainBlock, SignedSidechainBlock>
+	for AuraVerifier<AuthorityPair, ParentchainBlock, SignedSidechainBlock, Context>
 where
 	AuthorityPair: Pair,
 	AuthorityPair::Public: Debug + UncheckedFrom<[u8; 32]>,
 	// todo: Relax hash trait bound, but this needs a change to some other parts in the code.
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait<Hash = BlockHash>,
+	ParentchainBlock: ParentchainBlockTrait<Hash = BlockHash>,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = AuthorityPair::Public> + 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
 	Context: ValidateerFetch + EnclaveOnChainOCallApi + Send + Sync,
@@ -72,7 +72,7 @@ where
 	fn verify(
 		&self,
 		signed_block: SignedSidechainBlock,
-		parentchain_header: &ParentchainBlockHeader,
+		parentchain_header: &ParentchainBlock::Header,
 		shard: ShardIdentifierFor<SignedSidechainBlock>,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams, ConsensusError> {
@@ -80,10 +80,10 @@ where
 			_,
 			AuthorityPair,
 			SignedSidechainBlock,
-			ParentchainBlockHeader,
+			ParentchainBlock::Header,
 		>(ctx, parentchain_header, shard)?;
 
-		Ok(verify_sidechain_block::<AuthorityPair, ParentchainBlockHeader, SignedSidechainBlock>(
+		Ok(verify_sidechain_block::<AuthorityPair, ParentchainBlock, SignedSidechainBlock>(
 			signed_block,
 			self.slot_duration,
 			&self.last_sidechain_block,

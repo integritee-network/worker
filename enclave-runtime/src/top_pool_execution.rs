@@ -39,11 +39,6 @@ use crate::{
 	},
 };
 use codec::Encode;
-use ita_parentchain_interface::{
-	integritee::api_client_types::SignedBlock as IntegriteeSignedBlock,
-	target_a::api_client_types::SignedBlock as TargetASignedBlock,
-	target_b::api_client_types::SignedBlock as TargetBSignedBlock,
-};
 use itc_parentchain::{
 	block_import_dispatcher::triggered_dispatcher::TriggerParentchainBlockImport,
 	light_client::{
@@ -227,7 +222,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 			log_remaining_slot_duration(&slot, SlotStage::BeforeAura);
 
-			let env = ProposerFactory::<Block::Header, _, _, _>::new(
+			let env = ProposerFactory::<Block, _, _, _>::new(
 				top_pool_author,
 				stf_executor,
 				block_composer,
@@ -278,7 +273,7 @@ pub(crate) fn exec_aura_on_slot<
 	TargetABlockImportTrigger,
 	TargetBBlockImportTrigger,
 >(
-	slot: SlotInfo<ParentchainBlock::Header>,
+	slot: SlotInfo<ParentchainBlock>,
 	authority: Authority,
 	ocall_api: Arc<OCallApi>,
 	integritee_block_import_trigger: Arc<IntegriteeBlockImportTrigger>,
@@ -299,13 +294,14 @@ where
 	Authority::Public: Encode + UncheckedFrom<[u8; 32]>,
 	OCallApi: ValidateerFetch + EnclaveOnChainOCallApi + Send + 'static,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
-	PEnvironment: Environment<ParentchainBlock::Header, SignedSidechainBlock, Error = ConsensusError>
-		+ Send
-		+ Sync,
+	PEnvironment:
+		Environment<ParentchainBlock, SignedSidechainBlock, Error = ConsensusError> + Send + Sync,
 	IntegriteeBlockImportTrigger:
-		TriggerParentchainBlockImport<SignedBlockType = IntegriteeSignedBlock>,
-	TargetABlockImportTrigger: TriggerParentchainBlockImport<SignedBlockType = TargetASignedBlock>,
-	TargetBBlockImportTrigger: TriggerParentchainBlockImport<SignedBlockType = TargetBSignedBlock>,
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
+	TargetABlockImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
+	TargetBBlockImportTrigger:
+		TriggerParentchainBlockImport<SignedBlockType = SignedParentchainBlock<ParentchainBlock>>,
 {
 	debug!("[Aura] Executing aura for slot: {:?}", slot);
 
@@ -383,7 +379,7 @@ where
 }
 
 fn log_remaining_slot_duration<B: BlockTrait<Hash = H256>>(
-	slot_info: &SlotInfo<B::Header>,
+	slot_info: &SlotInfo<B>,
 	stage: SlotStage,
 ) {
 	GLOBAL_OCALL_API_COMPONENT

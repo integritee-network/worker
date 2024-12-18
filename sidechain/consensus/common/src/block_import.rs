@@ -27,18 +27,18 @@ use its_primitives::traits::{
 };
 use its_state::{LastBlockExt, SidechainState};
 use log::*;
-use sp_runtime::traits::Header as ParentchainBlockHeaderTrait;
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Instant, vec::Vec};
 
-pub trait BlockImport<ParentchainBlockHeader, SignedSidechainBlock>
+pub trait BlockImport<ParentchainBlock, SignedSidechainBlock>
 where
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	SignedSidechainBlock::Block: SidechainBlockTrait,
 {
 	/// The verifier for of the respective consensus instance.
 	type Verifier: Verifier<
-		ParentchainBlockHeader,
+		ParentchainBlock,
 		SignedSidechainBlock,
 		BlockImportParams = SignedSidechainBlock,
 		Context = Self::Context,
@@ -97,8 +97,8 @@ where
 	fn import_parentchain_block(
 		&self,
 		sidechain_block: &SignedSidechainBlock::Block,
-		last_imported_parentchain_header: &ParentchainBlockHeader,
-	) -> Result<ParentchainBlockHeader, Error>;
+		last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, Error>;
 
 	/// Peek the parentchain import queue for the block that is associated with a given sidechain.
 	/// Does not perform the import or mutate the queue.
@@ -107,8 +107,8 @@ where
 	fn peek_parentchain_header(
 		&self,
 		sidechain_block: &SignedSidechainBlock::Block,
-		last_imported_parentchain_header: &ParentchainBlockHeader,
-	) -> Result<ParentchainBlockHeader, Error>;
+		last_imported_parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, Error>;
 	/// Cleanup task after import is done.
 	fn cleanup(&self, signed_sidechain_block: &SignedSidechainBlock) -> Result<(), Error>;
 
@@ -116,8 +116,8 @@ where
 	fn import_block(
 		&self,
 		signed_sidechain_block: SignedSidechainBlock,
-		parentchain_header: &ParentchainBlockHeader,
-	) -> Result<ParentchainBlockHeader, Error> {
+		parentchain_header: &ParentchainBlock::Header,
+	) -> Result<ParentchainBlock::Header, Error> {
 		let start_time = Instant::now();
 
 		let sidechain_block = signed_sidechain_block.block().clone();

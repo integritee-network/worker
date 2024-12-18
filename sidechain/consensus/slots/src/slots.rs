@@ -27,7 +27,7 @@ use its_primitives::traits::{
 };
 use lazy_static::lazy_static;
 use log::warn;
-use sp_runtime::traits::Header as ParentchainBlockHeaderTrait;
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::time::Duration;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
@@ -54,7 +54,7 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 
 /// Information about a slot.
 #[derive(Debug, Clone)]
-pub struct SlotInfo<ParentchainBlockHeader: ParentchainBlockHeaderTrait> {
+pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The slot number as found in the inherent data.
 	pub slot: Slot,
 	/// Current timestamp as found in the inherent data.
@@ -64,14 +64,14 @@ pub struct SlotInfo<ParentchainBlockHeader: ParentchainBlockHeaderTrait> {
 	/// The time at which the slot ends.
 	pub ends_at: Duration,
 	/// Last imported parentchain header, potentially outdated.
-	pub last_imported_integritee_parentchain_head: ParentchainBlockHeader,
+	pub last_imported_integritee_parentchain_head: ParentchainBlock::Header,
 	/// Last imported parentchain header, potentially outdated.
-	pub maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlockHeader>,
+	pub maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
 	/// Last imported parentchain header, potentially outdated.
-	pub maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlockHeader>,
+	pub maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
 }
 
-impl<ParentchainBlockHeader: ParentchainBlockHeaderTrait> SlotInfo<ParentchainBlockHeader> {
+impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {
 	/// Create a new [`SlotInfo`].
 	///
 	/// `ends_at` is calculated using `now` and `time_until_next_slot`.
@@ -80,9 +80,9 @@ impl<ParentchainBlockHeader: ParentchainBlockHeaderTrait> SlotInfo<ParentchainBl
 		timestamp: Duration,
 		duration: Duration,
 		ends_at: Duration,
-		last_imported_integritee_parentchain_head: ParentchainBlockHeader,
-		maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlockHeader>,
-		maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlockHeader>,
+		last_imported_integritee_parentchain_head: ParentchainBlock::Header,
+		maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
+		maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
 	) -> Self {
 		Self {
 			slot,
@@ -113,10 +113,10 @@ pub fn slot_ends_at(slot: Slot, slot_duration: Duration) -> Duration {
 }
 
 pub(crate) fn timestamp_within_slot<
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 >(
-	slot: &SlotInfo<ParentchainBlockHeader>,
+	slot: &SlotInfo<ParentchainBlock>,
 	proposal: &SignedSidechainBlock,
 ) -> bool {
 	let proposal_stamp = proposal.block().block_data().timestamp();
@@ -136,17 +136,17 @@ pub(crate) fn timestamp_within_slot<
 	is_within_slot
 }
 
-pub fn yield_next_slot<SlotGetter, ParentchainBlockHeader>(
+pub fn yield_next_slot<SlotGetter, ParentchainBlock>(
 	timestamp: Duration,
 	duration: Duration,
-	integritee_header: ParentchainBlockHeader,
-	maybe_target_a_header: Option<ParentchainBlockHeader>,
-	maybe_target_b_header: Option<ParentchainBlockHeader>,
+	integritee_header: ParentchainBlock::Header,
+	maybe_target_a_header: Option<ParentchainBlock::Header>,
+	maybe_target_b_header: Option<ParentchainBlock::Header>,
 	last_slot_getter: &mut SlotGetter,
-) -> Result<Option<SlotInfo<ParentchainBlockHeader>>, ConsensusError>
+) -> Result<Option<SlotInfo<ParentchainBlock>>, ConsensusError>
 where
 	SlotGetter: LastSlotTrait,
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: ParentchainBlockTrait,
 {
 	if duration == Default::default() {
 		return Err(ConsensusError::Other("Tried to yield next slot with 0 duration".into()))
@@ -202,7 +202,7 @@ mod tests {
 	use super::*;
 	use core::assert_matches::assert_matches;
 	use itc_parentchain_test::ParentchainHeaderBuilder;
-	use itp_types::Header as ParentchainBlockHeader;
+	use itp_types::Block as ParentchainBlock;
 	use its_primitives::{
 		traits::{Block as BlockT, SignBlock},
 		types::block::{Block, SignedBlock},
@@ -225,7 +225,7 @@ mod tests {
 		Block::new(header, block_data).sign_block(&Keyring::Alice.pair())
 	}
 
-	fn slot(slot: u64) -> SlotInfo<ParentchainBlockHeader> {
+	fn slot(slot: u64) -> SlotInfo<ParentchainBlock> {
 		SlotInfo {
 			slot: slot.into(),
 			timestamp: duration_now(),
@@ -272,7 +272,7 @@ mod tests {
 		let slot: Slot = 1000.into();
 
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
-		let slot_one: SlotInfo<ParentchainBlockHeader> = SlotInfo::new(
+		let slot_one: SlotInfo<ParentchainBlock> = SlotInfo::new(
 			slot,
 			timestamp,
 			SLOT_DURATION,
@@ -282,7 +282,7 @@ mod tests {
 			None,
 		);
 		thread::sleep(Duration::from_millis(200));
-		let slot_two: SlotInfo<ParentchainBlockHeader> =
+		let slot_two: SlotInfo<ParentchainBlock> =
 			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header, None, None);
 
 		let difference_of_ends_at =
@@ -298,7 +298,7 @@ mod tests {
 
 	#[test]
 	fn duration_remaing_returns_none_if_ends_at_is_in_the_past() {
-		let slot: SlotInfo<ParentchainBlockHeader> = SlotInfo {
+		let slot: SlotInfo<ParentchainBlock> = SlotInfo {
 			slot: 1.into(),
 			timestamp: duration_now() - Duration::from_secs(5),
 			duration: SLOT_DURATION,
@@ -312,7 +312,7 @@ mod tests {
 
 	#[test]
 	fn duration_remaining_returns_some_if_ends_at_is_in_the_future() {
-		let slot: SlotInfo<ParentchainBlockHeader> = SlotInfo {
+		let slot: SlotInfo<ParentchainBlock> = SlotInfo {
 			slot: 1.into(),
 			timestamp: duration_now() - Duration::from_secs(5),
 			duration: SLOT_DURATION,
@@ -334,7 +334,7 @@ mod tests {
 		let slot_end_time = slot_ends_at(slot, SLOT_DURATION);
 
 		thread::sleep(SLOT_DURATION * 2);
-		let slot: SlotInfo<ParentchainBlockHeader> =
+		let slot: SlotInfo<ParentchainBlock> =
 			SlotInfo::new(slot, timestamp, SLOT_DURATION, slot_end_time, pc_header, None, None);
 
 		assert!(slot.ends_at < duration_now());
@@ -375,7 +375,7 @@ mod tests {
 	fn yield_next_slot_returns_none_when_slot_equals_last_slot() {
 		let _lock =
 			LastSlot.set_last_slot(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION));
-		assert!(yield_next_slot::<_, ParentchainBlockHeader>(
+		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now(),
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
@@ -391,7 +391,7 @@ mod tests {
 	fn yield_next_slot_returns_next_slot() {
 		let _lock =
 			LastSlot.set_last_slot(slot_from_timestamp_and_duration(duration_now(), SLOT_DURATION));
-		assert!(yield_next_slot::<_, ParentchainBlockHeader>(
+		assert!(yield_next_slot::<_, ParentchainBlock>(
 			duration_now() + SLOT_DURATION,
 			SLOT_DURATION,
 			ParentchainHeaderBuilder::default().build(),
@@ -406,7 +406,7 @@ mod tests {
 	#[test]
 	fn yield_next_slot_returns_err_on_0_duration() {
 		assert_consensus_other_err(
-			yield_next_slot::<_, ParentchainBlockHeader>(
+			yield_next_slot::<_, ParentchainBlock>(
 				duration_now(),
 				Default::default(),
 				ParentchainHeaderBuilder::default().build(),

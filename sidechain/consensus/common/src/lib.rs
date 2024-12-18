@@ -29,7 +29,7 @@ extern crate sgx_tstd as std;
 extern crate alloc;
 
 use its_primitives::traits::{ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait};
-use sp_runtime::traits::Header as ParentchainBlockHeaderTrait;
+use sp_runtime::traits::Block as ParentchainBlockTrait;
 use std::{time::Duration, vec::Vec};
 
 mod block_import;
@@ -53,9 +53,9 @@ pub use error::*;
 use itp_types::parentchain::ParentchainCall;
 pub use peer_block_sync::*;
 
-pub trait Verifier<ParentchainBlockHeader, SignedSidechainBlock>: Send + Sync
+pub trait Verifier<ParentchainBlock, SignedSidechainBlock>: Send + Sync
 where
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 {
 	/// Contains all the relevant data needed for block import
@@ -68,7 +68,7 @@ where
 	fn verify(
 		&self,
 		block: SignedSidechainBlock,
-		parentchain_header: &ParentchainBlockHeader,
+		parentchain_header: &ParentchainBlock::Header,
 		shard: ShardIdentifierFor<SignedSidechainBlock>,
 		ctx: &Self::Context,
 	) -> Result<Self::BlockImportParams>;
@@ -78,25 +78,25 @@ where
 ///
 /// Creates proposer instance.
 pub trait Environment<
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 >
 {
 	/// The proposer type this creates.
-	type Proposer: Proposer<ParentchainBlockHeader, SignedSidechainBlock> + Send;
+	type Proposer: Proposer<ParentchainBlock, SignedSidechainBlock> + Send;
 	/// Error which can occur upon creation.
 	type Error: From<Error> + std::fmt::Debug + 'static;
 
 	/// Initialize the proposal logic on top of a specific header.
 	fn init(
 		&mut self,
-		parent_header: ParentchainBlockHeader,
+		parent_header: ParentchainBlock::Header,
 		shard: ShardIdentifierFor<SignedSidechainBlock>,
 	) -> std::result::Result<Self::Proposer, Self::Error>;
 }
 
 pub trait Proposer<
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: ParentchainBlockTrait,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 >
 {

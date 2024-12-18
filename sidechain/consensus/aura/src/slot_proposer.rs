@@ -31,13 +31,16 @@ use its_primitives::traits::{
 };
 use its_state::{SidechainState, SidechainSystemExt};
 use log::*;
-use sp_runtime::{traits::Header as ParentchainBlockHeaderTrait, MultiSignature};
+use sp_runtime::{
+	traits::{Block, NumberFor},
+	MultiSignature,
+};
 use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration, vec::Vec};
 
 pub type ExternalitiesFor<T> = <T as StateUpdateProposer<TrustedCallSigned, Getter>>::Externalities;
 ///! `SlotProposer` instance that has access to everything needed to propose a sidechain block.
 pub struct SlotProposer<
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait,
+	ParentchainBlock: Block,
 	SignedSidechainBlock: SignedSidechainBlockTrait,
 	TopPoolAuthor,
 	StfExecutor,
@@ -46,23 +49,17 @@ pub struct SlotProposer<
 	pub(crate) top_pool_author: Arc<TopPoolAuthor>,
 	pub(crate) stf_executor: Arc<StfExecutor>,
 	pub(crate) block_composer: Arc<BlockComposer>,
-	pub(crate) parentchain_header: ParentchainBlockHeader,
+	pub(crate) parentchain_header: ParentchainBlock::Header,
 	pub(crate) shard: ShardIdentifierFor<SignedSidechainBlock>,
-	pub(crate) _phantom: PhantomData<ParentchainBlockHeader>,
+	pub(crate) _phantom: PhantomData<ParentchainBlock>,
 }
 
-impl<ParentchainBlockHeader, SignedSidechainBlock, TopPoolAuthor, BlockComposer, StfExecutor>
-	Proposer<ParentchainBlockHeader, SignedSidechainBlock>
-	for SlotProposer<
-		ParentchainBlockHeader,
-		SignedSidechainBlock,
-		TopPoolAuthor,
-		StfExecutor,
-		BlockComposer,
-	>
+impl<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, BlockComposer, StfExecutor>
+	Proposer<ParentchainBlock, SignedSidechainBlock>
+	for SlotProposer<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
 where
-	ParentchainBlockHeader: ParentchainBlockHeaderTrait<Hash = H256>,
-	ParentchainBlockHeader::Number: BlockNumberOps,
+	ParentchainBlock: Block<Hash = H256>,
+	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
 		+ 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,
@@ -72,13 +69,11 @@ where
 	ExternalitiesFor<StfExecutor>:
 		SgxExternalitiesTrait + SidechainState + SidechainSystemExt + StateHash,
 	<ExternalitiesFor<StfExecutor> as SgxExternalitiesTrait>::SgxExternalitiesType: Encode,
-	TopPoolAuthor: AuthorApi<H256, ParentchainBlockHeader::Hash, TrustedCallSigned, Getter>
-		+ Send
-		+ Sync
-		+ 'static,
+	TopPoolAuthor:
+		AuthorApi<H256, ParentchainBlock::Hash, TrustedCallSigned, Getter> + Send + Sync + 'static,
 	BlockComposer: ComposeBlock<
 			ExternalitiesFor<StfExecutor>,
-			ParentchainBlockHeader,
+			ParentchainBlock,
 			SignedSidechainBlock = SignedSidechainBlock,
 		> + Send
 		+ Sync
