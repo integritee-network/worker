@@ -170,17 +170,17 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 	/// None is returned.
 	fn import_integritee_parentchain_blocks_until(
 		&self,
-		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
 
 	fn import_target_a_parentchain_blocks_until(
 		&self,
-		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
 
 	fn import_target_b_parentchain_blocks_until(
 		&self,
-		last_imported_parentchain_header: &<ParentchainBlock::Header as ParentchainHeaderTrait>::Hash,
+		last_imported_parentchain_header: &ParentchainBlock::Header,
 	) -> Result<Option<ParentchainBlock::Header>, ConsensusError>;
 
 	/// Peek the parentchain import queue for the latest block in queue.
@@ -282,9 +282,9 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 		let _claim = self.claim_slot(&latest_integritee_parentchain_header, slot, &epoch_data)?;
 
 		// Import the peeked parentchain header(s).
-		let last_imported_integritee_header = match self.import_integritee_parentchain_blocks_until(
-			&latest_integritee_parentchain_header.hash(),
-		) {
+		let last_imported_integritee_header = match self
+			.import_integritee_parentchain_blocks_until(&latest_integritee_parentchain_header)
+		{
 			Ok(h) => h,
 			Err(e) => {
 				debug!(
@@ -302,7 +302,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		let maybe_last_imported_target_a_header =
 			if let Some(ref header) = maybe_latest_target_a_parentchain_header {
-				match self.import_target_a_parentchain_blocks_until(&header.hash()) {
+				match self.import_target_a_parentchain_blocks_until(&header) {
 					Ok(Some(h)) => Some(h),
 					Ok(None) => None,
 					Err(e) => {
@@ -324,7 +324,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		let maybe_last_imported_target_b_header =
 			if let Some(ref header) = maybe_latest_target_b_parentchain_header {
-				match self.import_target_b_parentchain_blocks_until(&header.hash()) {
+				match self.import_target_b_parentchain_blocks_until(&header) {
 					Ok(Some(h)) => Some(h),
 					Ok(None) => None,
 					Err(e) => {
