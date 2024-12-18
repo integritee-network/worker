@@ -302,7 +302,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		let maybe_last_imported_target_a_header =
 			if let Some(ref header) = maybe_latest_target_a_parentchain_header {
-				match self.import_target_a_parentchain_blocks_until(&header) {
+				match self.import_target_a_parentchain_blocks_until(header) {
 					Ok(Some(h)) => Some(h),
 					Ok(None) => None,
 					Err(e) => {
@@ -324,7 +324,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 
 		let maybe_last_imported_target_b_header =
 			if let Some(ref header) = maybe_latest_target_b_parentchain_header {
-				match self.import_target_b_parentchain_blocks_until(&header) {
+				match self.import_target_b_parentchain_blocks_until(header) {
 					Ok(Some(h)) => Some(h),
 					Ok(None) => None,
 					Err(e) => {
