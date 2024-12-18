@@ -251,7 +251,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 				Ok(Some(peeked_header)) => Some(peeked_header),
 				Ok(None) => slot_info.maybe_last_imported_target_b_parentchain_head.clone(),
 				Err(e) => {
-					debug!("Failed to peek latest target_a_parentchain block header: {:?}", e);
+					debug!("Failed to peek latest target_b_parentchain block header: {:?}", e);
 					None
 				},
 			};
