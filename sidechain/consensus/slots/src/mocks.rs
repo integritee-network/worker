@@ -96,7 +96,7 @@ where
 
 	fn import_integritee_parentchain_blocks_until(
 		&self,
-		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
+		_parentchain_header: &B::Header,
 	) -> Result<Option<B::Header>> {
 		todo!()
 	}
@@ -107,7 +107,7 @@ where
 
 	fn import_target_a_parentchain_blocks_until(
 		&self,
-		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
+		_parentchain_header: &B::Header,
 	) -> Result<Option<B::Header>> {
 		todo!()
 	}
@@ -118,7 +118,7 @@ where
 
 	fn import_target_b_parentchain_blocks_until(
 		&self,
-		_last_imported_parentchain_header: &<B::Header as ParentchainHeaderTrait>::Hash,
+		_parentchain_header: &B::Header,
 	) -> Result<Option<B::Header>> {
 		todo!()
 	}

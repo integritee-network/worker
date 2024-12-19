@@ -168,6 +168,7 @@ impl<
 			Error::Other(format!("Error when shielding for privacy sidechain {:?}", e).into())
 		})?;
 		trace!("xt_statuses:: {:?}", xt_statuses);
+		trace!("extrinsic count :: {:?}", block.extrinsics().len());
 
 		let shard = self.get_default_shard();
 		if let Ok((vault, _parentchain_id)) = self.stf_enclave_signer.get_shard_vault(&shard) {

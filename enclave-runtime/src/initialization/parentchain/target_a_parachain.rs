@@ -25,10 +25,11 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor, TargetAParentchainBlockImportDispatcher,
-			GLOBAL_OCALL_API_COMPONENT, GLOBAL_STATE_HANDLER_COMPONENT,
-			GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL, GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, TargetAEnclaveExtrinsicsFactory,
+			TargetAParentchainBlockImportDispatcher, GLOBAL_OCALL_API_COMPONENT,
+			GLOBAL_STATE_HANDLER_COMPONENT, GLOBAL_TARGET_A_PARENTCHAIN_LIGHT_CLIENT_SEAL,
+			GLOBAL_TARGET_A_PARENTCHAIN_NONCE_CACHE,
 		},
 		parentchain::common::{
 			create_extrinsics_factory, create_sidechain_triggered_import_dispatcher_for_target_a,
@@ -51,7 +52,7 @@ pub struct TargetAParachainHandler {
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
-	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	pub extrinsics_factory: Arc<TargetAEnclaveExtrinsicsFactory>,
 	pub import_dispatcher: Arc<TargetAParentchainBlockImportDispatcher>,
 }
 

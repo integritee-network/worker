@@ -16,7 +16,7 @@
 */
 
 use crate::{command_utils::get_chain_api, Cli};
-use itp_node_api::api_client::ParentchainApi;
+use ita_parentchain_interface::integritee::api_client_types::IntegriteeApi;
 use itp_time_utils::{duration_now, remaining_time};
 use itp_types::parentchain::OracleUpdated;
 use log::*;
@@ -41,7 +41,7 @@ impl ListenToOracleEventsCmd {
 	}
 }
 
-fn count_oracle_update_events(api: &ParentchainApi, duration: Duration) -> EventCount {
+fn count_oracle_update_events(api: &IntegriteeApi, duration: Duration) -> EventCount {
 	let stop = duration_now() + duration;
 
 	//subscribe to events

@@ -208,7 +208,7 @@ where
 				ParentchainId::TargetA =>
 					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
 				ParentchainId::TargetB =>
-					Stf::update_parentchain_target_a_block(&mut state, header.clone()),
+					Stf::update_parentchain_target_b_block(&mut state, header.clone()),
 			}?;
 			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}

@@ -17,10 +17,10 @@
 use crate::{
 	error::{Error, Result},
 	initialization::global_components::{
-		EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner,
-		EnclaveStfExecutor, EnclaveValidatorAccessor,
-		IntegriteeParentchainTriggeredBlockImportDispatcher,
-		TargetAParentchainTriggeredBlockImportDispatcher,
+		EnclaveNodeMetadataRepository, EnclaveStfEnclaveSigner, EnclaveStfExecutor,
+		EnclaveValidatorAccessor, IntegriteeEnclaveExtrinsicsFactory,
+		IntegriteeParentchainTriggeredBlockImportDispatcher, TargetAEnclaveExtrinsicsFactory,
+		TargetAParentchainTriggeredBlockImportDispatcher, TargetBEnclaveExtrinsicsFactory,
 		TargetBParentchainTriggeredBlockImportDispatcher,
 		GLOBAL_INTEGRITEE_PARACHAIN_HANDLER_COMPONENT, GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE,
 		GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT, GLOBAL_OCALL_API_COMPONENT,
@@ -206,7 +206,7 @@ pub(crate) fn get_node_metadata_repository_from_target_b_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<IntegriteeEnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_INTEGRITEE_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()
@@ -219,7 +219,7 @@ pub(crate) fn get_extrinsic_factory_from_integritee_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_target_a_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<TargetAEnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_TARGET_A_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()
@@ -232,7 +232,7 @@ pub(crate) fn get_extrinsic_factory_from_target_a_solo_or_parachain(
 }
 
 pub(crate) fn get_extrinsic_factory_from_target_b_solo_or_parachain(
-) -> Result<Arc<EnclaveExtrinsicsFactory>> {
+) -> Result<Arc<TargetBEnclaveExtrinsicsFactory>> {
 	let extrinsics_factory =
 		if let Ok(solochain_handler) = GLOBAL_TARGET_B_SOLOCHAIN_HANDLER_COMPONENT.get() {
 			solochain_handler.extrinsics_factory.clone()
@@ -308,12 +308,13 @@ pub(crate) fn get_stf_enclave_signer_from_solo_or_parachain() -> Result<Arc<Encl
 	Ok(stf_enclave_signer)
 }
 
-pub(crate) fn try_mortality(blocks_to_live: u64, ocall_api: &OcallApi) -> GenericMortality {
+pub(crate) fn try_mortality(
+	blocks_to_live: u64,
+	parentchain_id: &ParentchainId,
+	ocall_api: &OcallApi,
+) -> GenericMortality {
 	let response: Option<WorkerResponse<ParentchainHeader, Vec<u8>>> = ocall_api
-		.worker_request(
-			[WorkerRequest::LatestParentchainHeaderUnverified].into(),
-			&ParentchainId::Integritee,
-		)
+		.worker_request([WorkerRequest::LatestParentchainHeaderUnverified].into(), parentchain_id)
 		.ok()
 		.iter()
 		.filter_map(|r| r.first().cloned())
