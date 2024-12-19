@@ -79,6 +79,8 @@ pub fn subscribe_to_parentchain_events(
 					_ => continue,
 				},
 				"ParaInclusion" => continue,
+				"Session" => continue,
+				"Grandpa" => continue,
 				"MessageQueue" => continue,
 				"TransactionPayment" => continue,
 				"Treasury" => continue,
