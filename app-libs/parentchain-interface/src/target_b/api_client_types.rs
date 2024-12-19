@@ -21,8 +21,8 @@
 //! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
 
 use crate::{
-	AssetTip, GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra,
-	ParentchainRuntimeConfig, UncheckedExtrinsicV4,
+	GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra, ParentchainRuntimeConfig,
+	PlainTip, UncheckedExtrinsicV4,
 };
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
@@ -33,7 +33,7 @@ pub type TargetBRuntimeConfig = ParentchainRuntimeConfig<TargetBTip>;
 // Configuration for the ExtrinsicParams.
 
 // Using the AssetTip, as we assume that TargetB uses the `pallet_asset_tx_payment`.
-pub type TargetBTip = AssetTip<Balance>;
+pub type TargetBTip = PlainTip<Balance>;
 pub type TargetBExtrinsicParams = GenericExtrinsicParams<TargetBRuntimeConfig, TargetBTip>;
 pub type TargetBAdditionalParams = GenericAdditionalParams<TargetBRuntimeConfig, Hash>;
 
@@ -51,12 +51,15 @@ pub use api::*;
 
 #[cfg(feature = "std")]
 mod api {
-	use super::TargetBRuntimeConfig;
-	use substrate_api_client::Api;
+	use crate::ParentchainRuntimeConfig;
+	use itp_api_client_types::PlainTip;
+	use itp_types::parentchain::Balance;
 	pub use substrate_api_client::{
 		api::Error as ApiClientError,
 		rpc::{tungstenite_client::TungsteniteRpcClient, Error as RpcClientError},
+		Api,
 	};
 
-	pub type TargetBApi = Api<TargetBRuntimeConfig, TungsteniteRpcClient>;
+	pub type TargetBNodeConfig = ParentchainRuntimeConfig<PlainTip<Balance>>;
+	pub type TargetBApi = Api<TargetBNodeConfig, TungsteniteRpcClient>;
 }
