@@ -21,6 +21,7 @@ use crate::{
 	error::{Error, Result},
 	DispatchBlockImport,
 };
+use core::cmp::min;
 use itc_parentchain_block_importer::ImportParentchainBlocks;
 use itp_import_queue::{PeekQueue, PopFromQueue, PushToQueue};
 use log::trace;
@@ -182,10 +183,9 @@ where
 		let blocks_to_import =
 			self.import_queue.pop_until(predicate).map_err(Error::ImportQueue)?;
 
-		let events_to_import = self
-			.events_queue
-			.pop_from_front_until(blocks_to_import.len())
-			.map_err(Error::ImportQueue)?;
+		let depth = min(self.events_queue.peek_queue_size().unwrap_or(0), blocks_to_import.len());
+		let events_to_import =
+			self.events_queue.pop_from_front_until(depth).map_err(Error::ImportQueue)?;
 
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 		let parentchain_id = self.block_importer.parentchain_id();

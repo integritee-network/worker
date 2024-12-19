@@ -217,7 +217,7 @@ where
 				let max_blocknumber_in_chunk =
 					block_chunk_to_sync.last().map_or_else(|| 0, |b| b.block.header.number());
 				if max_blocknumber_in_chunk < creation_block.number {
-					trace!("skipping invocations for fast-sync for blocks older than shard creation: {} < {}", max_blocknumber_in_chunk, creation_block.number);
+					trace!("[{:?}] skipping invocations for fast-sync for blocks older than shard creation: {} < {}", id, max_blocknumber_in_chunk, creation_block.number);
 					true
 				} else {
 					false
