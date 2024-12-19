@@ -19,9 +19,9 @@ use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
 use itp_api_client_types::ParentchainApi;
 use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer, ExtrinsicFailed, ParentchainId};
-use log::warn;
+use log::{debug, warn};
 use sp_runtime::DispatchError;
-use substrate_api_client::SubscribeEvents;
+use substrate_api_client::{ac_primitives::Header, GetChainInfo, SubscribeEvents};
 
 pub fn subscribe_to_parentchain_events(
 	api: &ParentchainApi,
@@ -32,6 +32,17 @@ pub fn subscribe_to_parentchain_events(
 	let mut subscription = api.subscribe_events().unwrap();
 	while !shutdown_flag.load(Ordering::Relaxed) {
 		let events = subscription.next_events_from_metadata().unwrap().unwrap();
+		if let Some(header) = api.get_header(None).unwrap() {
+			let maybe_finalized_number =
+				api.get_header(api.get_finalized_head().unwrap()).unwrap().map(|h| h.number);
+			debug!(
+				"[{}] New block {} {} (finalized: {:?})",
+				parentchain_id,
+				header.number,
+				header.hash(),
+				maybe_finalized_number
+			);
+		};
 
 		for event in events.iter() {
 			let event = event.unwrap();

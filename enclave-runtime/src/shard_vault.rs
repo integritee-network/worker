@@ -189,7 +189,7 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	));
 
 	info!("[{:?}] vault funding call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let mortality = try_mortality(64, &ocall_api);
+	let mortality = try_mortality(64, &ocall_api, parentchain_id);
 	let xts = enclave_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
@@ -213,7 +213,7 @@ pub(crate) fn init_proxied_shard_vault_internal(
 	));
 
 	info!("[{:?}] add proxy call: 0x{}", parentchain_id, hex::encode(call.0.clone()));
-	let mortality = try_mortality(64, &ocall_api);
+	let mortality = try_mortality(64, &ocall_api, parentchain_id);
 	let xts = vault_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	ocall_api.send_to_parentchain(xts, &parentchain_id, false)?;
@@ -268,7 +268,7 @@ pub(crate) fn add_shard_vault_proxy(
 	));
 
 	info!("proxied add proxy call: 0x{}", hex::encode(call.0.clone()));
-	let mortality = try_mortality(64, &ocall_api);
+	let mortality = try_mortality(64, &ocall_api, parentchain_id);
 	let xts = enclave_extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	ocall_api.send_to_parentchain(xts, &ParentchainId::Integritee, false)?;

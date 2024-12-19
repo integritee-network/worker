@@ -154,7 +154,7 @@ pub unsafe extern "C" fn get_shard_creation_info(
 			return sgx_status_t::SGX_ERROR_UNEXPECTED
 		},
 	};
-	trace!("fetched shard creation header from state: {:?}", shard_creation_info);
+	trace!("fetched  shard creation header from state: {:?}", shard_creation_info);
 
 	let creation_slice = slice::from_raw_parts_mut(creation, creation_size as usize);
 	if let Err(e) = write_slice_and_whitespace_pad(creation_slice, shard_creation_info.encode()) {
