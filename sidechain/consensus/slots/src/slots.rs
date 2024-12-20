@@ -19,6 +19,7 @@
 //!
 //! This is used instead of `futures_timer::Interval` because it was unreliable.
 
+use core::fmt::{Debug, Formatter};
 use itp_time_utils::duration_now;
 use its_block_verification::slot::slot_from_timestamp_and_duration;
 use its_consensus_common::Error as ConsensusError;
@@ -27,8 +28,8 @@ use its_primitives::traits::{
 };
 use lazy_static::lazy_static;
 use log::warn;
-use sp_runtime::traits::Block as ParentchainBlockTrait;
-use std::time::Duration;
+use sp_runtime::traits::{Block as ParentchainBlockTrait, Header};
+use std::{string::String, time::Duration};
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 use std::sync::SgxRwLock as RwLock;
@@ -53,7 +54,7 @@ pub fn time_until_next_slot(slot_duration: Duration) -> Duration {
 }
 
 /// Information about a slot.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	/// The slot number as found in the inherent data.
 	pub slot: Slot,
@@ -69,6 +70,33 @@ pub struct SlotInfo<ParentchainBlock: ParentchainBlockTrait> {
 	pub maybe_last_imported_target_a_parentchain_head: Option<ParentchainBlock::Header>,
 	/// Last imported parentchain header, potentially outdated.
 	pub maybe_last_imported_target_b_parentchain_head: Option<ParentchainBlock::Header>,
+}
+
+fn header_info_fmt<P: ParentchainBlockTrait>(header: &P::Header) -> String {
+	format!("number: {:?}, hash: {:?}", header.number(), header.hash())
+}
+
+impl<P: ParentchainBlockTrait> Debug for SlotInfo<P> {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		write!(
+			f,
+			"SlotInfo {{ slot: {:?}, timestamp: {:?}, \
+        duration: {:?}, ends_at: {:?} integritee_head: ({:?}),\
+         maybe_last_imported_target_a_parentchain_head: ({:?}), \
+         maybe_last_imported_target_b_parentchain_head: ({:?}) }}",
+			self.slot,
+			self.timestamp,
+			self.duration,
+			self.ends_at,
+			header_info_fmt::<P>(&self.last_imported_integritee_parentchain_head),
+			self.maybe_last_imported_target_a_parentchain_head
+				.as_ref()
+				.map(header_info_fmt::<P>),
+			self.maybe_last_imported_target_b_parentchain_head
+				.as_ref()
+				.map(header_info_fmt::<P>),
+		)
+	}
 }
 
 impl<ParentchainBlock: ParentchainBlockTrait> SlotInfo<ParentchainBlock> {

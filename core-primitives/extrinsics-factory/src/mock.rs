@@ -14,24 +14,40 @@
 	limitations under the License.
 
 */
-
-use crate::{error::Result, CreateExtrinsics};
-use itp_node_api::api_client::ParentchainAdditionalParams;
-use itp_types::{parentchain::GenericMortality, OpaqueCall};
+use crate::{error::Result, AdditionalParamsOf, CreateExtrinsics};
+use core::marker::PhantomData;
+use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall};
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
+
+pub use itp_node_api::api_client::{
+	Config, GenericExtrinsicParams, ParentchainRuntimeConfig, PlainTip,
+};
 
 /// Mock of an extrinsics factory. To be used in unit tests.
 ///
 /// Returns an empty extrinsic.
-#[derive(Default, Clone)]
-pub struct ExtrinsicsFactoryMock;
+#[derive(Clone)]
+pub struct ExtrinsicsFactoryMock<C> {
+	_phantom: PhantomData<C>,
+}
 
-impl CreateExtrinsics for ExtrinsicsFactoryMock {
+impl<C> Default for ExtrinsicsFactoryMock<C> {
+	fn default() -> Self {
+		Self { _phantom: Default::default() }
+	}
+}
+
+impl CreateExtrinsics for ExtrinsicsFactoryMock<ParentchainRuntimeConfig> {
+	type Config = ParentchainRuntimeConfig;
+	type ExtrinsicParams = GenericExtrinsicParams<ParentchainRuntimeConfig, PlainTip<Balance>>;
+
 	fn create_extrinsics(
 		&self,
 		_calls: &[(OpaqueCall, GenericMortality)],
-		_additional_params: Option<ParentchainAdditionalParams>,
+		_additional_params: Option<
+			AdditionalParamsOf<ParentchainRuntimeConfig, Self::ExtrinsicParams>,
+		>,
 	) -> Result<Vec<OpaqueExtrinsic>> {
 		// Intention was to map an OpaqueCall to some dummy OpaqueExtrinsic,
 		// so the output vector has the same size as the input one (and thus can be tested from the outside).

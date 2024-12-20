@@ -17,13 +17,23 @@
 extern crate alloc;
 use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
-use itp_api_client_types::ParentchainApi;
-use itp_types::parentchain::{AddedSgxEnclave, BalanceTransfer, ExtrinsicFailed, ParentchainId};
+use itp_node_api::api_client::AccountApi;
+use itp_types::parentchain::{
+	AddedSgxEnclave, BalanceTransfer, BlockNumber, ExtrinsicFailed, Hash, ParentchainId,
+};
 use log::{debug, warn};
+use sp_core::crypto::AccountId32;
 use sp_runtime::DispatchError;
-use substrate_api_client::{ac_primitives::Header, GetChainInfo, SubscribeEvents};
+use substrate_api_client::{
+	ac_primitives::{BlakeTwo256, Header, SubstrateHeader},
+	GetChainInfo, SubscribeEvents,
+};
 
-pub fn subscribe_to_parentchain_events(
+pub fn subscribe_to_parentchain_events<
+	ParentchainApi: AccountApi<AccountId = AccountId32>
+		+ SubscribeEvents<Hash = Hash>
+		+ GetChainInfo<Header = SubstrateHeader<BlockNumber, BlakeTwo256>>,
+>(
 	api: &ParentchainApi,
 	parentchain_id: ParentchainId,
 	shutdown_flag: Arc<AtomicBool>,

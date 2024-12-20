@@ -145,6 +145,7 @@ impl<
 			}
 
 			// check if we can fast-sync
+			trace!("Shard creation info {:?}", self.shard_creation_info);
 			if let Some(creation_block) = self.shard_creation_info.for_parentchain(id) {
 				if signed_block.block.header().number < creation_block.number {
 					trace!(

@@ -34,13 +34,17 @@ use codec::{Decode, Encode};
 use core::time::Duration;
 use enclave_bridge_primitives::ShardIdentifier;
 use frame_support::scale_info::TypeInfo;
+use ita_parentchain_interface::{
+	integritee::api_client_types::IntegriteeApi, target_a::api_client_types::TargetAApi,
+	target_b::api_client_types::TargetBApi,
+};
 #[cfg(feature = "attesteer")]
 use itc_rest_client::{
 	http_client::{DefaultSend, HttpClient},
 	rest_client::{RestClient, Url as URL},
 	RestGet, RestPath,
 };
-use itp_api_client_types::ParentchainApi;
+
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_types::{parentchain::ParentchainId, EnclaveFingerprint};
@@ -141,15 +145,20 @@ pub trait HandleMetrics {
 }
 
 /// Metrics handler implementation. This is for untrusted sources of metrics (non-enclave)
-pub struct MetricsHandler<Wallet, Sidechain> {
-	wallets: Vec<Arc<Wallet>>,
+pub struct MetricsHandler<IntegriteeWallet, TargetAWallet, TargetBWallet, Sidechain> {
+	integritee_wallets: Vec<Arc<IntegriteeWallet>>,
+	target_a_wallets: Vec<Arc<TargetAWallet>>,
+	target_b_wallets: Vec<Arc<TargetBWallet>>,
 	sidechain: Arc<Sidechain>,
 }
 
 #[async_trait]
-impl<Wallet, Sidechain> HandleMetrics for MetricsHandler<Wallet, Sidechain>
+impl<IntegriteeWallet, TargetAWallet, TargetBWallet, Sidechain> HandleMetrics
+	for MetricsHandler<IntegriteeWallet, TargetAWallet, TargetBWallet, Sidechain>
 where
-	Wallet: ParentchainAccountInfo + Send + Sync,
+	IntegriteeWallet: ParentchainAccountInfo + Send + Sync,
+	TargetAWallet: ParentchainAccountInfo + Send + Sync,
+	TargetBWallet: ParentchainAccountInfo + Send + Sync,
 	Sidechain: ParentchainIntegriteeSidechainInfo + Send + Sync,
 {
 	type ReplyType = String;
@@ -170,24 +179,45 @@ where
 	}
 }
 
-impl<Wallet, Sidechain> MetricsHandler<Wallet, Sidechain>
+impl<IntegriteeWallet, TargetAWallet, TargetBWallet, Sidechain>
+	MetricsHandler<IntegriteeWallet, TargetAWallet, TargetBWallet, Sidechain>
 where
-	Wallet: ParentchainAccountInfo + Send + Sync,
+	IntegriteeWallet: ParentchainAccountInfo + Send + Sync,
+	TargetAWallet: ParentchainAccountInfo + Send + Sync,
+	TargetBWallet: ParentchainAccountInfo + Send + Sync,
 	Sidechain: ParentchainIntegriteeSidechainInfo + Send + Sync,
 {
-	pub fn new(wallets: Vec<Arc<Wallet>>, sidechain: Arc<Sidechain>) -> Self {
-		MetricsHandler { wallets, sidechain }
+	pub fn new(
+		integritee_wallets: Vec<Arc<IntegriteeWallet>>,
+		target_a_wallets: Vec<Arc<TargetAWallet>>,
+		target_b_wallets: Vec<Arc<TargetBWallet>>,
+		sidechain: Arc<Sidechain>,
+	) -> Self {
+		MetricsHandler { integritee_wallets, target_a_wallets, target_b_wallets, sidechain }
 	}
 
 	async fn update_all_account_metrics(&self) {
-		for wallet in &self.wallets {
+		for wallet in &self.integritee_wallets {
 			if let Err(e) = Self::update_wallet_metrics(wallet).await {
-				error!("Failed to update wallet metrics: {:?}", e);
+				error!("Failed to update integritee wallet metrics: {:?}", e);
+			}
+		}
+
+		for wallet in &self.target_a_wallets {
+			if let Err(e) = Self::update_wallet_metrics(wallet).await {
+				error!("Failed to update target a wallet metrics: {:?}", e);
+			}
+		}
+		for wallet in &self.target_b_wallets {
+			if let Err(e) = Self::update_wallet_metrics(wallet).await {
+				error!("Failed to update target b wallet metrics: {:?}", e);
 			}
 		}
 	}
 
-	async fn update_wallet_metrics(wallet: &Wallet) -> ServiceResult<()> {
+	async fn update_wallet_metrics<W: ParentchainAccountInfo>(
+		wallet: &Arc<W>,
+	) -> ServiceResult<()> {
 		let balance = wallet.free_balance()?;
 		let parentchain_id = wallet.parentchain_id()?;
 		let account_and_role = wallet.account_and_role()?;
@@ -354,17 +384,23 @@ pub fn start_prometheus_metrics_server<E>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
 	shard: &ShardIdentifier,
-	integritee_rpc_api: ParentchainApi,
-	maybe_target_a_rpc_api: Option<ParentchainApi>,
-	maybe_target_b_rpc_api: Option<ParentchainApi>,
+	integritee_rpc_api: IntegriteeApi,
+	maybe_target_a_rpc_api: Option<TargetAApi>,
+	maybe_target_b_rpc_api: Option<TargetBApi>,
 	shielding_target: Option<ParentchainId>,
 	tokio_handle: &Handle,
 	metrics_server_port: u16,
 ) where
 	E: EnclaveBase + Sidechain,
 {
-	let mut account_info_providers: Vec<Arc<ParentchainAccountInfoProvider>> = vec![];
-	account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+	let mut integritee_account_info_providers: Vec<Arc<ParentchainAccountInfoProvider<_, _>>> =
+		vec![];
+	let mut target_a_account_info_providers: Vec<Arc<ParentchainAccountInfoProvider<_, _>>> =
+		vec![];
+	let mut target_b_account_info_providers: Vec<Arc<ParentchainAccountInfoProvider<_, _>>> =
+		vec![];
+
+	integritee_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 		ParentchainId::Integritee,
 		integritee_rpc_api.clone(),
 		AccountAndRole::EnclaveSigner(tee_account_id.clone()),
@@ -372,33 +408,56 @@ pub fn start_prometheus_metrics_server<E>(
 	let shielding_target = shielding_target.unwrap_or_default();
 	let shard_vault =
 		enclave.get_ecc_vault_pubkey(shard).expect("shard vault must be defined by now");
-	account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-		shielding_target,
-		match shielding_target {
-			ParentchainId::Integritee => integritee_rpc_api.clone(),
-			ParentchainId::TargetA => maybe_target_a_rpc_api
-				.clone()
-				.expect("target A must be initialized to be used as shielding target"),
-			ParentchainId::TargetB => maybe_target_b_rpc_api
-				.clone()
-				.expect("target B must be initialized to be used as shielding target"),
-		},
-		AccountAndRole::ShardVault(
-			enclave
-				.get_ecc_vault_pubkey(shard)
-				.expect("shard vault must be defined by now")
-				.into(),
-		),
-	)));
+
+	match shielding_target {
+		ParentchainId::Integritee =>
+			integritee_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+				shielding_target,
+				integritee_rpc_api.clone(),
+				AccountAndRole::ShardVault(
+					enclave
+						.get_ecc_vault_pubkey(shard)
+						.expect("shard vault must be defined by now")
+						.into(),
+				),
+			))),
+		ParentchainId::TargetA =>
+			target_a_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+				shielding_target,
+				maybe_target_a_rpc_api
+					.clone()
+					.expect("target A must be initialized to be used as shielding target"),
+				AccountAndRole::ShardVault(
+					enclave
+						.get_ecc_vault_pubkey(shard)
+						.expect("shard vault must be defined by now")
+						.into(),
+				),
+			))),
+		ParentchainId::TargetB =>
+			target_b_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+				shielding_target,
+				maybe_target_b_rpc_api
+					.clone()
+					.expect("target B must be initialized to be used as shielding target"),
+				AccountAndRole::ShardVault(
+					enclave
+						.get_ecc_vault_pubkey(shard)
+						.expect("shard vault must be defined by now")
+						.into(),
+				),
+			))),
+	};
+
 	if let Some(api) = maybe_target_a_rpc_api {
-		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+		target_a_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 			ParentchainId::TargetA,
 			api,
 			AccountAndRole::EnclaveSigner(tee_account_id.clone()),
 		)))
 	};
 	if let Some(api) = maybe_target_b_rpc_api {
-		account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+		target_b_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
 			ParentchainId::TargetB,
 			api,
 			AccountAndRole::EnclaveSigner(tee_account_id.clone()),
@@ -407,8 +466,12 @@ pub fn start_prometheus_metrics_server<E>(
 	let sidechain_info_provider =
 		Arc::new(ParentchainIntegriteeSidechainInfoProvider::new(integritee_rpc_api, *shard));
 
-	let metrics_handler =
-		Arc::new(MetricsHandler::new(account_info_providers, sidechain_info_provider));
+	let metrics_handler = Arc::new(MetricsHandler::new(
+		integritee_account_info_providers,
+		target_a_account_info_providers,
+		target_b_account_info_providers,
+		sidechain_info_provider,
+	));
 
 	tokio_handle.spawn(async move {
 		if let Err(e) = start_metrics_server(metrics_handler, metrics_server_port).await {

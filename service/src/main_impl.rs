@@ -39,7 +39,7 @@ use itp_enclave_api::{
 	teeracle_api::TeeracleApi,
 };
 use itp_node_api::{
-	api_client::{AccountApi, PalletTeerexApi, ParentchainApi},
+	api_client::{AccountApi, PalletTeerexApi},
 	metadata::NodeMetadata,
 	node_api_factory::{CreateNodeApi, NodeApiFactory},
 };
@@ -54,8 +54,10 @@ use regex::Regex;
 use sgx_types::*;
 use sp_runtime::traits::{Header as HeaderT, IdentifyAccount};
 use substrate_api_client::{
-	api::XtStatus, rpc::HandleSubscription, GetAccountInformation, GetBalance, GetChainInfo,
-	SubmitAndWatch, SubscribeChain, SubscribeEvents,
+	api::XtStatus,
+	rpc::{HandleSubscription, Request, Subscribe},
+	Api, GetAccountInformation, GetBalance, GetChainInfo, GetStorage, SubmitAndWatch,
+	SubscribeChain, SubscribeEvents,
 };
 
 use teerex_primitives::{AnySigner, MultiEnclave};
@@ -72,8 +74,18 @@ use crate::{
 	sidechain_setup::ParentchainIntegriteeSidechainInfoProvider,
 };
 use enclave_bridge_primitives::ShardIdentifier;
+use ita_parentchain_interface::{
+	integritee::{
+		api_client_types::{IntegriteeApi, IntegriteeTip},
+		api_factory::IntegriteeNodeApiFactory,
+	},
+	target_a::api_client_types::{TargetAApi, TargetARuntimeConfig},
+	target_b::api_client_types::{TargetBApi, TargetBRuntimeConfig},
+	ParentchainRuntimeConfig,
+};
 use itc_parentchain::primitives::ParentchainId;
-use itp_types::parentchain::{AccountId, Balance};
+use itp_node_api::api_client::ChainApi;
+use itp_types::parentchain::{AccountId, Balance, Index};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
 use sp_runtime::MultiSigner;
@@ -89,14 +101,21 @@ use std::{
 	thread,
 	time::Duration,
 };
-use substrate_api_client::ac_node_api::{EventRecord, Phase::ApplyExtrinsic};
+use substrate_api_client::{
+	ac_node_api::{EventRecord, Phase::ApplyExtrinsic},
+	rpc::TungsteniteRpcClient,
+};
 use tokio::{runtime::Handle, task::JoinHandle, time::Instant};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(feature = "link-binary")]
-pub type EnclaveWorker =
-	Worker<Config, NodeApiFactory, Enclave, InitializationHandler<WorkerModeProvider>>;
+pub type EnclaveWorker = Worker<
+	Config,
+	ParentchainRuntimeConfig<IntegriteeTip>,
+	Enclave,
+	InitializationHandler<WorkerModeProvider>,
+>;
 
 pub(crate) fn main() {
 	// Setup logging
@@ -161,13 +180,21 @@ pub(crate) fn main() {
 		Arc::new(BlockFetcher::<SignedSidechainBlock, _>::new(untrusted_peer_fetcher));
 	let enclave_metrics_receiver = Arc::new(EnclaveMetricsReceiver {});
 
-	let maybe_target_a_parentchain_api_factory = config
-		.target_a_parentchain_rpc_endpoint()
-		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
+	let maybe_target_a_parentchain_api_factory =
+		config.target_a_parentchain_rpc_endpoint().map(|url| {
+			Arc::new(NodeApiFactory::<TargetARuntimeConfig, _>::new(
+				url,
+				AccountKeyring::Alice.pair(),
+			))
+		});
 
-	let maybe_target_b_parentchain_api_factory = config
-		.target_b_parentchain_rpc_endpoint()
-		.map(|url| Arc::new(NodeApiFactory::new(url, AccountKeyring::Alice.pair())));
+	let maybe_target_b_parentchain_api_factory =
+		config.target_b_parentchain_rpc_endpoint().map(|url| {
+			Arc::new(NodeApiFactory::<TargetBRuntimeConfig, _>::new(
+				url,
+				AccountKeyring::Alice.pair(),
+			))
+		});
 
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
@@ -294,7 +321,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	shard: &ShardIdentifier,
 	enclave: Arc<E>,
 	sidechain_storage: Arc<D>,
-	integritee_rpc_api: ParentchainApi,
+	integritee_rpc_api: IntegriteeApi,
 	tokio_handle_getter: Arc<T>,
 	initialization_handler: Arc<InitializationHandler>,
 	quoting_enclave_target_info: Option<sgx_target_info_t>,
@@ -651,10 +678,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	}
 
 	let maybe_target_a_rpc_api = if let Some(url) = config.target_a_parentchain_rpc_endpoint() {
-		let (api, mut handles) = init_target_parentchain(
+		println!("Initializing parentchain TargetA with url: {}", url);
+		let api = ita_parentchain_interface::target_a::api_factory::TargetANodeApiFactory::new(
+			url,
+			AccountKeyring::Alice.pair(),
+		)
+		.create_api()
+		.unwrap_or_else(|_| panic!("[TargetA] Failed to create parentchain node API"));
+		let mut handles = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
-			url,
+			api.clone(),
 			shard,
 			ParentchainId::TargetA,
 			is_development_mode,
@@ -667,10 +701,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 	};
 
 	let maybe_target_b_rpc_api = if let Some(url) = config.target_b_parentchain_rpc_endpoint() {
-		let (api, mut handles) = init_target_parentchain(
+		println!("Initializing parentchain TargetB with url: {}", url);
+		let api = ita_parentchain_interface::target_b::api_factory::TargetBNodeApiFactory::new(
+			url,
+			AccountKeyring::Alice.pair(),
+		)
+		.create_api()
+		.unwrap_or_else(|_| panic!("[TargetB] Failed to create parentchain node API"));
+		let mut handles = init_target_parentchain(
 			&enclave,
 			&tee_accountid,
-			url,
+			api.clone(),
 			shard,
 			ParentchainId::TargetB,
 			is_development_mode,
@@ -741,24 +782,56 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 fn init_provided_shard_vault<E: EnclaveBase>(
 	shard: &ShardIdentifier,
 	enclave: &Arc<E>,
-	integritee_rpc_api: ParentchainApi,
-	maybe_target_a_rpc_api: Option<ParentchainApi>,
-	maybe_target_b_rpc_api: Option<ParentchainApi>,
+	integritee_rpc_api: IntegriteeApi,
+	maybe_target_a_rpc_api: Option<TargetAApi>,
+	maybe_target_b_rpc_api: Option<TargetBApi>,
 	shielding_target: Option<ParentchainId>,
 	we_are_primary_validateer: bool,
 ) {
 	let shielding_target = shielding_target.unwrap_or_default();
-	let rpc_api = match shielding_target {
-		ParentchainId::Integritee => integritee_rpc_api,
-		ParentchainId::TargetA => maybe_target_a_rpc_api
-			.expect("target A must be initialized to be used as shielding target"),
-		ParentchainId::TargetB => maybe_target_b_rpc_api
-			.expect("target B must be initialized to be used as shielding target"),
+	match shielding_target {
+		ParentchainId::Integritee => init_vault(
+			shard,
+			enclave,
+			&integritee_rpc_api,
+			shielding_target,
+			we_are_primary_validateer,
+		),
+		ParentchainId::TargetA => init_vault(
+			shard,
+			enclave,
+			&maybe_target_a_rpc_api
+				.expect("target A must be initialized to be used as shielding target"),
+			shielding_target,
+			we_are_primary_validateer,
+		),
+		ParentchainId::TargetB => init_vault(
+			shard,
+			enclave,
+			&maybe_target_b_rpc_api
+				.expect("target B must be initialized to be used as shielding target"),
+			shielding_target,
+			we_are_primary_validateer,
+		),
 	};
-	let funding_balance = shard_vault_initial_funds(&rpc_api).unwrap();
+}
+
+fn init_vault<E, Tip, Client>(
+	shard: &ShardIdentifier,
+	enclave: &Arc<E>,
+	node_api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
+	shielding_target: ParentchainId,
+	we_are_primary_validateer: bool,
+) where
+	E: EnclaveBase,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request,
+{
+	let funding_balance = shard_vault_initial_funds(&node_api, shielding_target).unwrap();
 	if let Ok(shard_vault) = enclave.get_ecc_vault_pubkey(shard) {
 		// verify if proxy is set up on chain
-		let nonce = rpc_api.get_account_nonce(&AccountId::from(shard_vault)).unwrap();
+		let nonce = node_api.get_account_nonce(&AccountId::from(shard_vault)).unwrap();
 		println!(
 			"[{:?}] shard vault account is already initialized in state: {} with nonce {}",
 			shielding_target,
@@ -787,31 +860,29 @@ fn init_provided_shard_vault<E: EnclaveBase>(
 	}
 }
 
-fn init_target_parentchain<E>(
+fn init_target_parentchain<E, Tip, Client>(
 	enclave: &Arc<E>,
 	tee_account_id: &AccountId32,
-	url: String,
+	node_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	shard: &ShardIdentifier,
 	parentchain_id: ParentchainId,
 	is_development_mode: bool,
 	shutdown_flag: Arc<AtomicBool>,
-) -> (ParentchainApi, Vec<thread::JoinHandle<()>>)
+) -> Vec<thread::JoinHandle<()>>
 where
 	E: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
+	Client: Request + Subscribe + Clone + Send + Sync + 'static,
 {
-	println!("Initializing parentchain {:?} with url: {}", parentchain_id, url);
-	let node_api = NodeApiFactory::new(url, AccountKeyring::Alice.pair())
-		.create_api()
-		.unwrap_or_else(|_| panic!("[{:?}] Failed to create parentchain node API", parentchain_id));
-
 	setup_reasonable_account_funding(
-		&node_api,
+		node_api.clone(),
 		tee_account_id,
 		parentchain_id,
 		is_development_mode,
 	)
-	.unwrap_or_else(|_| {
-		panic!("[{:?}] Could not fund parentchain enclave account", parentchain_id)
+	.unwrap_or_else(|e| {
+		panic!("[{:?}] Could not fund parentchain enclave account: {:?}", parentchain_id, e)
 	});
 
 	// we attempt to set shard creation for this parentchain in case it hasn't been done before
@@ -861,18 +932,21 @@ where
 			)
 		})
 		.unwrap();
-	(node_api, handles)
+	handles
 }
 
-fn init_parentchain<E>(
+fn init_parentchain<E, Tip, Client>(
 	enclave: &Arc<E>,
-	node_api: &ParentchainApi,
+	node_api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	tee_account_id: &AccountId32,
 	parentchain_id: ParentchainId,
 	shard: &ShardIdentifier,
-) -> (Arc<ParentchainHandler<ParentchainApi, E>>, Header)
+) -> (Arc<ParentchainHandler<Tip, Client, E>>, Header)
 where
 	E: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request + Subscribe + Clone,
 {
 	let parentchain_handler = Arc::new(
 		ParentchainHandler::new_with_automatic_light_client_allocation(
@@ -913,7 +987,7 @@ where
 /// considered initialized and ready for the next worker to start.
 fn spawn_worker_for_shard_polling<InitializationHandler>(
 	shard: &ShardIdentifier,
-	node_api: ParentchainApi,
+	node_api: IntegriteeApi,
 	initialization_handler: Arc<InitializationHandler>,
 ) where
 	InitializationHandler: TrackInitialization + Sync + Send + 'static,
@@ -942,7 +1016,7 @@ fn spawn_worker_for_shard_polling<InitializationHandler>(
 
 #[cfg(feature = "attesteer")]
 fn fetch_marblerun_events_every_hour<E>(
-	api: ParentchainApi,
+	api: IntegriteeApi,
 	enclave: Arc<E>,
 	accountid: AccountId32,
 	is_development_mode: bool,
@@ -973,7 +1047,7 @@ fn fetch_marblerun_events_every_hour<E>(
 }
 #[cfg(feature = "attesteer")]
 fn register_quotes_from_marblerun(
-	api: &ParentchainApi,
+	api: &IntegriteeApi,
 	enclave: Arc<dyn RemoteAttestation>,
 	accountid: &AccountId32,
 	is_development_mode: bool,
@@ -981,7 +1055,7 @@ fn register_quotes_from_marblerun(
 	marblerun_base_url: &str,
 ) {
 	let enclave = enclave.as_ref();
-	let events = prometheus_metrics::fetch_marblerun_events(marblerun_base_url)
+	let events = crate::prometheus_metrics::fetch_marblerun_events(marblerun_base_url)
 		.map_err(|e| {
 			info!("Fetching events from Marblerun failed with: {:?}, continuing with 0 events.", e);
 		})
@@ -1002,7 +1076,7 @@ fn register_quotes_from_marblerun(
 }
 #[cfg(feature = "dcap")]
 fn register_collateral(
-	api: &ParentchainApi,
+	api: &IntegriteeApi,
 	enclave: &dyn RemoteAttestation,
 	accountid: &AccountId32,
 	is_development_mode: bool,
@@ -1022,12 +1096,17 @@ fn register_collateral(
 	}
 }
 
-fn send_integritee_extrinsic(
+fn send_integritee_extrinsic<Tip, Client>(
 	extrinsic: Vec<u8>,
-	api: &ParentchainApi,
+	api: &Api<ParentchainRuntimeConfig<Tip>, Client>,
 	fee_payer: &AccountId32,
 	is_development_mode: bool,
-) -> ServiceResult<Hash> {
+) -> ServiceResult<Hash>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
+	Client: Request + Subscribe + Clone + Send + Sync + 'static,
+{
 	let timeout = Duration::from_secs(5 * 60);
 	let (sender, receiver) = mpsc::channel();
 	let local_fee_payer = fee_payer.clone();
@@ -1048,7 +1127,7 @@ fn send_integritee_extrinsic(
 
 		if missing_funds > 0 {
 			setup_reasonable_account_funding(
-				&local_api,
+				local_api.clone(),
 				&local_fee_payer,
 				ParentchainId::Integritee,
 				is_development_mode,
@@ -1089,12 +1168,18 @@ fn send_integritee_extrinsic(
 	}
 }
 
-fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
+fn start_parentchain_header_subscription_thread<EnclaveApi, Tip, Client>(
 	shutdown_flag: Arc<AtomicBool>,
-	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
+	parentchain_handler: Arc<ParentchainHandler<Tip, Client, EnclaveApi>>,
 	last_synced_header: Header,
 	shard: ShardIdentifier,
-) -> thread::JoinHandle<()> {
+) -> thread::JoinHandle<()>
+where
+	EnclaveApi: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
+	Client: Request + Subscribe + Send + Sync + 'static,
+{
 	let parentchain_id = *parentchain_handler.parentchain_id();
 	thread::Builder::new()
 		.name(format!("{:?}_parentchain_sync_loop", parentchain_id))
@@ -1117,12 +1202,18 @@ fn start_parentchain_header_subscription_thread<E: EnclaveBase + Sidechain>(
 
 /// Subscribe to the node API finalized heads stream and trigger a parent chain sync
 /// upon receiving a new header.
-fn subscribe_to_parentchain_new_headers<E: EnclaveBase + Sidechain>(
+fn subscribe_to_parentchain_new_headers<EnclaveApi, Tip, Client>(
 	shutdown_flag: Arc<AtomicBool>,
-	parentchain_handler: Arc<ParentchainHandler<ParentchainApi, E>>,
+	parentchain_handler: Arc<ParentchainHandler<Tip, Client, EnclaveApi>>,
 	mut last_synced_header: Header,
 	shard: ShardIdentifier,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+	EnclaveApi: EnclaveBase + Sidechain,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request + Subscribe,
+{
 	// TODO: this should be implemented by parentchain_handler directly, and not via
 	// exposed parentchain_api
 	let mut subscription = parentchain_handler

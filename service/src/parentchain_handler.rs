@@ -18,13 +18,13 @@
 
 use crate::error::{Error, ServiceResult};
 use codec::{Decode, Encode};
+use core::fmt::Debug;
 use humantime::format_duration;
-use ita_parentchain_interface::integritee::Header;
+use ita_parentchain_interface::{integritee::Header, ParentchainRuntimeConfig};
 use itc_parentchain::{
 	light_client::light_client_init_params::{GrandpaParams, SimpleParams},
 	primitives::{ParentchainId, ParentchainInitParams},
 };
-use itp_api_client_types::ParentchainApi;
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_node_api::api_client::ChainApi;
 use itp_storage::StorageProof;
@@ -36,7 +36,8 @@ use sp_runtime::traits::Header as HeaderTrait;
 use std::{cmp::min, sync::Arc, time::Duration};
 use substrate_api_client::{
 	ac_primitives::{Block, Header as HeaderT},
-	GetChainInfo,
+	rpc::{Request, Subscribe},
+	Api, GetChainInfo,
 };
 
 const BLOCK_SYNC_BATCH_SIZE: u32 = 1000;
@@ -66,20 +67,27 @@ pub trait HandleParentchain {
 }
 
 /// Handles the interaction between parentchain and enclave.
-pub(crate) struct ParentchainHandler<ParentchainApi, EnclaveApi> {
-	parentchain_api: ParentchainApi,
+pub(crate) struct ParentchainHandler<Tip, Client, EnclaveApi>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+{
+	parentchain_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 	enclave_api: Arc<EnclaveApi>,
 	pub parentchain_init_params: ParentchainInitParams,
 }
 
 // #TODO: #1451: Reintroduce `ParentchainApi: ChainApi` once there is no trait bound conflict
 // any more with the api-clients own trait definitions.
-impl<EnclaveApi> ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<Tip, Client, EnclaveApi> ParentchainHandler<Tip, Client, EnclaveApi>
 where
 	EnclaveApi: EnclaveBase,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request + Subscribe,
 {
 	pub fn new(
-		parentchain_api: ParentchainApi,
+		parentchain_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 		enclave_api: Arc<EnclaveApi>,
 		parentchain_init_params: ParentchainInitParams,
 	) -> Self {
@@ -88,7 +96,7 @@ where
 
 	// FIXME: Necessary in the future? Fix with #1080
 	pub fn new_with_automatic_light_client_allocation(
-		parentchain_api: ParentchainApi,
+		parentchain_api: Api<ParentchainRuntimeConfig<Tip>, Client>,
 		enclave_api: Arc<EnclaveApi>,
 		id: ParentchainId,
 		shard: ShardIdentifier,
@@ -133,7 +141,7 @@ where
 		Ok(Self::new(parentchain_api, enclave_api, parentchain_init_params))
 	}
 
-	pub fn parentchain_api(&self) -> &ParentchainApi {
+	pub fn parentchain_api(&self) -> &Api<ParentchainRuntimeConfig<Tip>, Client> {
 		&self.parentchain_api
 	}
 
@@ -142,9 +150,12 @@ where
 	}
 }
 
-impl<EnclaveApi> HandleParentchain for ParentchainHandler<ParentchainApi, EnclaveApi>
+impl<Tip, Client, EnclaveApi> HandleParentchain for ParentchainHandler<Tip, Client, EnclaveApi>
 where
 	EnclaveApi: Sidechain + EnclaveBase,
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+	Client: Request + Subscribe,
 {
 	fn init_parentchain_components(&self) -> ServiceResult<Header> {
 		Ok(self

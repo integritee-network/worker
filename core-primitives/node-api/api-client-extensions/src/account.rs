@@ -14,11 +14,8 @@
 	limitations under the License.
 
 */
-
 use crate::ApiResult;
-use itp_api_client_types::{
-	traits::GetAccountInformation, Api, Config, ParentchainRuntimeConfig, Request,
-};
+use itp_api_client_types::{traits::GetAccountInformation, Api, Config, Request};
 
 /// ApiClient extension that contains some convenience methods around accounts.
 // Todo: make generic over `Config` type instead?
@@ -31,9 +28,11 @@ pub trait AccountApi {
 	fn get_free_balance(&self, who: &Self::AccountId) -> ApiResult<Self::Balance>;
 }
 
-impl<Client> AccountApi for Api<ParentchainRuntimeConfig, Client>
+impl<Client, ParentchainRuntimeConfig> AccountApi for Api<ParentchainRuntimeConfig, Client>
 where
 	Client: Request,
+	ParentchainRuntimeConfig:
+		Config<AccountData = itp_types::AccountData, Balance = itp_types::Balance>,
 {
 	type AccountId = <ParentchainRuntimeConfig as Config>::AccountId;
 	type Index = <ParentchainRuntimeConfig as Config>::Index;

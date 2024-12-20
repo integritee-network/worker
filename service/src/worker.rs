@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-
 ///! Integritee worker. Inspiration for this design came from parity's substrate Client.
 ///
 /// This should serve as a proof of concept for a potential refactoring design. Ultimately, everything
@@ -23,7 +22,11 @@
 use crate::{config::Config, error::Error, initialized_service::TrackInitialization};
 use async_trait::async_trait;
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api::{api_client::PalletTeerexApi, node_api_factory::CreateNodeApi};
+use itp_api_client_types::{Config as NodeRuntimeConfig, Request};
+use itp_node_api::{
+	api_client::PalletTeerexApi,
+	node_api_factory::{CreateNodeApi, NodeApiFactory},
+};
 use itp_types::ShardIdentifier;
 use itp_utils::ToHexPrefixed;
 use its_primitives::types::SignedBlock as SignedSidechainBlock;
@@ -33,28 +36,32 @@ use jsonrpsee::{
 	ws_client::WsClientBuilder,
 };
 use log::*;
-use std::sync::{Arc, RwLock};
+use std::{
+	marker::PhantomData,
+	sync::{Arc, RwLock},
+};
+use substrate_api_client::rpc::TungsteniteRpcClient;
 use teerex_primitives::MultiEnclave;
 use url::Url as UrlType;
 
 pub type WorkerResult<T> = Result<T, Error>;
 pub type Url = String;
-pub struct Worker<Config, NodeApiFactory, Enclave, InitializationHandler> {
+pub struct Worker<Config, NodeConfig: NodeRuntimeConfig, Enclave, InitializationHandler> {
 	_config: Config,
 	// unused yet, but will be used when more methods are migrated to the worker
 	_enclave_api: Arc<Enclave>,
-	node_api_factory: Arc<NodeApiFactory>,
+	node_api_factory: Arc<NodeApiFactory<NodeConfig, TungsteniteRpcClient>>,
 	initialization_handler: Arc<InitializationHandler>,
 	peers: RwLock<Vec<Url>>,
 }
 
-impl<Config, NodeApiFactory, Enclave, InitializationHandler>
-	Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
+impl<Config, NodeConfig: NodeRuntimeConfig, Enclave, InitializationHandler>
+	Worker<Config, NodeConfig, Enclave, InitializationHandler>
 {
 	pub fn new(
 		config: Config,
 		enclave_api: Arc<Enclave>,
-		node_api_factory: Arc<NodeApiFactory>,
+		node_api_factory: Arc<NodeApiFactory<NodeConfig, TungsteniteRpcClient>>,
 		initialization_handler: Arc<InitializationHandler>,
 		peers: Vec<Url>,
 	) -> Self {
@@ -75,10 +82,10 @@ pub trait AsyncBlockBroadcaster {
 }
 
 #[async_trait]
-impl<NodeApiFactory, Enclave, InitializationHandler> AsyncBlockBroadcaster
-	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
+impl<NodeConfig, Enclave, InitializationHandler> AsyncBlockBroadcaster
+	for Worker<Config, NodeConfig, Enclave, InitializationHandler>
 where
-	NodeApiFactory: CreateNodeApi + Send + Sync,
+	NodeConfig: NodeRuntimeConfig + Send + Sync,
 	Enclave: Send + Sync,
 	InitializationHandler: TrackInitialization + Send + Sync,
 {
@@ -136,10 +143,11 @@ pub trait UpdatePeers {
 	}
 }
 
-impl<NodeApiFactory, Enclave, InitializationHandler> UpdatePeers
-	for Worker<Config, NodeApiFactory, Enclave, InitializationHandler>
+impl<NodeConfig, Enclave, InitializationHandler> UpdatePeers
+	for Worker<Config, NodeConfig, Enclave, InitializationHandler>
 where
-	NodeApiFactory: CreateNodeApi + Send + Sync,
+	NodeConfig: NodeRuntimeConfig,
+	<NodeConfig as itp_api_client_types::Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
 {
 	fn search_peers(&self, shard: ShardIdentifier) -> WorkerResult<Vec<String>> {
 		let node_api = self
@@ -189,6 +197,7 @@ mod tests {
 		worker::{AsyncBlockBroadcaster, Worker},
 	};
 	use frame_support::assert_ok;
+	use ita_parentchain_interface::integritee::api_client_types::IntegriteeRuntimeConfig;
 	use itp_node_api::node_api_factory::NodeApiFactory;
 	use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 	use its_test::sidechain_block_builder::{SidechainBlockBuilder, SidechainBlockBuilderTrait};
@@ -227,7 +236,7 @@ mod tests {
 		let untrusted_worker_port = "4000".to_string();
 		let peers = vec![format!("ws://{}", W1_URL), format!("ws://{}", W2_URL)];
 
-		let worker = Worker::new(
+		let worker = Worker::<_, IntegriteeRuntimeConfig, _, _>::new(
 			local_worker_config(W1_URL.into(), untrusted_worker_port.clone(), "30".to_string()),
 			Arc::new(()),
 			Arc::new(NodeApiFactory::new(

@@ -18,9 +18,11 @@
 use crate::Cli;
 use base58::FromBase58;
 use chrono::{DateTime, Local, NaiveDateTime};
-use ita_parentchain_interface::integritee::{AccountId, Signature};
+use ita_parentchain_interface::integritee::{
+	api_client_types::IntegriteeApi, AccountId, Signature,
+};
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
-use itp_node_api::api_client::{ParentchainApi, TungsteniteRpcClient};
+use itp_node_api::api_client::TungsteniteRpcClient;
 use itp_types::Moment;
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
@@ -39,10 +41,10 @@ pub(crate) fn get_shielding_key(cli: &Cli) -> Result<Rsa3072PubKey, String> {
 	worker_api_direct.get_rsa_pubkey().map_err(|e| e.to_string())
 }
 
-pub(crate) fn get_chain_api(cli: &Cli) -> ParentchainApi {
+pub(crate) fn get_chain_api(cli: &Cli) -> IntegriteeApi {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);
-	ParentchainApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
+	IntegriteeApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {

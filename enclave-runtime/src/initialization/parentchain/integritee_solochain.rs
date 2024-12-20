@@ -19,9 +19,8 @@ use crate::{
 	error::Result,
 	initialization::{
 		global_components::{
-			EnclaveExtrinsicsFactory, EnclaveNodeMetadataRepository, EnclaveOCallApi,
-			EnclaveStfExecutor, EnclaveValidatorAccessor,
-			IntegriteeParentchainBlockImportDispatcher,
+			EnclaveNodeMetadataRepository, EnclaveOCallApi, EnclaveStfExecutor,
+			EnclaveValidatorAccessor, IntegriteeParentchainBlockImportDispatcher,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_SEAL,
 			GLOBAL_INTEGRITEE_PARENTCHAIN_NONCE_CACHE, GLOBAL_OCALL_API_COMPONENT,
 			GLOBAL_STATE_HANDLER_COMPONENT,
@@ -39,6 +38,7 @@ use itp_settings::worker_mode::{ProvideWorkerMode, WorkerMode};
 use itp_types::parentchain::ParentchainId;
 use std::{path::PathBuf, sync::Arc};
 
+use crate::initialization::global_components::IntegriteeEnclaveExtrinsicsFactory;
 pub use itc_parentchain::primitives::{SolochainBlock, SolochainHeader, SolochainParams};
 use itp_stf_interface::ShardCreationInfo;
 
@@ -47,7 +47,7 @@ pub struct IntegriteeSolochainHandler {
 	pub node_metadata_repository: Arc<EnclaveNodeMetadataRepository>,
 	pub stf_executor: Arc<EnclaveStfExecutor>,
 	pub validator_accessor: Arc<EnclaveValidatorAccessor>,
-	pub extrinsics_factory: Arc<EnclaveExtrinsicsFactory>,
+	pub extrinsics_factory: Arc<IntegriteeEnclaveExtrinsicsFactory>,
 	pub import_dispatcher: Arc<IntegriteeParentchainBlockImportDispatcher>,
 }
 

@@ -32,18 +32,23 @@ use crate::{
 	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 };
+use itp_api_client_types::{Config, Request};
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
-use itp_node_api::node_api_factory::CreateNodeApi;
+use itp_node_api::node_api_factory::{CreateNodeApi, NodeApiFactory};
+use itp_types::{AccountId, BlockHash, Nonce};
 use its_peer_fetch::FetchBlocksFromPeer;
 use its_primitives::types::block::SignedBlock as SignedSidechainBlock;
 use its_storage::BlockStorage;
 use std::{path::Path, sync::Arc};
+use substrate_api_client::rpc::TungsteniteRpcClient;
 
 /// Concrete implementation, should be moved out of the OCall Bridge, into the worker
 /// since the OCall bridge itself should not know any concrete types to ensure
 /// our dependency graph is worker -> ocall bridge
 pub struct OCallBridgeComponentFactory<
-	NodeApi,
+	IntegriteeRuntimeConfig: Config,
+	TargetARuntimeConfig: Config,
+	TargetBRuntimeConfig: Config,
 	Broadcaster,
 	EnclaveApi,
 	Storage,
@@ -52,9 +57,11 @@ pub struct OCallBridgeComponentFactory<
 	TokioHandle,
 	MetricsReceiver,
 > {
-	integritee_rpc_api_factory: Arc<NodeApi>,
-	target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
-	target_b_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
+	integritee_rpc_api_factory: Arc<NodeApiFactory<IntegriteeRuntimeConfig, TungsteniteRpcClient>>,
+	target_a_parentchain_rpc_api_factory:
+		Option<Arc<NodeApiFactory<TargetARuntimeConfig, TungsteniteRpcClient>>>,
+	target_b_parentchain_rpc_api_factory:
+		Option<Arc<NodeApiFactory<TargetBRuntimeConfig, TungsteniteRpcClient>>>,
 	block_broadcaster: Arc<Broadcaster>,
 	enclave_api: Arc<EnclaveApi>,
 	block_storage: Arc<Storage>,
@@ -66,7 +73,9 @@ pub struct OCallBridgeComponentFactory<
 }
 
 impl<
-		NodeApi,
+		IntegriteeRuntimeConfig: Config,
+		TargetARuntimeConfig: Config,
+		TargetBRuntimeConfig: Config,
 		Broadcaster,
 		EnclaveApi,
 		Storage,
@@ -76,7 +85,9 @@ impl<
 		MetricsReceiver,
 	>
 	OCallBridgeComponentFactory<
-		NodeApi,
+		IntegriteeRuntimeConfig,
+		TargetARuntimeConfig,
+		TargetBRuntimeConfig,
 		Broadcaster,
 		EnclaveApi,
 		Storage,
@@ -88,9 +99,15 @@ impl<
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn new(
-		integritee_rpc_api_factory: Arc<NodeApi>,
-		target_a_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
-		target_b_parentchain_rpc_api_factory: Option<Arc<NodeApi>>,
+		integritee_rpc_api_factory: Arc<
+			NodeApiFactory<IntegriteeRuntimeConfig, TungsteniteRpcClient>,
+		>,
+		target_a_parentchain_rpc_api_factory: Option<
+			Arc<NodeApiFactory<TargetARuntimeConfig, TungsteniteRpcClient>>,
+		>,
+		target_b_parentchain_rpc_api_factory: Option<
+			Arc<NodeApiFactory<TargetBRuntimeConfig, TungsteniteRpcClient>>,
+		>,
 		block_broadcaster: Arc<Broadcaster>,
 		enclave_api: Arc<EnclaveApi>,
 		block_storage: Arc<Storage>,
@@ -117,7 +134,9 @@ impl<
 }
 
 impl<
-		NodeApi,
+		IntegriteeRuntimeConfig,
+		TargetARuntimeConfig,
+		TargetBRuntimeConfig,
 		Broadcaster,
 		EnclaveApi,
 		Storage,
@@ -127,7 +146,9 @@ impl<
 		MetricsReceiver,
 	> GetOCallBridgeComponents
 	for OCallBridgeComponentFactory<
-		NodeApi,
+		IntegriteeRuntimeConfig,
+		TargetARuntimeConfig,
+		TargetBRuntimeConfig,
 		Broadcaster,
 		EnclaveApi,
 		Storage,
@@ -136,7 +157,13 @@ impl<
 		TokioHandle,
 		MetricsReceiver,
 	> where
-	NodeApi: CreateNodeApi + 'static,
+	IntegriteeRuntimeConfig:
+		Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
+	TargetARuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
+	TargetBRuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
+	<IntegriteeRuntimeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetARuntimeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
+	<TargetBRuntimeConfig as Config>::ExtrinsicSigner: From<sp_core::sr25519::Pair>,
 	Broadcaster: BroadcastBlocks + 'static,
 	EnclaveApi: RemoteAttestationCallBacks + 'static,
 	Storage: BlockStorage<SignedSidechainBlock> + 'static,

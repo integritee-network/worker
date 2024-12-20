@@ -15,6 +15,9 @@
 
 */
 
+pub mod api_client_types;
+#[cfg(feature = "std")]
+pub mod api_factory;
 mod event_filter;
 mod event_handler;
 

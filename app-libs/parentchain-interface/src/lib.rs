@@ -22,6 +22,31 @@
 extern crate sgx_tstd as std;
 
 use codec::{Decode, Encode};
+use core::{fmt::Debug, marker::PhantomData};
+use itp_types::parentchain::Hash;
+use sp_core::{crypto::AccountId32, sr25519};
+use sp_runtime::{MultiAddress, MultiSignature};
+use substrate_api_client::ac_primitives::{
+	BlakeTwo256, ExtrinsicSigner, SubstrateBlock, SubstrateHeader, SubstrateOpaqueExtrinsic,
+};
+
+pub use substrate_api_client::{
+	ac_node_api::{
+		metadata::{InvalidMetadataError, Metadata, MetadataError},
+		EventDetails, Events, StaticEvent,
+	},
+	ac_primitives::{
+		config::Config,
+		extrinsics::{
+			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
+			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+		},
+		serde_impls::StorageKey,
+		signer::{SignExtrinsic, StaticExtrinsicSigner},
+	},
+	rpc::Request,
+	storage_key, Api,
+};
 
 #[cfg(feature = "std")]
 pub mod event_subscriber;
@@ -53,4 +78,35 @@ pub fn decode_and_log_error<V: Decode>(encoded: &mut &[u8]) -> Option<V> {
 			None
 		},
 	}
+}
+
+/// Config matching the specs of the typical polkadot chains.
+/// We can define some more if we realize that we need more
+/// granular control than the tip.
+#[derive(Decode, Encode, Clone, Eq, PartialEq, Debug)]
+pub struct ParentchainRuntimeConfig<Tip: Sized> {
+	_phantom: PhantomData<Tip>,
+}
+
+impl<Tip> Config for ParentchainRuntimeConfig<Tip>
+where
+	u128: From<Tip>,
+	Tip: Copy + Default + Encode + Debug,
+{
+	type Index = u32;
+	type BlockNumber = u32;
+	type Hash = Hash;
+	type AccountId = AccountId32;
+	type Address = MultiAddress<Self::AccountId, u32>;
+	type Signature = MultiSignature;
+	type Hasher = BlakeTwo256;
+	type Header = SubstrateHeader<Self::BlockNumber, BlakeTwo256>;
+	type AccountData = itp_types::AccountData;
+	type ExtrinsicParams = GenericExtrinsicParams<Self, Tip>;
+	type CryptoKey = sr25519::Pair;
+	type ExtrinsicSigner = ExtrinsicSigner<Self>;
+	type Block = SubstrateBlock<Self::Header, SubstrateOpaqueExtrinsic>;
+	type Balance = itp_types::Balance;
+	type ContractCurrency = u128;
+	type StakingBalance = u128;
 }
