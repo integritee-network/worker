@@ -190,10 +190,11 @@ where
 		let latest_imported_block = blocks_to_import.last().map(|b| (*b).clone());
 		let parentchain_id = self.block_importer.parentchain_id();
 		trace!(
-			"[{:?}] Import of parentchain blocks and events has been triggered, importing {} blocks and {} events from queue",
+			"[{:?}] Import of parentchain blocks and events has been triggered, importing {} blocks and {} events of {} blocks from queue",
 			parentchain_id,
 			blocks_to_import.len(),
 			events_to_import.len(),
+			depth
 		);
 
 		self.block_importer

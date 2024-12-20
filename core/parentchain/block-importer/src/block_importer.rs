@@ -148,7 +148,8 @@ impl<
 			if let Some(creation_block) = self.shard_creation_info.for_parentchain(id) {
 				if signed_block.block.header().number < creation_block.number {
 					trace!(
-						"fast-syncing block import, ignoring any invocations before block {:}",
+						"[{:?}] fast-syncing block import, ignoring any invocations before block {:}",
+						id,
 						creation_block.number
 					);
 					continue
@@ -180,7 +181,8 @@ impl<
 					};
 					calls.push((opaque_call, mortality));
 				},
-				Ok(None) => trace!("omitting confirmation call to non-integritee parentchain"),
+				Ok(None) =>
+					trace!("[{:?}] omitting confirmation call to non-integritee parentchain", id),
 				Err(e) => error!("[{:?}] Error executing relevant extrinsics: {:?}", id, e),
 			};
 
