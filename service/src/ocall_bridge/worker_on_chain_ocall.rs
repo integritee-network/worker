@@ -37,7 +37,7 @@ use std::{
 };
 use substrate_api_client::{
 	ac_primitives,
-	ac_primitives::{serde_impls::StorageKey, SubstrateHeader},
+	ac_primitives::{serde_impls::StorageKey, Header, SubstrateHeader},
 	GetAccountInformation, GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic, XtStatus,
 };
 
@@ -91,7 +91,7 @@ where
 		request: Vec<u8>,
 		parentchain_id: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>> {
-		debug!("    Entering ocall_worker_request");
+		debug!("[{:?}]    Entering ocall_worker_request", parentchain_id);
 
 		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice())?;
 		if requests.is_empty() {
@@ -109,10 +109,18 @@ where
 		{
 			header
 		} else {
-			warn!("failed to fetch parentchain header. can't answer WorkerRequest");
+			warn!(
+				"[{:?}] failed to fetch parentchain header. can't answer WorkerRequest",
+				parentchain_id
+			);
 			return Ok(Vec::<u8>::new().encode())
 		};
-
+		trace!(
+			"[{:?}] Last finalized header {} {:?}",
+			parentchain_id,
+			header.number,
+			header.hash()
+		);
 		let resp: Vec<WorkerResponse<ParentchainHeader, Vec<u8>>> = requests
 			.into_iter()
 			.map(|req| match req {
