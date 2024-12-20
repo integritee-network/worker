@@ -393,7 +393,7 @@ pub fn generate_ias_skip_ra_extrinsic_from_der_cert_internal(
 fn create_extrinsics(call: OpaqueCall) -> EnclaveResult<OpaqueExtrinsic> {
 	let extrinsics_factory = get_extrinsic_factory_from_integritee_solo_or_parachain()?;
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let mortality = try_mortality(64, &ParentchainId::Integritee, &ocall_api);
+	let mortality = try_mortality(64, &ocall_api, ParentchainId::Integritee);
 	let extrinsics = extrinsics_factory.create_extrinsics(&[(call, mortality)], None)?;
 
 	Ok(extrinsics[0].clone())

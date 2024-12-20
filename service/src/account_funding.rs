@@ -159,7 +159,7 @@ where
 		let free = api.get_free_balance(accountid)?;
 		let missing_funds = needed.saturating_sub(free);
 
-		if missing_funds < needed * 2 / 3 {
+		if missing_funds < needed / 10 {
 			return Ok(())
 		}
 

@@ -53,7 +53,7 @@ fn update_weather_data_internal(weather_info: WeatherInfo) -> Result<Vec<OpaqueE
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<(OpaqueCall, GenericMortality)> = Vec::new();
-	let mortality = try_mortality(16, &ParentchainId::Integritee, &ocall_api);
+	let mortality = try_mortality(16, &ocall_api, ParentchainId::Integritee);
 	let open_meteo_weather_oracle = create_open_meteo_weather_oracle(ocall_api);
 
 	match get_longitude(weather_info, open_meteo_weather_oracle) {
@@ -215,7 +215,7 @@ fn update_market_data_internal(
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
 
 	let mut extrinsic_calls: Vec<(OpaqueCall, GenericMortality)> = Vec::new();
-	let mortality = try_mortality(16, &ParentchainId::Integritee, &ocall_api);
+	let mortality = try_mortality(16, &ocall_api, ParentchainId::Integritee);
 	// Get the exchange rate
 	let trading_pair = TradingPair { crypto_currency, fiat_currency };
 

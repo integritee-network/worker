@@ -58,7 +58,7 @@ pub(crate) fn init_shard_config(shard: ShardIdentifier) -> EnclaveResult<()> {
 	let opaque_call = OpaqueCall::from_tuple(&(call, shard, shard_config, BlockNumber::from(0u8)));
 	debug!("encoded call: {}", hex_encode(opaque_call.encode().as_slice()));
 	let ocall_api = GLOBAL_OCALL_API_COMPONENT.get()?;
-	let mortality = try_mortality(64, &ParentchainId::Integritee, &ocall_api);
+	let mortality = try_mortality(64, &ocall_api, ParentchainId::Integritee);
 	let xts = extrinsics_factory
 		.create_extrinsics(&[(opaque_call, mortality)], None)
 		.map_err(|e| Error::Other(e.into()))?;

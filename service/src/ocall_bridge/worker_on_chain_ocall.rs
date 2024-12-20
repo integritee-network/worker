@@ -46,7 +46,7 @@ use std::{
 };
 use substrate_api_client::{
 	ac_primitives,
-	ac_primitives::{serde_impls::StorageKey, SubstrateHeader},
+	ac_primitives::{serde_impls::StorageKey, Header, SubstrateHeader},
 	rpc::TungsteniteRpcClient,
 	Api, GetAccountInformation, GetChainInfo, GetStorage, SubmitAndWatch, SubmitExtrinsic,
 	XtStatus,
@@ -130,6 +130,7 @@ where
 		&self,
 		api: &Api<Config, TungsteniteRpcClient>,
 		requests: Vec<WorkerRequest>,
+		parentchain_id: ParentchainId,
 	) -> OCallBridgeResult<Vec<WorkerResponse<ParentchainHeader, Vec<u8>>>> {
 		let last_finalized =
 			api.get_finalized_head().map_err(|_| OCallBridgeError::NodeApiError)?;
@@ -141,7 +142,6 @@ where
 			warn!("failed to fetch parentchain header. can't answer WorkerRequest");
 			return Ok(vec![])
 		};
-
 		let resp: Vec<WorkerResponse<ParentchainHeader, Vec<u8>>> = requests
 			.into_iter()
 			.map(|req| match req {
@@ -233,7 +233,8 @@ where
 		request: Vec<u8>,
 		parentchain_id: Vec<u8>,
 	) -> OCallBridgeResult<Vec<u8>> {
-		debug!("    Entering ocall_worker_request");
+		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
+		debug!("[{:?}]    Entering ocall_worker_request", parentchain_id);
 
 		let requests: Vec<WorkerRequest> = Decode::decode(&mut request.as_slice())?;
 		if requests.is_empty() {
@@ -241,12 +242,10 @@ where
 			return Ok(Vec::<u8>::new().encode())
 		}
 
-		let parentchain_id = ParentchainId::decode(&mut parentchain_id.as_slice())?;
-
 		let resp = match parentchain_id {
 			ParentchainId::Integritee => {
 				let api = self.integritee_api_factory.create_api()?;
-				self.handle_requests(&api, requests)?
+				self.handle_requests(&api, requests, parentchain_id)?
 			},
 			ParentchainId::TargetA => {
 				let api = self
@@ -254,7 +253,7 @@ where
 					.as_ref()
 					.ok_or(OCallBridgeError::TargetAParentchainNotInitialized)?
 					.create_api()?;
-				self.handle_requests(&api, requests)?
+				self.handle_requests(&api, requests, parentchain_id)?
 			},
 			ParentchainId::TargetB => {
 				let api = self
@@ -262,7 +261,7 @@ where
 					.as_ref()
 					.ok_or(OCallBridgeError::TargetBParentchainNotInitialized)?
 					.create_api()?;
-				self.handle_requests(&api, requests)?
+				self.handle_requests(&api, requests, parentchain_id)?
 			},
 		};
 

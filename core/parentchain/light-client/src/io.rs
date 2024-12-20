@@ -156,7 +156,7 @@ impl<B: Block, LightClientState: Decode + Encode + Debug> LightClientSealing
 		fs::File::open(self.db_path())
 			.or_else(|e| {
 				warn!(
-					"can't open db at {:?}. error: {:?}. trying restore backup at {:?}",
+					"can't open db at {:?}. reason: {:?}. trying restore backup at {:?}",
 					self.db_path(),
 					e,
 					self.backup_path()

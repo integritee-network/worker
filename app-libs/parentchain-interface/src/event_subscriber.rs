@@ -19,15 +19,20 @@ use alloc::sync::Arc;
 use core::sync::atomic::{AtomicBool, Ordering};
 use itp_node_api::api_client::AccountApi;
 use itp_types::parentchain::{
-	AddedSgxEnclave, BalanceTransfer, ExtrinsicFailed, Hash, ParentchainId,
+	AddedSgxEnclave, BalanceTransfer, BlockNumber, ExtrinsicFailed, Hash, ParentchainId,
 };
-use log::warn;
+use log::{debug, warn};
 use sp_core::crypto::AccountId32;
 use sp_runtime::DispatchError;
-use substrate_api_client::SubscribeEvents;
+use substrate_api_client::{
+	ac_primitives::{BlakeTwo256, Header, SubstrateHeader},
+	GetChainInfo, SubscribeEvents,
+};
 
 pub fn subscribe_to_parentchain_events<
-	ParentchainApi: AccountApi<AccountId = AccountId32> + SubscribeEvents<Hash = Hash>,
+	ParentchainApi: AccountApi<AccountId = AccountId32>
+		+ SubscribeEvents<Hash = Hash>
+		+ GetChainInfo<Header = SubstrateHeader<BlockNumber, BlakeTwo256>>,
 >(
 	api: &ParentchainApi,
 	parentchain_id: ParentchainId,
@@ -37,6 +42,17 @@ pub fn subscribe_to_parentchain_events<
 	let mut subscription = api.subscribe_events().unwrap();
 	while !shutdown_flag.load(Ordering::Relaxed) {
 		let events = subscription.next_events_from_metadata().unwrap().unwrap();
+		if let Some(header) = api.get_header(None).unwrap() {
+			let maybe_finalized_number =
+				api.get_header(api.get_finalized_head().unwrap()).unwrap().map(|h| h.number);
+			debug!(
+				"[{}] New block {} {} (finalized: {:?})",
+				parentchain_id,
+				header.number,
+				header.hash(),
+				maybe_finalized_number
+			);
+		};
 
 		for event in events.iter() {
 			let event = event.unwrap();
@@ -73,6 +89,8 @@ pub fn subscribe_to_parentchain_events<
 					_ => continue,
 				},
 				"ParaInclusion" => continue,
+				"Session" => continue,
+				"Grandpa" => continue,
 				"MessageQueue" => continue,
 				"TransactionPayment" => continue,
 				"Treasury" => continue,

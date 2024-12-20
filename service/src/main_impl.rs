@@ -886,7 +886,7 @@ where
 	});
 
 	// we attempt to set shard creation for this parentchain in case it hasn't been done before
-	let api_head = node_api.get_header(None).unwrap().unwrap();
+	let api_head = node_api.get_header(node_api.get_finalized_head().unwrap()).unwrap().unwrap();
 	// TODO: #1451: Fix api-client type hacks
 	let head = Header::decode(&mut api_head.encode().as_slice())
 		.expect("Can decode previously encoded header; qed");
