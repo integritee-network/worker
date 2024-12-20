@@ -42,10 +42,7 @@ use ita_sgx_runtime::{
 	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::{
-	pallet_balances::BalancesCallIndexes, pallet_enclave_bridge::EnclaveBridgeCallIndexes,
-	pallet_proxy::ProxyCallIndexes,
-};
+use itp_node_api_metadata::{pallet_balances::BalancesCallIndexes, pallet_proxy::ProxyCallIndexes};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
@@ -63,7 +60,6 @@ use sp_core::{
 	crypto::{AccountId32, UncheckedFrom},
 	ed25519,
 };
-use sp_io::hashing::blake2_256;
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
 use std::{format, prelude::v1::*, sync::Arc, vec};
 
@@ -275,7 +271,6 @@ where
 		// todo! spending limits according to role https://github.com/integritee-network/worker/issues/1656
 		let sender = self.call.sender_account().clone();
 
-		let call_hash = blake2_256(&self.call.encode());
 		let system_nonce = System::account_nonce(&sender);
 		ensure!(self.nonce == system_nonce, Self::Error::InvalidNonce(self.nonce, system_nonce));
 
@@ -419,22 +414,6 @@ where
 				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
 				shield_funds(&who, value)?;
 				store_note(&enclave_account, self.call, vec![who])?;
-
-				// Send proof of execution on chain.
-				let mortality =
-					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
-				calls.push(ParentchainCall::Integritee {
-					call: OpaqueCall::from_tuple(&(
-						node_metadata_repo
-							.get_from_metadata(|m| m.publish_hash_call_indexes())
-							.map_err(|_| StfError::InvalidMetadata)?
-							.map_err(|_| StfError::InvalidMetadata)?,
-						call_hash,
-						Vec::<itp_types::H256>::new(),
-						b"shielded some funds!".to_vec(),
-					)),
-					mortality,
-				});
 				Ok(())
 			},
 			TrustedCall::timestamp_set(enclave_account, now, parentchain_id) => {
