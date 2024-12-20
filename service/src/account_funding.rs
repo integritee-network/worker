@@ -131,7 +131,7 @@ pub fn setup_reasonable_account_funding(
 		let free = api.get_free_balance(accountid)?;
 		let missing_funds = needed.saturating_sub(free);
 
-		if missing_funds < needed * 2 / 3 {
+		if missing_funds < needed * 1 / 10 {
 			return Ok(())
 		}
 
