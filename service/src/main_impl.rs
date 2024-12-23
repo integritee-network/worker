@@ -85,6 +85,7 @@ use ita_parentchain_interface::{
 };
 use itc_parentchain::primitives::ParentchainId;
 use itp_node_api::api_client::ChainApi;
+use itp_settings::files::SHARDS_PATH;
 use itp_types::parentchain::{AccountId, Balance, Index};
 use sp_core::crypto::{AccountId32, Ss58Codec};
 use sp_keyring::AccountKeyring;
@@ -148,7 +149,10 @@ pub(crate) fn main() {
 
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
-		crate::setup::purge_files_from_dir(config.data_dir()).unwrap();
+		println!("[+] Performing a clean reset of the worker");
+		setup::purge_integritee_lcdb_unless_protected(config.data_dir()).unwrap();
+		setup::purge_target_a_lcdb_unless_protected(config.data_dir()).unwrap();
+		setup::purge_target_b_lcdb_unless_protected(config.data_dir()).unwrap();
 	}
 
 	// build the entire dependency tree
@@ -227,11 +231,18 @@ pub(crate) fn main() {
 	};
 
 	if let Some(run_config) = config.run_config() {
-		let shard = extract_shard(run_config.shard(), enclave.as_ref());
-
 		println!("Worker Config: {:?}", config);
 
-		if clean_reset {
+		let shard = extract_shard(run_config.shard(), enclave.as_ref());
+
+		let mut shard_path = PathBuf::from(config.data_dir());
+		shard_path.push(SHARDS_PATH);
+		shard_path.push(shard.encode().to_base58());
+		println!("Worker Shard Path: {:?}", shard_path);
+		if clean_reset || std::fs::metadata(shard_path).is_err() {
+			// we default to purge here because we don't want to leave behind blocks
+			// for deprectated shards in the sidechain_db
+			setup::purge_shards_unless_protected(config.data_dir()).unwrap();
 			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
 		}
 

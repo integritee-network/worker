@@ -202,6 +202,12 @@ impl Config {
 	pub fn try_parse_untrusted_http_server_port(&self) -> Option<u16> {
 		self.untrusted_http_port.parse::<u16>().ok()
 	}
+
+	pub fn with_test_data_dir(&self) -> Self {
+		let mut new = self.clone();
+		new.data_dir.push("test");
+		new
+	}
 }
 
 impl From<&ArgMatches<'_>> for Config {
