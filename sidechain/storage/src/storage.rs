@@ -17,7 +17,7 @@
 
 use super::{db::SidechainDB, Error, Result};
 use codec::{Decode, Encode};
-use itp_settings::files::SIDECHAIN_STORAGE_PATH;
+use itp_settings::files::SIDECHAIN_BLOCKS_DB_STORAGE_PATH;
 use its_primitives::{
 	traits::{Block as BlockTrait, Header as HeaderTrait, SignedBlock as SignedBlockT},
 	types::{BlockHash, BlockNumber},
@@ -63,7 +63,7 @@ impl<SignedBlock: SignedBlockT> SidechainStorage<SignedBlock> {
 	/// Loads existing shards and their last blocks in memory for better performance.
 	pub fn load_from_base_path(base_path: PathBuf) -> Result<SidechainStorage<SignedBlock>> {
 		// load db
-		let db = SidechainDB::open_default(base_path.join(SIDECHAIN_STORAGE_PATH))?;
+		let db = SidechainDB::open_default(base_path.join(SIDECHAIN_BLOCKS_DB_STORAGE_PATH))?;
 		let mut storage = SidechainStorage { db, shards: vec![], last_blocks: HashMap::new() };
 		storage.shards = storage.load_shards_from_db()?;
 		// get last block of each shard

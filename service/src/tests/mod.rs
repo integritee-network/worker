@@ -34,8 +34,14 @@ pub fn run_enclave_tests(matches: &ArgMatches) {
 	use itp_enclave_api::enclave_test::EnclaveTest;
 
 	println!("*** Starting Test enclave");
-	let config = Config::from(matches);
-	setup::purge_files_from_dir(config.data_dir()).unwrap();
+	let mut config = Config::from(matches).with_test_data_dir();
+	println!("   creating temporary working dir for tests: {:?}", config.data_dir());
+	std::fs::create_dir_all(config.data_dir()).unwrap();
+	setup::purge_shards(config.data_dir()).unwrap();
+	setup::purge_integritee_lcdb(config.data_dir()).unwrap();
+	setup::purge_target_a_lcdb(config.data_dir()).unwrap();
+	setup::purge_target_b_lcdb(config.data_dir()).unwrap();
+
 	let enclave = enclave_init(&config).unwrap();
 
 	if matches.is_present("all") || matches.is_present("unit") {
@@ -43,6 +49,7 @@ pub fn run_enclave_tests(matches: &ArgMatches) {
 		enclave.test_main_entrance().unwrap();
 		println!("[+] unit_test ended!");
 	}
-
+	// clean up test directory
+	std::fs::remove_dir_all(config.data_dir()).unwrap();
 	println!("[+] All tests ended!");
 }

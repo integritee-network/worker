@@ -18,14 +18,16 @@
 
 use crate::error::{Error, ServiceResult};
 use itp_settings::files::{
-	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SIDECHAIN_STORAGE_PATH,
+	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SIDECHAIN_BLOCKS_DB_STORAGE_PATH,
 	TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
 };
-use std::{fs, path::Path};
-
 #[cfg(feature = "link-binary")]
 pub(crate) use needs_enclave::{
 	generate_shielding_key_file, generate_signing_key_file, init_shard, initialize_shard_and_keys,
+};
+use std::{
+	fs,
+	path::{Path, PathBuf},
 };
 
 #[cfg(feature = "link-binary")]
@@ -35,8 +37,8 @@ mod needs_enclave {
 	use itp_enclave_api::{enclave_base::EnclaveBase, Enclave};
 	use itp_settings::files::{
 		INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SHIELDING_KEY_FILE,
-		SIDECHAIN_STORAGE_PATH, SIGNING_KEY_FILE, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
-		TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
+		SIDECHAIN_BLOCKS_DB_STORAGE_PATH, SIGNING_KEY_FILE,
+		TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
 	};
 	use itp_types::ShardIdentifier;
 	use log::*;
@@ -47,7 +49,7 @@ mod needs_enclave {
 		enclave: &Enclave,
 		shard_identifier: &ShardIdentifier,
 	) -> ServiceResult<()> {
-		println!("[+] Initialize the shard");
+		println!("[+] Initialize the shard: {:?}", shard_identifier);
 		init_shard(enclave, shard_identifier);
 
 		let pubkey = enclave.get_ecc_signing_pubkey().unwrap();
@@ -103,25 +105,29 @@ mod needs_enclave {
 	}
 }
 
-/// Purge all worker files from `dir`.
-pub(crate) fn purge_files_from_dir(dir: &Path) -> ServiceResult<()> {
-	println!("[+] Performing a clean reset of the worker");
-
-	println!("[+] Purge all files from previous runs");
-	purge_files(dir)?;
-
+/// Purge all worker files in a given path.
+pub(crate) fn purge_shards(root_directory: &Path) -> ServiceResult<()> {
+	println!("[+] Purge all shards and sidechain blocks from previous runs");
+	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
+	remove_dir_if_it_exists(root_directory, SIDECHAIN_BLOCKS_DB_STORAGE_PATH)?;
 	Ok(())
 }
 
-/// Purge all worker files in a given path.
-fn purge_files(root_directory: &Path) -> ServiceResult<()> {
-	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
-	remove_dir_if_it_exists(root_directory, SIDECHAIN_STORAGE_PATH)?;
-
+pub(crate) fn purge_integritee_lcdb(root_directory: &Path) -> ServiceResult<()> {
+	println!("[+] Purge Integritee light-client db from previous runs");
 	remove_dir_if_it_exists(root_directory, INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
-	remove_dir_if_it_exists(root_directory, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
-	remove_dir_if_it_exists(root_directory, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+	Ok(())
+}
 
+pub(crate) fn purge_target_a_lcdb(root_directory: &Path) -> ServiceResult<()> {
+	println!("[+] Purge TargetA light-client db from previous runs");
+	remove_dir_if_it_exists(root_directory, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+	Ok(())
+}
+
+pub(crate) fn purge_target_b_lcdb(root_directory: &Path) -> ServiceResult<()> {
+	println!("[+] Purge TargetB light-client db from previous runs");
+	remove_dir_if_it_exists(root_directory, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
 	Ok(())
 }
 
@@ -150,7 +156,7 @@ mod tests {
 		fs::File::create(&shards_path.join("state_1.bin")).unwrap();
 		fs::File::create(&shards_path.join("state_2.bin")).unwrap();
 
-		let sidechain_db_path = root_directory.join(SIDECHAIN_STORAGE_PATH);
+		let sidechain_db_path = root_directory.join(SIDECHAIN_BLOCKS_DB_STORAGE_PATH);
 		fs::create_dir_all(&sidechain_db_path).unwrap();
 		fs::File::create(&sidechain_db_path.join("sidechain_db_1.bin")).unwrap();
 		fs::File::create(&sidechain_db_path.join("sidechain_db_2.bin")).unwrap();
