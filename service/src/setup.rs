@@ -217,6 +217,97 @@ mod tests {
 		assert!(purge_target_b_lcdb_unless_protected(&root_directory).is_ok());
 	}
 
+	#[test]
+	fn purge_shards_protect_file_respected() {
+		let test_directory_handle = TestDirectoryHandle::new(PathBuf::from("test_protect_shard"));
+		let root_directory = test_directory_handle.path();
+
+		let shards_path = root_directory.join(SHARDS_PATH);
+		fs::create_dir_all(&shards_path).unwrap();
+		fs::File::create(&shards_path.join("state_1.bin")).unwrap();
+		fs::File::create(&shards_path.join("state_2.bin")).unwrap();
+
+		let sidechain_db_path = root_directory.join(SIDECHAIN_BLOCKS_DB_STORAGE_PATH);
+		fs::create_dir_all(&sidechain_db_path).unwrap();
+		fs::File::create(&sidechain_db_path.join("sidechain_db_1.bin")).unwrap();
+		fs::File::create(&sidechain_db_path.join("sidechain_db_2.bin")).unwrap();
+		fs::File::create(&sidechain_db_path.join("sidechain_db_3.bin")).unwrap();
+
+		let protector_path = root_directory.join("shards.protect");
+		fs::File::create(&protector_path).unwrap();
+
+		purge_shards_unless_protected(&root_directory).unwrap();
+		assert!(shards_path.exists());
+		assert!(sidechain_db_path.exists());
+
+		fs::remove_file(&protector_path).unwrap();
+		while protector_path.exists() {
+			std::thread::sleep(std::time::Duration::from_millis(100));
+		}
+		purge_shards_unless_protected(&root_directory).unwrap();
+		assert!(!shards_path.exists());
+		assert!(!sidechain_db_path.exists());
+	}
+
+	#[test]
+	fn purge_integritee_lcdb_protect_file_respected() {
+		let test_directory_handle =
+			TestDirectoryHandle::new(PathBuf::from("test_protect_integritee_lcdb"));
+		let root_directory = test_directory_handle.path();
+
+		let lcdb_path = root_directory.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH);
+		fs::create_dir_all(&lcdb_path).unwrap();
+
+		let protector_path = root_directory.join("integritee_lcdb.protect");
+		fs::File::create(&protector_path).unwrap();
+
+		purge_integritee_lcdb_unless_protected(&root_directory).unwrap();
+		assert!(lcdb_path.exists());
+
+		fs::remove_file(&protector_path).unwrap();
+		purge_integritee_lcdb_unless_protected(&root_directory).unwrap();
+		assert!(!lcdb_path.exists());
+	}
+
+	#[test]
+	fn purge_target_a_lcdb_protect_file_respected() {
+		let test_directory_handle =
+			TestDirectoryHandle::new(PathBuf::from("test_protect_target_a_lcdb"));
+		let root_directory = test_directory_handle.path();
+
+		let lcdb_path = root_directory.join(TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH);
+		fs::create_dir_all(&lcdb_path).unwrap();
+
+		let protector_path = root_directory.join("target_a_lcdb.protect");
+		fs::File::create(&protector_path).unwrap();
+
+		purge_target_a_lcdb_unless_protected(&root_directory).unwrap();
+		assert!(lcdb_path.exists());
+
+		fs::remove_file(&protector_path).unwrap();
+		purge_target_a_lcdb_unless_protected(&root_directory).unwrap();
+		assert!(!lcdb_path.exists());
+	}
+
+	#[test]
+	fn purge_target_b_lcdb_protect_file_respected() {
+		let test_directory_handle =
+			TestDirectoryHandle::new(PathBuf::from("test_protect_target_b_lcdb"));
+		let root_directory = test_directory_handle.path();
+
+		let lcdb_path = root_directory.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH);
+		fs::create_dir_all(&lcdb_path).unwrap();
+
+		let protector_path = root_directory.join("target_b_lcdb.protect");
+		fs::File::create(&protector_path).unwrap();
+
+		purge_target_b_lcdb_unless_protected(&root_directory).unwrap();
+		assert!(lcdb_path.exists());
+
+		fs::remove_file(&protector_path).unwrap();
+		purge_target_b_lcdb_unless_protected(&root_directory).unwrap();
+		assert!(!lcdb_path.exists());
+	}
 	/// Directory handle to automatically initialize a directory
 	/// and upon dropping the reference, removing it again.
 	struct TestDirectoryHandle {
