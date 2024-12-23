@@ -37,10 +37,10 @@ pub fn run_enclave_tests(matches: &ArgMatches) {
 	let mut config = Config::from(matches).with_test_data_dir();
 	println!("   creating temporary working dir for tests: {:?}", config.data_dir());
 	std::fs::create_dir_all(config.data_dir()).unwrap();
-	setup::purge_shards(config.data_dir()).unwrap();
-	setup::purge_integritee_lcdb(config.data_dir()).unwrap();
-	setup::purge_target_a_lcdb(config.data_dir()).unwrap();
-	setup::purge_target_b_lcdb(config.data_dir()).unwrap();
+	setup::purge_shards_unless_protected(config.data_dir()).unwrap();
+	setup::purge_integritee_lcdb_unless_protected(config.data_dir()).unwrap();
+	setup::purge_target_a_lcdb_unless_protected(config.data_dir()).unwrap();
+	setup::purge_target_b_lcdb_unless_protected(config.data_dir()).unwrap();
 
 	let enclave = enclave_init(&config).unwrap();
 
