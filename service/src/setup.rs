@@ -106,28 +106,52 @@ mod needs_enclave {
 }
 
 /// Purge all worker files in a given path.
-pub(crate) fn purge_shards(root_directory: &Path) -> ServiceResult<()> {
-	println!("[+] Purge all shards and sidechain blocks from previous runs");
-	remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
-	remove_dir_if_it_exists(root_directory, SIDECHAIN_BLOCKS_DB_STORAGE_PATH)?;
+pub(crate) fn purge_shards_unless_protected(root_directory: &Path) -> ServiceResult<()> {
+	let mut protectfile = PathBuf::from(root_directory);
+	protectfile.push("shards.protect");
+	if fs::metadata(protectfile.clone()).is_ok() {
+		println!("   all shards and sidechain db are protected by {:?}", protectfile);
+	} else {
+		println!("[+] Purge all shards and sidechain blocks from previous runs");
+		remove_dir_if_it_exists(root_directory, SHARDS_PATH)?;
+		remove_dir_if_it_exists(root_directory, SIDECHAIN_BLOCKS_DB_STORAGE_PATH)?;
+	}
 	Ok(())
 }
 
-pub(crate) fn purge_integritee_lcdb(root_directory: &Path) -> ServiceResult<()> {
-	println!("[+] Purge Integritee light-client db from previous runs");
-	remove_dir_if_it_exists(root_directory, INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+pub(crate) fn purge_integritee_lcdb_unless_protected(root_directory: &Path) -> ServiceResult<()> {
+	let mut protectfile = PathBuf::from(root_directory);
+	protectfile.push("integritee_lcdb.protect");
+	if fs::metadata(protectfile.clone()).is_ok() {
+		println!("   Integritee light-client dB is protected by {:?}", protectfile);
+	} else {
+		println!("[+] Purge Integritee light-client db from previous runs");
+		remove_dir_if_it_exists(root_directory, INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+	}
 	Ok(())
 }
 
-pub(crate) fn purge_target_a_lcdb(root_directory: &Path) -> ServiceResult<()> {
-	println!("[+] Purge TargetA light-client db from previous runs");
-	remove_dir_if_it_exists(root_directory, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+pub(crate) fn purge_target_a_lcdb_unless_protected(root_directory: &Path) -> ServiceResult<()> {
+	let mut protectfile = PathBuf::from(root_directory);
+	protectfile.push("target_a_lcdb.protect");
+	if fs::metadata(protectfile.clone()).is_ok() {
+		println!("   TargetA light-client dB is protected by {:?}", protectfile);
+	} else {
+		println!("[+] Purge TargetA light-client db from previous runs");
+		remove_dir_if_it_exists(root_directory, TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+	}
 	Ok(())
 }
 
-pub(crate) fn purge_target_b_lcdb(root_directory: &Path) -> ServiceResult<()> {
-	println!("[+] Purge TargetB light-client db from previous runs");
-	remove_dir_if_it_exists(root_directory, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+pub(crate) fn purge_target_b_lcdb_unless_protected(root_directory: &Path) -> ServiceResult<()> {
+	let mut protectfile = PathBuf::from(root_directory);
+	protectfile.push("target_b_lcdb.protect");
+	if fs::metadata(protectfile.clone()).is_ok() {
+		println!("   TargetB light-client dB is protected by {:?}", protectfile);
+	} else {
+		println!("[+] Purge TargetB light-client db from previous runs");
+		remove_dir_if_it_exists(root_directory, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH)?;
+	}
 	Ok(())
 }
 
@@ -169,12 +193,14 @@ mod tests {
 		fs::create_dir_all(&root_directory.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH))
 			.unwrap();
 
-		purge_files(&root_directory).unwrap();
-
+		purge_shards_unless_protected(&root_directory).unwrap();
 		assert!(!shards_path.exists());
 		assert!(!sidechain_db_path.exists());
+		purge_integritee_lcdb_unless_protected(&root_directory).unwrap();
 		assert!(!root_directory.join(INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH).exists());
+		purge_target_a_lcdb_unless_protected(&root_directory).unwrap();
 		assert!(!root_directory.join(TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH).exists());
+		purge_target_b_lcdb_unless_protected(&root_directory).unwrap();
 		assert!(!root_directory.join(TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH).exists());
 	}
 
@@ -185,7 +211,10 @@ mod tests {
 		));
 		let root_directory = test_directory_handle.path();
 
-		assert!(purge_files(&root_directory).is_ok());
+		assert!(purge_shards_unless_protected(&root_directory).is_ok());
+		assert!(purge_integritee_lcdb_unless_protected(&root_directory).is_ok());
+		assert!(purge_target_a_lcdb_unless_protected(&root_directory).is_ok());
+		assert!(purge_target_b_lcdb_unless_protected(&root_directory).is_ok());
 	}
 
 	/// Directory handle to automatically initialize a directory

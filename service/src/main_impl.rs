@@ -150,27 +150,9 @@ pub(crate) fn main() {
 	let clean_reset = matches.is_present("clean-reset");
 	if clean_reset {
 		println!("[+] Performing a clean reset of the worker");
-		let mut protectfile = PathBuf::from(config.data_dir());
-		protectfile.push("integritee_lcdb.protect");
-		if std::fs::metadata(protectfile.clone()).is_ok() {
-			println!("   Integritee light-client dB is protected by {:?}", protectfile);
-		} else {
-			setup::purge_integritee_lcdb(config.data_dir()).unwrap();
-		}
-		protectfile = PathBuf::from(config.data_dir());
-		protectfile.push("target_a_lcdb.protect");
-		if std::fs::metadata(protectfile.clone()).is_ok() {
-			println!("   TargetA light-client dB is protected by {:?}", protectfile);
-		} else {
-			setup::purge_target_a_lcdb(config.data_dir()).unwrap();
-		}
-		protectfile = PathBuf::from(config.data_dir());
-		protectfile.push("target_b_lcdb.protect");
-		if std::fs::metadata(protectfile.clone()).is_ok() {
-			println!("   TargetB light-client dB is protected by {:?}", protectfile);
-		} else {
-			setup::purge_target_b_lcdb(config.data_dir()).unwrap();
-		}
+		setup::purge_integritee_lcdb_unless_protected(config.data_dir()).unwrap();
+		setup::purge_target_a_lcdb_unless_protected(config.data_dir()).unwrap();
+		setup::purge_target_b_lcdb_unless_protected(config.data_dir()).unwrap();
 	}
 
 	// build the entire dependency tree
@@ -260,13 +242,7 @@ pub(crate) fn main() {
 		if clean_reset || std::fs::metadata(shard_path).is_err() {
 			// we default to purge here because we don't want to leave behind blocks
 			// for deprectated shards in the sidechain_db
-			let mut protectfile = PathBuf::from(config.data_dir());
-			protectfile.push("shards.protect");
-			if std::fs::metadata(protectfile.clone()).is_ok() {
-				println!("   all shards and sidechain db are protected by {:?}", protectfile);
-			} else {
-				setup::purge_shards(config.data_dir()).unwrap();
-			}
+			setup::purge_shards_unless_protected(config.data_dir()).unwrap();
 			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
 		}
 
@@ -564,9 +540,12 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("our enclave should be registered at this point");
 	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
-	let (we_are_primary_validateer, re_init_parentchain_needed) =
-		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
-			Some(primary_enclave) => match primary_enclave.instance_signer() {
+	let (we_are_primary_validateer, re_init_parentchain_needed) = match integritee_rpc_api
+		.primary_worker_for_shard(shard, None)
+		.unwrap()
+	{
+		Some(primary_enclave) =>
+			match primary_enclave.instance_signer() {
 				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
 					if primary.encode() == tee_accountid.encode() {
 						println!("We are primary worker on this shard and we have been previously running.");
@@ -601,24 +580,24 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-			None => {
-				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				enclave.init_shard(shard.encode()).unwrap();
-				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-					enclave
-						.init_shard_creation_parentchain_header(
-							shard,
-							&ParentchainId::Integritee,
-							&register_enclave_xt_header,
-						)
-						.unwrap();
-					debug!("shard config should be initialized on integritee network now");
-					(true, true)
-				} else {
-					(true, false)
-				}
-			},
-		};
+		None => {
+			println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+			enclave.init_shard(shard.encode()).unwrap();
+			if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+				enclave
+					.init_shard_creation_parentchain_header(
+						shard,
+						&ParentchainId::Integritee,
+						&register_enclave_xt_header,
+					)
+					.unwrap();
+				debug!("shard config should be initialized on integritee network now");
+				(true, true)
+			} else {
+				(true, false)
+			}
+		},
+	};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();
 
