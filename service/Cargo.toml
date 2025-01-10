@@ -1,6 +1,6 @@
 [package]
 name = "integritee-service"
-version = "0.15.6"
+version = "0.15.7"
 authors = ["Integritee AG <hello@integritee.network>"]
 build = "build.rs"
 edition = "2021"

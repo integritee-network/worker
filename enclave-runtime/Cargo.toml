@@ -1,6 +1,6 @@
 [package]
 name = "enclave-runtime"
-version = "0.15.6"
+version = "0.15.7"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
