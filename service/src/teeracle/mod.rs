@@ -14,7 +14,6 @@
 	limitations under the License.
 
 */
-
 use crate::{error::ServiceResult, teeracle::schedule_periodic::schedule_periodic};
 use codec::{Decode, Encode};
 use ita_parentchain_interface::integritee::api_client_types::IntegriteeApi;
@@ -23,7 +22,7 @@ use itp_types::parentchain::Hash;
 use itp_utils::hex::hex_encode;
 use log::*;
 use sp_runtime::OpaqueExtrinsic;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use substrate_api_client::{SubmitAndWatch, XtStatus};
 use teeracle_metrics::{increment_number_of_request_failures, set_extrinsics_inclusion_success};
 use tokio::runtime::Handle;
@@ -71,29 +70,37 @@ pub(crate) fn schedule_periodic_reregistration_thread(
 pub(crate) fn start_periodic_market_update<E: TeeracleApi>(
 	api: &IntegriteeApi,
 	period: Duration,
-	enclave_api: &E,
+	enclave_api: Arc<E>,
 	tokio_handle: &Handle,
 ) {
-	let updates_to_run = || {
-		if let Err(e) = execute_oracle_update(api, tokio_handle, || {
-			// Get market data for usd (hardcoded)
-			enclave_api.update_market_data_xt("TEER", "USD")
-		}) {
-			error!("Error running market update {:?}", e)
-		}
+	let updates_to_run = {
+		let api = api.clone();
+		let enclave_api = Arc::clone(&enclave_api);
+		let tokio_handle = tokio_handle.clone();
+		move || {
+			if let Err(e) = execute_oracle_update(&api, &tokio_handle, || {
+				// Get market data for usd (hardcoded)
+				enclave_api.update_market_data_xt("TEER", "USD")
+			}) {
+				error!("Error running market update {:?}", e)
+			}
 
-		// TODO: Refactor and add this back according to ISSUE: https://github.com/integritee-network/worker/issues/1300
-		// if let Err(e) = execute_oracle_update(api, tokio_handle, || {
-		// 	enclave_api.update_weather_data_xt("54.32", "15.37")
-		// }) {
-		// 	error!("Error running weather update {:?}", e)
-		// }
+			// TODO: Refactor and add this back according to ISSUE: https://github.com/integritee-network/worker/issues/1300
+			// if let Err(e) = execute_oracle_update(api, tokio_handle, || {
+			// 	enclave_api.update_weather_data_xt("54.32", "15.37")
+			// }) {
+			// 	error!("Error running weather update {:?}", e)
+			// }
+		}
 	};
+
 	info!("Teeracle will update now");
 	updates_to_run();
 
 	info!("Schedule teeracle updates every {:?}", period);
-	schedule_periodic(updates_to_run, period);
+	tokio_handle.spawn(async move {
+		schedule_periodic(updates_to_run, period);
+	});
 }
 
 fn execute_oracle_update<F>(

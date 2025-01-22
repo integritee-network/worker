@@ -630,7 +630,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 			start_periodic_market_update(
 				&integritee_rpc_api,
 				run_config.teeracle_update_interval(),
-				enclave.as_ref(),
+				enclave.clone(),
 				&tokio_handle,
 			);
 		},
