@@ -16,9 +16,8 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers, get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -51,8 +50,9 @@ impl SetBalanceCommand {
 		println!("send trusted call set-balance({}, {})", who.public(), self.amount);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = signer.public().into();
-		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
+		let nonce = get_trusted_account_info(cli, trusted_args, signer.public().into(), &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_set_balance(
 			signer.public().into(),
 			who.public().into(),

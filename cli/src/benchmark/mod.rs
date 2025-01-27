@@ -17,13 +17,12 @@
 
 use crate::{
 	command_utils::get_worker_api_direct,
-	get_layer_two_nonce,
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_keystore_path, get_pair_from_str},
-	trusted_operation::{
-		await_status, await_subscription_response, get_json_request, get_state,
-		perform_trusted_operation,
+	trusted_command_utils::{
+		get_identifiers, get_keystore_path, get_pair_from_str, get_trusted_account_info,
 	},
+	trusted_operation::{await_status, await_subscription_response, get_json_request, get_state},
 	Cli, CliResult, CliResultOk, SR25519_KEY_TYPE,
 };
 use codec::Decode;
@@ -34,7 +33,7 @@ use ita_stf::{
 use itc_rpc_client::direct_client::{DirectApi, DirectClient};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
-	types::{AccountId, KeyPair, TrustedOperation},
+	types::{KeyPair, TrustedOperation},
 };
 use itp_types::{
 	AccountInfo, Balance, ShardIdentifier, TrustedOperationStatus,
@@ -86,6 +85,10 @@ pub struct BenchmarkCommand {
 	/// Account to be used for initial funding of generated accounts used in benchmark
 	#[clap(default_value_t = String::from("//Alice"))]
 	funding_account: String,
+
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 struct BenchmarkClient {
@@ -127,7 +130,12 @@ impl BenchmarkCommand {
 			self.random_wait_before_transaction_max_ms,
 		);
 		let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
-		let funding_account_keys = get_pair_from_str(trusted_args, &self.funding_account);
+
+		let (sender, signer) = get_sender_and_signer_from_args!(
+			self.funding_account,
+			self.session_proxy,
+			trusted_args
+		);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 
@@ -137,14 +145,17 @@ impl BenchmarkCommand {
 			Ok(key) => key,
 			Err(err_msg) => panic!("{}", err_msg.to_string()),
 		};
-		let subject: AccountId = funding_account_keys.public().into();
-		let nonce_start = get_layer_two_nonce!(subject, funding_account_keys, cli, trusted_args);
+
+		let nonce_start = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
 		println!("Nonce for account {}: {}", self.funding_account, nonce_start);
 
 		let mut accounts = Vec::new();
 		let initial_balance = (self.number_iterations + 1)
 			* (1_000_000_000_000 / STF_TX_FEE_UNIT_DIVIDER + EXISTENTIAL_DEPOSIT);
-		// Setup new accounts and initialize them with money from Alice.
+		// Setup new accounts and initialize them with money from funding_account.
 		for i in 0..self.number_clients {
 			let nonce = i + nonce_start;
 			println!("Initializing account {} with initial amount {:?}", i, initial_balance);
@@ -153,18 +164,13 @@ impl BenchmarkCommand {
 			let a = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
 			let account = get_pair_from_str(trusted_args, a.to_string().as_str());
 
-			// Transfer amount from Alice to new account.
+			// Transfer amount from funding_account to new account.
 			let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_transfer(
-				funding_account_keys.public().into(),
+				sender.clone().into(),
 				account.public().into(),
 				initial_balance,
 			)
-			.sign(
-				&KeyPair::Sr25519(Box::new(funding_account_keys.clone())),
-				nonce,
-				&mrenclave,
-				&shard,
-			)
+			.sign(&KeyPair::Sr25519(Box::new(signer.clone())), nonce, &mrenclave, &shard)
 			.into_trusted_operation(true);
 
 			// For the last account we wait for confirmation in order to ensure all accounts were setup correctly

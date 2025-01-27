@@ -27,7 +27,7 @@ use crate::{
 		get_shard_vault::GetShardVaultCommand, get_total_issuance::GetTotalIssuanceCommand,
 		nonce::NonceCommand, note_bloat::NoteBloatCommand, transfer::TransferCommand,
 		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
-		waste_time::WasteTimeCommand,
+		waste_time::WasteTimeCommand, watchdog::WatchdogCommand,
 	},
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_keystore_path,
@@ -101,6 +101,9 @@ pub enum TrustedBaseCommand {
 	/// bloat state with dummy notes for benchmarking
 	NoteBloat(NoteBloatCommand),
 
+	/// run a watchdog service to probe a validateer regularly and profile timings
+	Watchdog(WatchdogCommand),
+
 	/// get a version string for the enclave
 	Version(VersionCommand),
 }
@@ -128,6 +131,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Watchdog(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}

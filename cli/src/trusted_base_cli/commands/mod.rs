@@ -16,6 +16,7 @@ pub mod transfer;
 pub mod unshield_funds;
 pub mod version;
 pub mod waste_time;
+pub mod watchdog;
 
 #[cfg(feature = "test")]
 pub mod set_balance;

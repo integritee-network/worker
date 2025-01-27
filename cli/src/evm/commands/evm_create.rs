@@ -16,21 +16,18 @@
 */
 
 use crate::{
-	get_layer_two_evm_nonce, get_layer_two_nonce,
+	evm::commands::evm_command_utils::get_trusted_evm_nonce,
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers, get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
-use ita_stf::{evm_helpers::evm_create_address, Index, TrustedCall, TrustedGetter};
-use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
-};
-use itp_types::AccountId;
+use ita_stf::{evm_helpers::evm_create_address, TrustedCall};
+use itp_stf_primitives::traits::TrustedCallSigning;
 use log::*;
 use pallet_evm::{AddressMapping, HashedAddressMapping};
-use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
+use sp_core::{crypto::Ss58Codec, H160, U256};
 use sp_runtime::traits::BlakeTwo256;
 use std::vec::Vec;
 
@@ -41,34 +38,41 @@ pub struct EvmCreateCommands {
 
 	/// Smart Contract in Hex format
 	smart_contract: String,
+
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl EvmCreateCommands {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let from = get_pair_from_str(trusted_args, &self.from);
-		let from_acc: AccountId = from.public().into();
-		println!("from ss58 is {}", from.public().to_ss58check());
+		let (sender, signer) =
+			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
+		println!("from ss58 is {}", sender.to_ss58check());
 
 		let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
 		sender_evm_acc_slice
-			.copy_from_slice((<[u8; 32]>::from(from_acc.clone())).get(0..20).unwrap());
+			.copy_from_slice((<[u8; 32]>::from(sender.clone())).get(0..20).unwrap());
 		let sender_evm_acc: H160 = sender_evm_acc_slice.into();
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
 
 		let sender_evm_substrate_addr =
 			HashedAddressMapping::<BlakeTwo256>::into_account_id(sender_evm_acc);
+
 		println!(
 			"Trying to get nonce of evm account {:?}",
 			sender_evm_substrate_addr.to_ss58check()
 		);
 
-		let subject: AccountId = from.public().into();
-		let nonce = get_layer_two_nonce!(subject, from, cli, trusted_args);
-		let evm_account_nonce = get_layer_two_evm_nonce!(from, cli, trusted_args);
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
+		let evm_nonce = get_trusted_evm_nonce(cli, trusted_args, &sender, &signer);
 
 		let top = TrustedCall::evm_create(
-			from_acc,
+			sender,
 			sender_evm_acc,
 			array_bytes::hex2bytes(&self.smart_contract).unwrap().to_vec(),
 			U256::from(0),
@@ -78,7 +82,7 @@ impl EvmCreateCommands {
 			None,
 			Vec::new(),
 		)
-		.sign(&from.into(), nonce, &mrenclave, &shard)
+		.sign(&signer.into(), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
 		if trusted_args.direct {
@@ -87,7 +91,7 @@ impl EvmCreateCommands {
 			perform_trusted_operation::<()>(cli, trusted_args, &top).map(|_| CliResultOk::None)?;
 		}
 
-		let execution_address = evm_create_address(sender_evm_acc, evm_account_nonce);
+		let execution_address = evm_create_address(sender_evm_acc, evm_nonce);
 		info!("trusted call evm_create executed");
 		println!("Created the smart contract with address {:?}", execution_address);
 		Ok(CliResultOk::H160 { hash: execution_address })

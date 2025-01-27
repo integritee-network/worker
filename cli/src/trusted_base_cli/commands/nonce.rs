@@ -16,25 +16,32 @@
 */
 
 use crate::{
-	get_layer_two_nonce, trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
-	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+	get_sender_and_signer_from_args,
+	trusted_cli::TrustedCli,
+	trusted_command_utils::{get_pair_from_str, get_trusted_account_info},
+	Cli, CliResult, CliResultOk,
 };
-use itp_stf_primitives::types::{KeyPair, TrustedOperation};
-use itp_types::AccountId;
 use log::*;
-use sp_core::Pair;
 
 #[derive(Parser)]
 pub struct NonceCommand {
 	/// AccountId in ss58check format, mnemonic or hex seed
 	account: String,
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl NonceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, &self.account);
-		let subject: AccountId = who.public().into();
-		println!("{}", get_layer_two_nonce!(subject, who, cli, trusted_args));
-		Ok(CliResultOk::None)
+		let (sender, signer) =
+			get_sender_and_signer_from_args!(self.account, self.session_proxy, trusted_args);
+
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
+		println!("{}", nonce);
+		Ok(CliResultOk::U32 { value: nonce as u32 })
 	}
 }

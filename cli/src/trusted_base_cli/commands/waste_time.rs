@@ -16,9 +16,9 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers, get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -27,15 +27,17 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::AccountId;
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair};
+use sp_core::Pair;
 use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct WasteTimeCommand {
 	/// subject's AccountId in ss58check format. must have maintainer privilege
-	account: String,
+	maintainer: String,
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 
 	/// milliseconds to waste
 	millis: u32,
@@ -43,14 +45,17 @@ pub struct WasteTimeCommand {
 
 impl WasteTimeCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let signer = get_pair_from_str(trusted_args, &self.account);
-		info!("account ss58 is {}", signer.public().to_ss58check());
+		let (sender, signer) =
+			get_sender_and_signer_from_args!(self.maintainer, self.session_proxy, trusted_args);
 
 		println!("send trusted call waste-time({}ms)", self.millis);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = signer.public().into();
-		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
+
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::waste_time(signer.public().into(), self.millis)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
