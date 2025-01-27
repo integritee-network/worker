@@ -16,9 +16,11 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
+	trusted_command_utils::{
+		get_accountid_from_str, get_identifiers, get_pair_from_str, get_trusted_account_info,
+	},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -30,7 +32,7 @@ use itp_stf_primitives::{
 	types::{KeyPair, TrustedOperation},
 };
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair};
+use sp_core::crypto::Ss58Codec;
 use std::boxed::Box;
 
 #[derive(Parser)]
@@ -54,19 +56,18 @@ pub struct TransferCommand {
 
 impl TransferCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let from = get_accountid_from_str(&self.from);
+		let (from, signer) =
+			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
 		let to = get_accountid_from_str(&self.to);
 		info!("from ss58 is {}", from.to_ss58check());
 		info!("to ss58 is {}", to.to_ss58check());
-		let signer = self
-			.session_proxy
-			.as_ref()
-			.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
-			.unwrap_or_else(|| get_pair_from_str(trusted_args, &self.from));
-		info!("signer ss58 is {}", signer.public().to_ss58check());
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let nonce = get_layer_two_nonce!(from, signer, cli, trusted_args);
+
+		let nonce = get_trusted_account_info(cli, trusted_args, &from, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
 		println!(
             "send trusted call transfer from {} to {}: {}, nonce: {}, signing using mrenclave: {} and shard: {}",
             from,

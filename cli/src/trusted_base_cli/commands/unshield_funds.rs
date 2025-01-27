@@ -16,9 +16,11 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_accountid_from_str, get_identifiers, get_pair_from_str},
+	trusted_command_utils::{
+		get_accountid_from_str, get_identifiers, get_pair_from_str, get_trusted_account_info,
+	},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -28,9 +30,8 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::AccountId;
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair};
+use sp_core::crypto::Ss58Codec;
 use std::boxed::Box;
 
 #[derive(Parser)]
@@ -43,28 +44,33 @@ pub struct UnshieldFundsCommand {
 
 	/// amount to be transferred
 	amount: Balance,
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl UnshieldFundsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let from = get_pair_from_str(trusted_args, &self.from);
+		let (from, signer) =
+			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
 		let to = get_accountid_from_str(&self.to);
-		println!("from ss58 is {}", from.public().to_ss58check());
-		println!("to   ss58 is {}", to.to_ss58check());
 
 		println!(
 			"send trusted call unshield_funds from {} to {}: {}",
-			from.public(),
-			to,
+			from.to_ss58check(),
+			to.to_ss58check(),
 			self.amount
 		);
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = from.public().into();
-		let nonce = get_layer_two_nonce!(subject, from, cli, trusted_args);
+
+		let nonce = get_trusted_account_info(cli, trusted_args, &from, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::balance_unshield(from.public().into(), to, self.amount, shard)
-				.sign(&KeyPair::Sr25519(Box::new(from)), nonce, &mrenclave, &shard)
+			TrustedCall::balance_unshield(from.into(), to, self.amount, shard)
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 
 		if trusted_args.direct {

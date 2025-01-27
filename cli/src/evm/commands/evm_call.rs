@@ -16,20 +16,17 @@
 */
 
 use crate::{
-	get_layer_two_evm_nonce, get_layer_two_nonce,
+	evm::commands::evm_command_utils::get_trusted_evm_nonce,
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers, get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
-use ita_stf::{Index, TrustedCall, TrustedGetter};
-use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
-};
-use itp_types::AccountId;
+use ita_stf::TrustedCall;
+use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
 use log::*;
-use sp_core::{crypto::Ss58Codec, Pair, H160, U256};
+use sp_core::{crypto::Ss58Codec, H160, U256};
 use std::{boxed::Box, vec::Vec};
 
 #[derive(Parser)]
@@ -42,18 +39,22 @@ pub struct EvmCallCommands {
 
 	/// Function hash
 	function: String,
+
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl EvmCallCommands {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let sender = get_pair_from_str(trusted_args, &self.from);
-		let sender_acc: AccountId = sender.public().into();
+		let (sender, signer) =
+			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
 
-		info!("senders ss58 is {}", sender.public().to_ss58check());
+		info!("senders ss58 is {}", sender.to_ss58check());
 
 		let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
 		sender_evm_acc_slice
-			.copy_from_slice((<[u8; 32]>::from(sender_acc.clone())).get(0..20).unwrap());
+			.copy_from_slice((<[u8; 32]>::from(sender.clone())).get(0..20).unwrap());
 		let sender_evm_acc: H160 = sender_evm_acc_slice.into();
 
 		info!("senders evm account is {}", sender_evm_acc);
@@ -64,13 +65,16 @@ impl EvmCallCommands {
 		let function_hash = array_bytes::hex2bytes(&self.function).unwrap();
 
 		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = sender.public().into();
-		let nonce = get_layer_two_nonce!(subject, sender, cli, trusted_args);
-		let evm_nonce = get_layer_two_evm_nonce!(sender, cli, trusted_args);
+
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
+		let evm_nonce = get_trusted_evm_nonce(cli, trusted_args, &sender, &signer);
 
 		println!("calling smart contract function");
 		let function_call = TrustedCall::evm_call(
-			sender_acc,
+			sender,
 			sender_evm_acc,
 			execution_address,
 			function_hash,
@@ -81,7 +85,7 @@ impl EvmCallCommands {
 			Some(U256::from(evm_nonce)),
 			Vec::new(),
 		)
-		.sign(&KeyPair::Sr25519(Box::new(sender)), nonce, &mrenclave, &shard)
+		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 		.into_trusted_operation(trusted_args.direct);
 
 		if trusted_args.direct {

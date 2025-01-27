@@ -33,7 +33,7 @@ use substrate_client_keystore::LocalKeystore;
 
 #[macro_export]
 macro_rules! get_layer_two_nonce {
-	($subject:ident, $signer_pair:ident, $cli: ident, $trusted_args:ident ) => {{
+	($subject:expr, $signer_pair:expr, $cli: ident, $trusted_args:ident ) => {{
 		use ita_stf::{AccountInfo, Getter, TrustedCallSigned, TrustedGetter};
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::account_info($subject.clone().into())
@@ -48,25 +48,48 @@ macro_rules! get_layer_two_nonce {
 	}};
 }
 
+#[macro_export]
+macro_rules! get_sender_and_signer_from_args {
+	($sender:expr, $maybe_session_proxy:expr, $trusted_args:ident ) => {{
+		use itp_stf_primitives::types::AccountId;
+		use log::debug;
+		use sp_application_crypto::{sr25519, Pair};
+		use sp_core::crypto::Ss58Codec;
+
+		let sender: AccountId = sr25519::Public::from_ss58check($sender.as_str()).unwrap().into();
+		let signer = $maybe_session_proxy
+			.as_ref()
+			.map(|proxy| get_pair_from_str($trusted_args, proxy.as_str()))
+			.unwrap_or_else(|| get_pair_from_str($trusted_args, $sender.as_str()));
+		debug!(
+			"get_sender_and_signer_from_args: sender = {:?}, signer: {:?}",
+			sender.to_ss58check(),
+			signer.public().to_ss58check()
+		);
+		(sender, signer)
+	}};
+}
+
 const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
-pub(crate) fn get_balance(
+pub(crate) fn get_trusted_account_info(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
-	arg_who: &str,
-	arg_session_proxy: Option<&String>,
-) -> Option<u128> {
-	debug!("arg_who = {:?}, session proxy: {:?}", arg_who, arg_session_proxy);
-	let who = get_pair_from_str(trusted_args, arg_who);
-	let signer = arg_session_proxy
-		.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
-		.unwrap_or_else(|| who.clone());
+	subject: &AccountId,
+	signer: &sr25519_core::Pair,
+) -> Option<AccountInfo> {
+	debug!(
+		"get_trusted_account_info: subject = {:?}, signer: {:?}",
+		subject.to_ss58check(),
+		signer.public().to_ss58check()
+	);
 	let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-		TrustedGetter::account_info(who.public().into()).sign(&KeyPair::Sr25519(Box::new(signer))),
+		TrustedGetter::account_info(subject.clone())
+			.sign(&KeyPair::Sr25519(Box::new(signer.clone()))),
 	));
-	let info = perform_trusted_operation::<AccountInfo>(cli, trusted_args, &top).ok();
-	info!("AccountInfo: {:?}", info);
-	info.map(|i| i.data.free)
+	let maybe_info = perform_trusted_operation::<AccountInfo>(cli, trusted_args, &top).ok();
+	debug!("get_trusted_account_info: result: {:?}", maybe_info);
+	maybe_info
 }
 
 pub(crate) fn get_keystore_path(trusted_args: &TrustedCli) -> PathBuf {
