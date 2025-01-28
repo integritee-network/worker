@@ -19,7 +19,14 @@ use crate::{
 	get_sender_and_signer_from_args, trusted_cli::TrustedCli,
 	trusted_command_utils::get_trusted_account_info, Cli, CliResult, CliResultOk,
 };
-use std::time::Instant;
+use prometheus::{register_gauge, Encoder, Gauge, TextEncoder};
+use rayon::prelude::*;
+use std::{
+	sync::mpsc::{channel, Receiver, Sender},
+	time::Instant,
+};
+use tokio::time::{sleep, Duration};
+use warp::Filter;
 
 #[derive(Parser)]
 pub struct WatchdogCommand {
@@ -35,12 +42,40 @@ impl WatchdogCommand {
 		let (sender, signer) =
 			get_sender_and_signer_from_args!(self.account, self.session_proxy, trusted_args);
 
-		let getter_start_timer = Instant::now();
-		let _info = get_trusted_account_info(cli, trusted_args, &sender, &signer)
-			.map(|info| info.nonce)
-			.unwrap_or_default();
-		let getter_duration = getter_start_timer.elapsed();
-		println!("Getting AccountInfo took {}ms", getter_duration.as_millis());
+		// Register a gauge metric
+		let getter_duration_gauge = register_gauge!(
+			"trusted_getter_account_info_request_seconds",
+			"Duration of the getter request operation in seconds"
+		)
+		.unwrap();
+		// Create a Tokio runtime
+		let rt = tokio::runtime::Runtime::new().unwrap();
+
+		// Start the Prometheus server and run the loop in the Tokio runtime
+		rt.block_on(async {
+			// Start the Prometheus server
+			let metrics_route = warp::path("metrics").map(move || {
+				let encoder = TextEncoder::new();
+				let metric_families = prometheus::gather();
+				let mut buffer = Vec::new();
+				encoder.encode(&metric_families, &mut buffer).unwrap();
+				warp::http::Response::builder()
+					.header("Content-Type", encoder.format_type())
+					.body(buffer)
+			});
+
+			tokio::spawn(warp::serve(metrics_route).run(([0, 0, 0, 0], 9090)));
+
+			loop {
+				let getter_start_timer = Instant::now();
+				let _info = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+					.map(|info| info.nonce)
+					.unwrap_or_default();
+				let getter_duration = getter_start_timer.elapsed();
+				println!("Getting AccountInfo took {}ms", getter_duration.as_millis());
+				getter_duration_gauge.set(getter_duration.as_secs_f64());
+			}
+		});
 		Ok(CliResultOk::None)
 	}
 }
