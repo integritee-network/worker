@@ -16,6 +16,7 @@
 */
 
 use crate::{
+	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::{get_pair_from_str, get_trusted_account_info},
 	Cli, CliResult, CliResultOk,
@@ -36,13 +37,8 @@ pub struct WatchdogCommand {
 
 impl WatchdogCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let sender: itp_stf_primitives::types::AccountId =
-			sr25519::Public::from_ss58check(self.account.as_str()).unwrap().into();
-		let signer = self
-			.session_proxy
-			.as_ref()
-			.map(|proxy| get_pair_from_str(trusted_args, proxy.as_str()))
-			.unwrap_or_else(|| get_pair_from_str(trusted_args, self.account.as_str()));
+		let (sender, signer) =
+			get_sender_and_signer_from_args!(self.account, self.session_proxy, trusted_args);
 
 		let getter_start_timer = Instant::now();
 		let _info = get_trusted_account_info(cli, trusted_args, &sender, &signer)

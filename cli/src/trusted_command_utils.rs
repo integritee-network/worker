@@ -31,32 +31,18 @@ use sp_runtime::traits::IdentifyAccount;
 use std::{boxed::Box, path::PathBuf};
 use substrate_client_keystore::LocalKeystore;
 
-#[macro_export]
-macro_rules! get_layer_two_nonce {
-	($subject:expr, $signer_pair:expr, $cli: ident, $trusted_args:ident ) => {{
-		use ita_stf::{AccountInfo, Getter, TrustedCallSigned, TrustedGetter};
-		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-			TrustedGetter::account_info($subject.clone().into())
-				.sign(&KeyPair::Sr25519(Box::new($signer_pair.clone()))),
-		));
-		// final nonce = current system nonce + pending tx count, panic early
-		let info = perform_trusted_operation::<AccountInfo>($cli, $trusted_args, &top);
-		let nonce = info.map(|i| i.nonce).ok().unwrap_or_default();
-		debug!("got system nonce: {:?}", nonce);
-		// todo! pending TrustedCalls in pool should be considered too, but: https://github.com/integritee-network/worker/issues/1657
-		nonce
-	}};
-}
+const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 #[macro_export]
 macro_rules! get_sender_and_signer_from_args {
 	($sender:expr, $maybe_session_proxy:expr, $trusted_args:ident ) => {{
+		use crate::trusted_command_utils::{get_account_id_from_str, get_pair_from_str};
 		use itp_stf_primitives::types::AccountId;
 		use log::debug;
 		use sp_application_crypto::{sr25519, Pair};
 		use sp_core::crypto::Ss58Codec;
 
-		let sender: AccountId = sr25519::Public::from_ss58check($sender.as_str()).unwrap().into();
+		let sender: AccountId = get_account_id_from_str($sender.as_str());
 		let signer = $maybe_session_proxy
 			.as_ref()
 			.map(|proxy| get_pair_from_str($trusted_args, proxy.as_str()))
@@ -69,8 +55,6 @@ macro_rules! get_sender_and_signer_from_args {
 		(sender, signer)
 	}};
 }
-
-const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 
 pub(crate) fn get_trusted_account_info(
 	cli: &Cli,
@@ -152,5 +136,19 @@ pub(crate) fn get_pair_from_str(trusted_args: &TrustedCli, account: &str) -> sr2
 				None => panic!("account not in my_trusted_keystore"),
 			}
 		},
+	}
+}
+
+// get an AccountId either form keyring (well known keys) or from the store
+pub(crate) fn get_account_id_from_str(account: &str) -> AccountId {
+	info!("getting AccountId for {}", account);
+	match &account[..2] {
+		"//" => sr25519_core::Pair::from_string(account, None).unwrap().public().into(),
+		"0x" => sr25519_core::Pair::from_string_with_seed(account, None)
+			.unwrap()
+			.0
+			.public()
+			.into(),
+		_ => sr25519::Public::from_ss58check(account).unwrap().into(),
 	}
 }
