@@ -69,7 +69,7 @@ impl UnshieldFundsCommand {
 			.unwrap_or_default();
 
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::balance_unshield(from.into(), to, self.amount, shard)
+			TrustedCall::balance_unshield(from, to, self.amount, shard)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 

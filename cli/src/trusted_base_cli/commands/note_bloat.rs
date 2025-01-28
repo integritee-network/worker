@@ -55,7 +55,7 @@ impl NoteBloatCommand {
 			.map(|info| info.nonce)
 			.unwrap_or_default();
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::note_bloat(sender.into(), self.kilobytes)
+			TrustedCall::note_bloat(sender, self.kilobytes)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 

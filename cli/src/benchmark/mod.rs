@@ -166,7 +166,7 @@ impl BenchmarkCommand {
 
 			// Transfer amount from funding_account to new account.
 			let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_transfer(
-				sender.clone().into(),
+				sender.clone(),
 				account.public().into(),
 				initial_balance,
 			)

@@ -42,6 +42,6 @@ impl NonceCommand {
 			.unwrap_or_default();
 
 		println!("{}", nonce);
-		Ok(CliResultOk::U32 { value: nonce as u32 })
+		Ok(CliResultOk::U32 { value: nonce })
 	}
 }
