@@ -16,14 +16,9 @@
 */
 
 use crate::{
-	get_sender_and_signer_from_args,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_pair_from_str, get_trusted_account_info},
-	Cli, CliResult, CliResultOk,
+	get_sender_and_signer_from_args, trusted_cli::TrustedCli,
+	trusted_command_utils::get_trusted_account_info, Cli, CliResult, CliResultOk,
 };
-
-use sp_application_crypto::sr25519;
-use sp_core::crypto::Ss58Codec;
 use std::time::Instant;
 
 #[derive(Parser)]

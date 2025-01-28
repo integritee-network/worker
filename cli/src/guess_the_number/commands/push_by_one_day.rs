@@ -18,7 +18,7 @@
 use crate::{
 	get_sender_and_signer_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::{get_identifiers},
 	trusted_operation::perform_trusted_operation,
 	Cli, CliResult, CliResultOk,
 };

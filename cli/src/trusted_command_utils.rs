@@ -36,11 +36,11 @@ const TRUSTED_KEYSTORE_PATH: &str = "my_trusted_keystore";
 #[macro_export]
 macro_rules! get_sender_and_signer_from_args {
 	($sender:expr, $maybe_session_proxy:expr, $trusted_args:ident ) => {{
-		use crate::trusted_command_utils::{get_account_id_from_str, get_pair_from_str};
 		use itp_stf_primitives::types::AccountId;
 		use log::debug;
-		use sp_application_crypto::{sr25519, Pair};
+		use sp_application_crypto::Pair;
 		use sp_core::crypto::Ss58Codec;
+		use $crate::trusted_command_utils::{get_account_id_from_str, get_pair_from_str};
 
 		let sender: AccountId = get_account_id_from_str($sender.as_str());
 		let signer = $maybe_session_proxy
