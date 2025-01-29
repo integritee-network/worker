@@ -40,6 +40,9 @@ pub struct WatchdogCommand {
 	/// probing interval in seconds. default is 3600 (1h)
 	#[clap(long)]
 	interval: Option<u64>,
+	/// port to use for serving prometheus metrics. default is 9090
+	#[clap(long)]
+	prometheus_port: Option<u16>,
 	/// session proxy who can sign on behalf of the account
 	#[clap(long)]
 	session_proxy: Option<String>,
@@ -97,7 +100,10 @@ impl WatchdogCommand {
 					.body(buffer)
 			});
 
-			tokio::spawn(warp::serve(metrics_route).run(([0, 0, 0, 0], 9090)));
+			tokio::spawn(
+				warp::serve(metrics_route)
+					.run(([0, 0, 0, 0], self.prometheus_port.unwrap_or(9090))),
+			);
 
 			loop {
 				// probe TrustedGetter for AccountInfo
