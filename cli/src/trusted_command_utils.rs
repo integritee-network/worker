@@ -16,14 +16,20 @@
 */
 
 use crate::{
-	command_utils::mrenclave_from_base58, trusted_cli::TrustedCli,
-	trusted_operation::perform_trusted_operation, Cli,
+	command_utils::{get_worker_api_direct, mrenclave_from_base58},
+	trusted_cli::TrustedCli,
+	trusted_operation::perform_trusted_operation,
+	Cli, CliError,
 };
 use base58::{FromBase58, ToBase58};
-use codec::Encode;
+use codec::{Decode, Encode};
 use ita_stf::{Getter, TrustedCallSigned, TrustedGetter};
+use itc_rpc_client::direct_client::DirectApi;
+use itp_rpc::{RpcRequest, RpcResponse, RpcReturnValue};
 use itp_stf_primitives::types::{AccountId, KeyPair, ShardIdentifier, TrustedOperation};
-use itp_types::AccountInfo;
+use itp_types::{AccountInfo, DirectRequestStatus};
+use itp_utils::FromHexPrefixed;
+use its_primitives::types::header::SidechainHeader;
 use log::*;
 use sp_application_crypto::sr25519;
 use sp_core::{crypto::Ss58Codec, sr25519 as sr25519_core, Pair};
@@ -151,4 +157,32 @@ pub(crate) fn get_account_id_from_str(account: &str) -> AccountId {
 			.into(),
 		_ => sr25519::Public::from_ss58check(account).unwrap().into(),
 	}
+}
+
+pub(crate) fn get_sidechain_header(cli: &Cli) -> Result<SidechainHeader, CliError> {
+	let direct_api = get_worker_api_direct(cli);
+	let rpc_method = "chain_getHeader".to_owned();
+	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, vec![]).unwrap();
+	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
+	// Decode RPC response.
+	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str)
+		.map_err(|err| CliError::WorkerRpcApi { msg: err.to_string() })?;
+	let rpc_return_value = RpcReturnValue::from_hex(&rpc_response.result)
+		// Replace with `inspect_err` once it's stable.
+		.map_err(|err| {
+			error!("Failed to decode RpcReturnValue: {:?}", err);
+			CliError::WorkerRpcApi { msg: "failed to decode RpcReturnValue".to_string() }
+		})?;
+
+	if rpc_return_value.status == DirectRequestStatus::Error {
+		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
+		return Err(CliError::WorkerRpcApi { msg: "rpc error".to_string() })
+	}
+
+	SidechainHeader::decode(&mut rpc_return_value.value.as_slice())
+		// Replace with `inspect_err` once it's stable.
+		.map_err(|err| {
+			error!("Failed to decode sidechain header: {:?}", err);
+			CliError::WorkerRpcApi { msg: err.to_string() }
+		})
 }
