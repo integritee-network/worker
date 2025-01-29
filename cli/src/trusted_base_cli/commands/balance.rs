@@ -14,9 +14,9 @@
 	limitations under the License.
 
 */
-
 use crate::{
-	trusted_cli::TrustedCli, trusted_command_utils::get_balance, Cli, CliResult, CliResultOk,
+	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
+	trusted_command_utils::get_trusted_account_info, Cli, CliResult, CliResultOk,
 };
 
 #[derive(Parser)]
@@ -30,8 +30,13 @@ pub struct BalanceCommand {
 
 impl BalanceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let balance = get_balance(cli, trusted_args, &self.account, self.session_proxy.as_ref())
-			.unwrap_or_default();
+		let (sender, signer, _mrenclave, _shard) =
+			get_basic_signing_info_from_args!(self.account, self.session_proxy, cli, trusted_args);
+
+		let balance = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.unwrap_or_default()
+			.data
+			.free;
 		println!("{}", balance);
 		Ok(CliResultOk::Balance { balance })
 	}

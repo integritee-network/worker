@@ -390,6 +390,20 @@ pub struct ParentchainsInfo {
 	pub shielding_target: ParentchainId,
 }
 
+impl ParentchainsInfo {
+	pub fn get_shielding_target_decimals(&self) -> Option<u8> {
+		self.get_shielding_target_genesis_hash().map(MinimalChainSpec::decimals)
+	}
+
+	pub fn get_shielding_target_genesis_hash(&self) -> Option<Hash> {
+		match self.shielding_target {
+			ParentchainId::Integritee => self.integritee.genesis_hash,
+			ParentchainId::TargetA => self.target_a.genesis_hash,
+			ParentchainId::TargetB => self.target_b.genesis_hash,
+		}
+	}
+}
+
 /// General public information about the sync status of a parentchain
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub struct ParentchainInfo {

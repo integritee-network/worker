@@ -2290,6 +2290,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "http"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f16ca2af56261c99fba8bac40a10251ce8188205a4c448fbb745a2e4daa76fea"
+dependencies = [
+ "bytes 1.4.0",
+ "fnv 1.0.7",
+ "itoa 1.0.9",
+]
+
+[[package]]
 name = "http-body"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2557,7 +2568,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.15.8"
+version = "0.15.9"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2588,6 +2599,7 @@ dependencies = [
  "pallet-teeracle",
  "pallet-teerex",
  "parity-scale-codec",
+ "prometheus 0.10.0",
  "rand 0.8.5",
  "rayon",
  "regex 1.9.5",
@@ -2605,12 +2617,14 @@ dependencies = [
  "substrate-client-keystore",
  "teeracle-primitives",
  "thiserror 1.0.44",
+ "tokio",
  "urlencoding",
+ "warp",
 ]
 
 [[package]]
 name = "integritee-service"
-version = "0.15.8"
+version = "0.15.9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2657,7 +2671,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "parse_duration",
  "primitive-types",
- "prometheus",
+ "prometheus 0.13.3",
  "regex 1.9.5",
  "scale-info",
  "serde 1.0.193",
@@ -5795,6 +5809,21 @@ dependencies = [
 
 [[package]]
 name = "prometheus"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30d70cf4412832bcac9cffe27906f4a66e450d323525e977168c70d1b36120ae"
+dependencies = [
+ "cfg-if 0.1.10",
+ "fnv 1.0.7",
+ "lazy_static",
+ "parking_lot 0.11.2",
+ "protobuf",
+ "regex 1.9.5",
+ "thiserror 1.0.44",
+]
+
+[[package]]
+name = "prometheus"
 version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "449811d15fbdf5ceb5c1144416066429cf82316e2ec8ce0c1f6f8a02e7bbcf8c"
@@ -5808,6 +5837,12 @@ dependencies = [
  "procfs",
  "thiserror 1.0.44",
 ]
+
+[[package]]
+name = "protobuf"
+version = "2.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
 name = "psm"
@@ -6410,15 +6445,6 @@ dependencies = [
  "rustls 0.19.1",
  "schannel",
  "security-framework",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d3987094b1d07b653b7dfdc3f70ce9a1da9c51ac18c1b06b662e4f9a0e9f4b2"
-dependencies = [
- "base64 0.21.5",
 ]
 
 [[package]]
@@ -8183,14 +8209,14 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
-version = "0.18.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54319c93411147bced34cb5609a80e0a8e44c5999c93903a81cd866630ec0bfd"
+checksum = "c83b561d025642014097b66e6c1bb422783339e0909e4429cde4749d1990bc38"
 dependencies = [
  "futures-util 0.3.28",
  "log 0.4.22",
  "tokio",
- "tungstenite 0.18.0",
+ "tungstenite 0.21.0",
 ]
 
 [[package]]
@@ -8431,6 +8457,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "tungstenite"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ef1a641ea34f399a848dea702823bbecfb4c486f911735368f1f137cb8257e1"
+dependencies = [
+ "byteorder 1.4.3",
+ "bytes 1.4.0",
+ "data-encoding",
+ "http 1.2.0",
+ "httparse 1.8.0",
+ "log 0.4.22",
+ "rand 0.8.5",
+ "sha1 0.10.5",
+ "thiserror 1.0.44",
+ "url 2.5.0",
+ "utf-8 0.7.6",
+]
+
+[[package]]
 name = "twox-hash"
 version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8659,9 +8704,9 @@ dependencies = [
 
 [[package]]
 name = "warp"
-version = "0.3.5"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba431ef570df1287f7f8b07e376491ad54f84d26ac473489427231e1718e1f69"
+checksum = "4378d202ff965b011c64817db11d5829506d3404edeadb61f190d111da3f231c"
 dependencies = [
  "bytes 1.4.0",
  "futures-channel 0.3.28",
@@ -8675,13 +8720,11 @@ dependencies = [
  "multer",
  "percent-encoding 2.3.1",
  "pin-project",
- "rustls-pemfile",
  "scoped-tls",
  "serde 1.0.193",
  "serde_json 1.0.103",
  "serde_urlencoded",
  "tokio",
- "tokio-stream",
  "tokio-tungstenite",
  "tokio-util 0.7.8",
  "tower-service",

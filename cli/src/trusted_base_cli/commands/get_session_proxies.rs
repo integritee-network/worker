@@ -31,7 +31,7 @@ pub struct GetSessionProxiesCommand {
 
 impl GetSessionProxiesCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, self.account.as_str());
+		let who = get_pair_from_str(cli, trusted_args, self.account.as_str());
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::account_info_and_session_proxies(who.public().into())
 				.sign(&KeyPair::Sr25519(Box::new(who))),

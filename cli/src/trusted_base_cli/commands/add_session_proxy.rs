@@ -16,9 +16,8 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::get_pair_from_str,
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -28,10 +27,10 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::AccountId;
 use log::*;
 use pallet_session_proxy::{SessionProxyCredentials, SessionProxyRole};
 
+use crate::trusted_command_utils::{get_identifiers, get_trusted_account_info};
 use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
 
@@ -49,14 +48,15 @@ pub struct AddSessionProxyCommand {
 
 impl AddSessionProxyCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let delegator = get_pair_from_str(trusted_args, &self.account);
+		let delegator = get_pair_from_str(cli, trusted_args, &self.account);
 		info!("account ss58 is {}", delegator.public().to_ss58check());
-		let delegate = get_pair_from_str(trusted_args, &self.seed);
+		let delegate = get_pair_from_str(cli, trusted_args, &self.seed);
 		println!("send trusted call add-session-proxy for {}", delegate.public().to_ss58check());
-
-		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = delegator.public().into();
-		let nonce = get_layer_two_nonce!(subject, delegator, cli, trusted_args);
+		let (mrenclave, shard) = get_identifiers(cli, trusted_args);
+		let nonce =
+			get_trusted_account_info(cli, trusted_args, &delegator.public().into(), &delegator)
+				.map(|info| info.nonce)
+				.unwrap_or_default();
 
 		let role = match self.role.as_str() {
 			"Any" => SessionProxyRole::Any,

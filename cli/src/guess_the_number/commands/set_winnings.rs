@@ -16,9 +16,9 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
+	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
+	trusted_command_utils::get_trusted_account_info,
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -30,9 +30,8 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::AccountId;
 use log::*;
-use sp_core::Pair;
+use sp_core::{crypto::Ss58Codec, Pair};
 use std::boxed::Box;
 
 #[derive(Parser)]
@@ -41,21 +40,27 @@ pub struct SetWinningsCommand {
 	master: String,
 	/// amount to be transferred
 	winnings: Balance,
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl SetWinningsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let signer = get_pair_from_str(trusted_args, &self.master);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.master, self.session_proxy, cli, trusted_args);
 
 		println!(
-			"send trusted call guess-the-number set winnings({}, {})",
-			signer.public(),
+			"send trusted call guess-the-number set winnings. sender {}, signer {}, winnings {})",
+			sender.to_ss58check(),
+			signer.public().to_ss58check(),
 			self.winnings
 		);
 
-		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = signer.public().into();
-		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
 		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::guess_the_number(
 			GuessTheNumberTrustedCall::set_winnings(signer.public().into(), self.winnings),
 		)

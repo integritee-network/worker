@@ -16,45 +16,47 @@
 */
 
 use crate::{
-	get_layer_two_nonce,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str},
-	trusted_operation::perform_trusted_operation,
-	Cli, CliResult, CliResultOk,
+	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 
-use crate::trusted_operation::send_direct_request;
+use crate::{
+	trusted_command_utils::get_trusted_account_info, trusted_operation::send_direct_request,
+};
 use ita_stf::{
 	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
 };
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
-	types::{AccountId, KeyPair, TrustedOperation},
+	types::{KeyPair, TrustedOperation},
 };
 use log::*;
-use sp_core::Pair;
 use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct PushByOneDayCommand {
 	/// sender's AccountId in ss58check format, mnemonic or hex seed. must by authorized as GuessMaster
 	master: String,
+	/// session proxy who can sign on behalf of the account
+	#[clap(long)]
+	session_proxy: Option<String>,
 }
 
 impl PushByOneDayCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let signer = get_pair_from_str(trusted_args, &self.master);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.master, self.session_proxy, cli, trusted_args);
 
 		println!("send trusted call guess-the-number push by one day");
 
-		let (mrenclave, shard) = get_identifiers(trusted_args);
-		let subject: AccountId = signer.public().into();
-		let nonce = get_layer_two_nonce!(subject, signer, cli, trusted_args);
-		let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::guess_the_number(
-			GuessTheNumberTrustedCall::push_by_one_day(signer.public().into()),
-		)
-		.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
-		.into_trusted_operation(trusted_args.direct);
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
+			.map(|info| info.nonce)
+			.unwrap_or_default();
+
+		let top: TrustedOperation<TrustedCallSigned, Getter> =
+			TrustedCall::guess_the_number(GuessTheNumberTrustedCall::push_by_one_day(sender))
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct);
 
 		if trusted_args.direct {
 			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)

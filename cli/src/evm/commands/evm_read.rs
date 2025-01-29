@@ -36,7 +36,7 @@ pub struct EvmReadCommands {
 
 impl EvmReadCommands {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let sender = get_pair_from_str(trusted_args, &self.from);
+		let sender = get_pair_from_str(cli, trusted_args, &self.from);
 		let sender_acc: AccountId = sender.public().into();
 
 		info!("senders ss58 is {}", sender.public().to_ss58check());
