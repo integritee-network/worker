@@ -138,7 +138,7 @@ impl WatchdogCommand {
 				if decimal_balance_free < 2f64 / STF_TX_FEE_UNIT_DIVIDER as f64 {
 					println!("Account has insufficient funds. Exiting.");
 					send_note_duration_gauge.set(f64::INFINITY);
-					break;
+					break
 				};
 				let top = TrustedCall::send_note(sender.clone(), sender.clone(), "W".into())
 					.sign(&KeyPair::Sr25519(Box::new(signer.clone())), nonce, &mrenclave, &shard)
