@@ -32,7 +32,7 @@ pub struct GetAttemptsCommand {
 
 impl GetAttemptsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, &self.account);
+		let who = get_pair_from_str(cli, trusted_args, &self.account);
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::guess_the_number(GuessTheNumberTrustedGetter::attempts {
 				origin: who.public().into(),

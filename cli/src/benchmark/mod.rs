@@ -17,11 +17,9 @@
 
 use crate::{
 	command_utils::get_worker_api_direct,
-	get_sender_and_signer_from_args,
+	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{
-		get_identifiers, get_keystore_path, get_pair_from_str, get_trusted_account_info,
-	},
+	trusted_command_utils::{get_keystore_path, get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{await_status, await_subscription_response, get_json_request, get_state},
 	Cli, CliResult, CliResultOk, SR25519_KEY_TYPE,
 };
@@ -129,15 +127,14 @@ impl BenchmarkCommand {
 			self.random_wait_before_transaction_min_ms,
 			self.random_wait_before_transaction_max_ms,
 		);
-		let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+		let store = LocalKeystore::open(get_keystore_path(cli, trusted_args), None).unwrap();
 
-		let (sender, signer) = get_sender_and_signer_from_args!(
+		let (sender, signer, mrenclave, shard) = get_basic_signing_info_from_args!(
 			self.funding_account,
 			self.session_proxy,
+			cli,
 			trusted_args
 		);
-
-		let (mrenclave, shard) = get_identifiers(trusted_args);
 
 		// Get shielding pubkey.
 		let worker_api_direct = get_worker_api_direct(cli);
@@ -162,7 +159,7 @@ impl BenchmarkCommand {
 
 			// Create new account to use.
 			let a = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
-			let account = get_pair_from_str(trusted_args, a.to_string().as_str());
+			let account = get_pair_from_str(cli, trusted_args, a.to_string().as_str());
 
 			// Transfer amount from funding_account to new account.
 			let top: TrustedOperation<TrustedCallSigned, Getter> = TrustedCall::balance_transfer(
@@ -207,7 +204,7 @@ impl BenchmarkCommand {
 					let account_keys = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
 
 					let new_account =
-						get_pair_from_str(trusted_args, account_keys.to_string().as_str());
+						get_pair_from_str(cli, trusted_args, account_keys.to_string().as_str());
 
 
 					println!("  Transfer amount: {}", EXISTENTIAL_DEPOSIT);

@@ -16,11 +16,9 @@
 */
 
 use crate::{
-	get_sender_and_signer_from_args,
+	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{
-		get_accountid_from_str, get_identifiers, get_trusted_account_info,
-	},
+	trusted_command_utils::{get_accountid_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -56,31 +54,29 @@ pub struct TransferCommand {
 
 impl TransferCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let (from, signer) =
-			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.from, self.session_proxy, cli, trusted_args);
 		let to = get_accountid_from_str(&self.to);
-		info!("from ss58 is {}", from.to_ss58check());
+		info!("from ss58 is {}", sender.to_ss58check());
 		info!("to ss58 is {}", to.to_ss58check());
 
-		let (mrenclave, shard) = get_identifiers(trusted_args);
-
-		let nonce = get_trusted_account_info(cli, trusted_args, &from, &signer)
+		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)
 			.unwrap_or_default();
 
 		println!(
             "send trusted call transfer from {} to {}: {}, nonce: {}, signing using mrenclave: {} and shard: {}",
-            from,
+            sender,
             to,
             self.amount,
             nonce, mrenclave.to_base58(), shard.0.to_base58()
         );
 		let top: TrustedOperation<TrustedCallSigned, Getter> = if let Some(note) = &self.note {
-			TrustedCall::balance_transfer_with_note(from, to, self.amount, note.as_bytes().into())
+			TrustedCall::balance_transfer_with_note(sender, to, self.amount, note.as_bytes().into())
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct)
 		} else {
-			TrustedCall::balance_transfer(from, to, self.amount)
+			TrustedCall::balance_transfer(sender, to, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct)
 		};

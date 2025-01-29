@@ -17,9 +17,9 @@
 
 use crate::{
 	evm::commands::evm_command_utils::get_trusted_evm_nonce,
-	get_sender_and_signer_from_args,
+	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str, get_trusted_account_info},
+	trusted_command_utils::{get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -47,8 +47,8 @@ pub struct EvmCallCommands {
 
 impl EvmCallCommands {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let (sender, signer) =
-			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.from, self.session_proxy, cli, trusted_args);
 
 		info!("senders ss58 is {}", sender.to_ss58check());
 
@@ -63,8 +63,6 @@ impl EvmCallCommands {
 			H160::from_slice(&array_bytes::hex2bytes(&self.execution_address).unwrap());
 
 		let function_hash = array_bytes::hex2bytes(&self.function).unwrap();
-
-		let (mrenclave, shard) = get_identifiers(trusted_args);
 
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)

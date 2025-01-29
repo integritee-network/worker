@@ -16,11 +16,8 @@
 */
 
 use crate::{
-	get_sender_and_signer_from_args,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers},
-	trusted_operation::perform_trusted_operation,
-	Cli, CliResult, CliResultOk,
+	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 
 use crate::{
@@ -49,8 +46,8 @@ pub struct GuessCommand {
 
 impl GuessCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let (sender, signer) =
-			get_sender_and_signer_from_args!(self.player, self.session_proxy, trusted_args);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.player, self.session_proxy, cli, trusted_args);
 
 		println!(
 			"send trusted call guess-the-number. sender {}, signer {}, guess {})",
@@ -58,7 +55,6 @@ impl GuessCommand {
 			signer.public().to_ss58check(),
 			self.guess
 		);
-		let (mrenclave, shard) = get_identifiers(trusted_args);
 
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)

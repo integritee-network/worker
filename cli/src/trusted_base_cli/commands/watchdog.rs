@@ -15,9 +15,9 @@
 
 */
 use crate::{
-	get_sender_and_signer_from_args,
+	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_sidechain_header, get_trusted_account_info},
+	trusted_command_utils::{get_sidechain_header, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -47,10 +47,8 @@ pub struct WatchdogCommand {
 
 impl WatchdogCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let (sender, signer) =
-			get_sender_and_signer_from_args!(self.account, self.session_proxy, trusted_args);
-
-		let (mrenclave, shard) = get_identifiers(trusted_args);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.account, self.session_proxy, cli, trusted_args);
 
 		let interval = self.interval.unwrap_or(3600);
 		let account_info_getter_duration_gauge = register_gauge!(

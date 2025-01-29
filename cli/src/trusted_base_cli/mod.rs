@@ -111,8 +111,8 @@ pub enum TrustedBaseCommand {
 impl TrustedBaseCommand {
 	pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
 		match self {
-			TrustedBaseCommand::NewAccount => new_account(trusted_cli),
-			TrustedBaseCommand::ListAccounts => list_accounts(trusted_cli),
+			TrustedBaseCommand::NewAccount => new_account(cli, trusted_cli),
+			TrustedBaseCommand::ListAccounts => list_accounts(cli, trusted_cli),
 			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
 			#[cfg(feature = "test")]
 			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
@@ -137,8 +137,8 @@ impl TrustedBaseCommand {
 	}
 }
 
-fn new_account(trusted_args: &TrustedCli) -> CliResult {
-	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+fn new_account(cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+	let store = LocalKeystore::open(get_keystore_path(cli, trusted_args), None).unwrap();
 	let key = LocalKeystore::sr25519_generate_new(&store, SR25519_KEY_TYPE, None).unwrap();
 	drop(store);
 	info!("new account {}", key.to_ss58check());
@@ -148,8 +148,8 @@ fn new_account(trusted_args: &TrustedCli) -> CliResult {
 	Ok(CliResultOk::PubKeysBase58 { pubkeys_sr25519: Some(vec![key_str]), pubkeys_ed25519: None })
 }
 
-fn list_accounts(trusted_args: &TrustedCli) -> CliResult {
-	let store = LocalKeystore::open(get_keystore_path(trusted_args), None).unwrap();
+fn list_accounts(cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+	let store = LocalKeystore::open(get_keystore_path(cli, trusted_args), None).unwrap();
 	info!("sr25519 keys:");
 	for pubkey in store.sr25519_public_keys(SR25519_KEY_TYPE).into_iter() {
 		println!("{}", pubkey.to_ss58check());

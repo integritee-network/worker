@@ -16,10 +16,8 @@
 */
 
 use crate::{
-	get_sender_and_signer_from_args,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_trusted_account_info},
-	Cli, CliResult, CliResultOk,
+	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
+	trusted_command_utils::get_trusted_account_info, Cli, CliResult, CliResultOk,
 };
 use log::*;
 
@@ -34,8 +32,8 @@ pub struct NonceCommand {
 
 impl NonceCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let (sender, signer) =
-			get_sender_and_signer_from_args!(self.account, self.session_proxy, trusted_args);
+		let (sender, signer, _mrenclave, _shard) =
+			get_basic_signing_info_from_args!(self.account, self.session_proxy, cli, trusted_args);
 
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)

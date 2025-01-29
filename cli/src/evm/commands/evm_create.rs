@@ -17,9 +17,9 @@
 
 use crate::{
 	evm::commands::evm_command_utils::get_trusted_evm_nonce,
-	get_sender_and_signer_from_args,
+	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_identifiers, get_pair_from_str, get_trusted_account_info},
+	trusted_command_utils::{get_pair_from_str, get_trusted_account_info},
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
@@ -46,16 +46,14 @@ pub struct EvmCreateCommands {
 
 impl EvmCreateCommands {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let (sender, signer) =
-			get_sender_and_signer_from_args!(self.from, self.session_proxy, trusted_args);
+		let (sender, signer, mrenclave, shard) =
+			get_basic_signing_info_from_args!(self.from, self.session_proxy, cli, trusted_args);
 		println!("from ss58 is {}", sender.to_ss58check());
 
 		let mut sender_evm_acc_slice: [u8; 20] = [0; 20];
 		sender_evm_acc_slice
 			.copy_from_slice((<[u8; 32]>::from(sender.clone())).get(0..20).unwrap());
 		let sender_evm_acc: H160 = sender_evm_acc_slice.into();
-
-		let (mrenclave, shard) = get_identifiers(trusted_args);
 
 		let sender_evm_substrate_addr =
 			HashedAddressMapping::<BlakeTwo256>::into_account_id(sender_evm_acc);

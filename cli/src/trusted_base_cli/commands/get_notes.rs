@@ -41,7 +41,7 @@ pub struct GetNotesCommand {
 
 impl GetNotesCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
-		let who = get_pair_from_str(trusted_args, self.account.as_str());
+		let who = get_pair_from_str(cli, trusted_args, self.account.as_str());
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::notes_for(who.public().into(), self.bucket_index)
 				.sign(&KeyPair::Sr25519(Box::new(who))),
