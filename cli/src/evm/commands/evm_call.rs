@@ -19,7 +19,7 @@ use crate::{
 	evm::commands::evm_command_utils::get_trusted_evm_nonce,
 	get_basic_signing_info_from_args,
 	trusted_cli::TrustedCli,
-	trusted_command_utils::{get_pair_from_str, get_trusted_account_info},
+	trusted_command_utils::get_trusted_account_info,
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
