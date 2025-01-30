@@ -734,15 +734,17 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		None
 	};
 
-	init_provided_shard_vault(
-		shard,
-		&enclave,
-		integritee_rpc_api.clone(),
-		maybe_target_a_rpc_api.clone(),
-		maybe_target_b_rpc_api.clone(),
-		run_config.shielding_target,
-		we_are_primary_validateer,
-	);
+	if WorkerModeProvider::worker_mode() == WorkerMode::Sidechain {
+		init_provided_shard_vault(
+			shard,
+			&enclave,
+			integritee_rpc_api.clone(),
+			maybe_target_a_rpc_api.clone(),
+			maybe_target_b_rpc_api.clone(),
+			run_config.shielding_target,
+			we_are_primary_validateer,
+		);
+	}
 
 	// ------------------------------------------------------------------------
 	// Start prometheus metrics server.
