@@ -701,6 +701,7 @@ fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
 		TrustedCall::waste_time(..) => Balance::from(0u32),
 		TrustedCall::timestamp_set(..) => Balance::from(0u32),
 		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
+		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
 		#[cfg(any(feature = "test", test))]
 		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
 		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,
