@@ -308,8 +308,12 @@ impl ExecuteGetter for PublicGetter {
 				// This avoids leaking the exact number and cost of recent TrustedCalls
 				let noise =
 					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						/ STF_TX_FEE_UNIT_DIVIDER
-						* Balance::from(SgxRandomness::random_u32(0, 10));
+						.checked_div(STF_TX_FEE_UNIT_DIVIDER)
+						.unwrap_or(1)
+						.saturating_mul(SgxRandomness::random_u32(0, 10_000).into())
+						.checked_div(1000)
+						.unwrap_or_default();
+				// better to strictly subtract from real value to avoid overpayment errors during distribution
 				let noisy_fees = fees.saturating_sub(noise);
 				std::println!(
 					"⣿STF⣿ 🔍 PublicGetter query: undistributed fees at least {}",
