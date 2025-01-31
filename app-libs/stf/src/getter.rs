@@ -20,6 +20,7 @@ use ita_sgx_runtime::{
 	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime,
 	SessionProxy, System,
 };
+use itp_randomness::{Randomness, SgxRandomness};
 use itp_stf_interface::ExecuteGetter;
 use itp_stf_primitives::{
 	traits::GetterAuthorization,
@@ -39,7 +40,10 @@ use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account
 
 use crate::{
 	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
-	helpers::{shielding_target, shielding_target_genesis_hash, wrap_bytes},
+	helpers::{
+		enclave_signer_account, shielding_target, shielding_target_genesis_hash, wrap_bytes,
+	},
+	STF_TX_FEE_UNIT_DIVIDER,
 };
 use ita_parentchain_specs::MinimalChainSpec;
 use itp_sgx_runtime_primitives::types::{Balance, Moment};
@@ -118,6 +122,7 @@ impl PoolTransactionValidation for Getter {
 pub enum PublicGetter {
 	some_value = 0,
 	total_issuance = 1,
+	undistributed_fees = 2,
 	parentchains_info = 10,
 	note_buckets_info = 11,
 	guess_the_number(GuessTheNumberPublicGetter) = 50,
@@ -293,6 +298,25 @@ impl ExecuteGetter for PublicGetter {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::total_issuance => Some(Balances::total_issuance().encode()),
+			PublicGetter::undistributed_fees => {
+				let pot: AccountId = enclave_signer_account();
+				let info = System::account(&pot);
+				debug!("PublicGetter undistributed_fees");
+				debug!("AccountInfo for {} is {:?}", account_id_to_string(&pot), info);
+				let fees = info.data.free;
+				// for privacy reasons, we add some noise to the fees.
+				// This avoids leaking the exact number and cost of recent TrustedCalls
+				let noise =
+					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
+						/ STF_TX_FEE_UNIT_DIVIDER
+						* Balance::from(SgxRandomness::random_u32(0, 10));
+				let noisy_fees = fees.saturating_sub(noise);
+				std::println!(
+					"⣿STF⣿ 🔍 PublicGetter query: undistributed fees at least {}",
+					noisy_fees
+				);
+				Some(noisy_fees.encode())
+			},
 			PublicGetter::parentchains_info => {
 				let integritee = ParentchainInfo {
 					id: ParentchainId::Integritee,
