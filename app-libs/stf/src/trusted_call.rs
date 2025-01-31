@@ -74,6 +74,7 @@ pub enum TrustedCall {
 	balance_unshield(AccountId, AccountId, Balance, ShardIdentifier) = 3, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4, // (Root, AccountIncognito, Amount, origin parentchain)
 	balance_transfer_with_note(AccountId, AccountId, Balance, Vec<u8>) = 5,
+	balance_shield_through_enclave_bridge_pallet(AccountId, AccountId, Balance) = 6, // (Root, AccountIncognito, Amount)
 	note_bloat(AccountId, u32) = 10,
 	waste_time(AccountId, u32) = 11,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
@@ -136,6 +137,8 @@ impl TrustedCall {
 			Self::balance_unshield(sender_account, ..) => sender_account,
 			Self::balance_shield(sender_account, ..) => sender_account,
 			Self::balance_transfer_with_note(sender_account, ..) => sender_account,
+			Self::balance_shield_through_enclave_bridge_pallet(sender_account, ..) =>
+				sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
 			Self::send_note(sender_account, ..) => sender_account,
 			Self::add_session_proxy(sender_account, ..) => sender_account,
@@ -416,6 +419,26 @@ where
 				store_note(&enclave_account, self.call, vec![who])?;
 				Ok(())
 			},
+			TrustedCall::balance_shield_through_enclave_bridge_pallet(
+				enclave_account,
+				who,
+				value,
+			) => {
+				ensure_enclave_signer_account(&enclave_account)?;
+				debug!(
+					"balance_shield_through_enclave_bridge_pallet({}, {})",
+					account_id_to_string(&who),
+					value,
+				);
+				ensure!(
+					shard_vault().is_none(),
+					StfError::EnclaveBridgeShieldingDisabledIfVaultAssigned
+				);
+				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
+				shield_funds(&who, value)?;
+				store_note(&enclave_account, self.call, vec![who])?;
+				Ok(())
+			},
 			TrustedCall::timestamp_set(enclave_account, now, parentchain_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				debug!("timestamp_set({}, {:?})", now, parentchain_id);
@@ -678,6 +701,7 @@ fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
 		TrustedCall::waste_time(..) => Balance::from(0u32),
 		TrustedCall::timestamp_set(..) => Balance::from(0u32),
 		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
+		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
 		#[cfg(any(feature = "test", test))]
 		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
 		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,
