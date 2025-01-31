@@ -1,6 +1,6 @@
 [package]
 name = "integritee-cli"
-version = "0.15.10"
+version = "0.15.11"
 authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 

@@ -47,6 +47,7 @@ use itc_rest_client::{
 
 use itp_enclave_api::{enclave_base::EnclaveBase, sidechain::Sidechain};
 use itp_enclave_metrics::EnclaveMetric;
+use itp_settings::worker_mode::WorkerModeProvider;
 use itp_types::{parentchain::ParentchainId, EnclaveFingerprint};
 use lazy_static::lazy_static;
 use log::*;
@@ -406,48 +407,38 @@ pub fn start_prometheus_metrics_server<E>(
 		AccountAndRole::EnclaveSigner(tee_account_id.clone()),
 	)));
 	let shielding_target = shielding_target.unwrap_or_default();
-	let shard_vault =
-		enclave.get_ecc_vault_pubkey(shard).expect("shard vault must be defined by now");
 
-	match shielding_target {
-		ParentchainId::Integritee =>
-			integritee_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-				shielding_target,
-				integritee_rpc_api.clone(),
-				AccountAndRole::ShardVault(
-					enclave
-						.get_ecc_vault_pubkey(shard)
-						.expect("shard vault must be defined by now")
-						.into(),
+	#[cfg(feature = "sidechain")]
+	{
+		let shard_vault =
+			enclave.get_ecc_vault_pubkey(shard).expect("shard vault must be defined by now");
+
+		match shielding_target {
+			ParentchainId::Integritee => integritee_account_info_providers.push(Arc::new(
+				ParentchainAccountInfoProvider::new(
+					shielding_target,
+					integritee_rpc_api.clone(),
+					AccountAndRole::ShardVault(shard_vault.into()),
 				),
-			))),
-		ParentchainId::TargetA =>
-			target_a_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-				shielding_target,
-				maybe_target_a_rpc_api
-					.clone()
-					.expect("target A must be initialized to be used as shielding target"),
-				AccountAndRole::ShardVault(
-					enclave
-						.get_ecc_vault_pubkey(shard)
-						.expect("shard vault must be defined by now")
-						.into(),
-				),
-			))),
-		ParentchainId::TargetB =>
-			target_b_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
-				shielding_target,
-				maybe_target_b_rpc_api
-					.clone()
-					.expect("target B must be initialized to be used as shielding target"),
-				AccountAndRole::ShardVault(
-					enclave
-						.get_ecc_vault_pubkey(shard)
-						.expect("shard vault must be defined by now")
-						.into(),
-				),
-			))),
-	};
+			)),
+			ParentchainId::TargetA =>
+				target_a_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+					shielding_target,
+					maybe_target_a_rpc_api
+						.clone()
+						.expect("target A must be initialized to be used as shielding target"),
+					AccountAndRole::ShardVault(shard_vault.into()),
+				))),
+			ParentchainId::TargetB =>
+				target_b_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(
+					shielding_target,
+					maybe_target_b_rpc_api
+						.clone()
+						.expect("target B must be initialized to be used as shielding target"),
+					AccountAndRole::ShardVault(shard_vault.into()),
+				))),
+		};
+	}
 
 	if let Some(api) = maybe_target_a_rpc_api {
 		target_a_account_info_providers.push(Arc::new(ParentchainAccountInfoProvider::new(

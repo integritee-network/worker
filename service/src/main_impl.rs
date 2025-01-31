@@ -577,10 +577,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-			None => {
-				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				enclave.init_shard(shard.encode()).unwrap();
+			None =>
 				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+					println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+					enclave.init_shard(shard.encode()).unwrap();
 					enclave
 						.init_shard_creation_parentchain_header(
 							shard,
@@ -592,8 +592,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					(true, true)
 				} else {
 					(true, false)
-				}
-			},
+				},
 		};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();
