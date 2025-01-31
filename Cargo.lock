@@ -2860,6 +2860,7 @@ dependencies = [
  "itp-hashing",
  "itp-node-api",
  "itp-node-api-metadata",
+ "itp-randomness",
  "itp-sgx-externalities",
  "itp-sgx-runtime-primitives",
  "itp-stf-interface",

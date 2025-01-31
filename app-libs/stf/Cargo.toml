@@ -20,6 +20,7 @@ ita-sgx-runtime = { default-features = false, path = "../sgx-runtime" }
 itp-hashing = { default-features = false, path = "../../core-primitives/hashing" }
 itp-node-api = { default-features = false, path = "../../core-primitives/node-api" }
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
+itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-runtime-primitives = { default-features = false, path = "../../core-primitives/sgx-runtime-primitives" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }

@@ -25,7 +25,8 @@ use crate::{
 		get_parentchains_info::GetParentchainsInfoCommand,
 		get_session_proxies::GetSessionProxiesCommand, get_shard::GetShardCommand,
 		get_shard_vault::GetShardVaultCommand, get_total_issuance::GetTotalIssuanceCommand,
-		nonce::NonceCommand, note_bloat::NoteBloatCommand, transfer::TransferCommand,
+		get_undistributed_fees::GetUndistributedFeesCommand, nonce::NonceCommand,
+		note_bloat::NoteBloatCommand, transfer::TransferCommand,
 		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
 		waste_time::WasteTimeCommand, watchdog::WatchdogCommand,
 	},
@@ -80,6 +81,9 @@ pub enum TrustedBaseCommand {
 	/// get total issuance of this shard's native token
 	GetTotalIssuance(GetTotalIssuanceCommand),
 
+	/// get a noisy amount of collected but undistributed fees
+	GetUndistributedFees(GetUndistributedFeesCommand),
+
 	/// get info for all parentchains' sync status
 	GetParentchainsInfo(GetParentchainsInfoCommand),
 
@@ -127,6 +131,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetUndistributedFees(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::AddSessionProxy(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
