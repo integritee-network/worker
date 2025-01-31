@@ -42,4 +42,5 @@ pub enum StfError {
 	ChangingShardVaultAccountNotAllowed,
 	WrongParentchainIdForShardVault,
 	NoShardVaultAssigned,
+	EnclaveBridgeShieldingDisabledIfVaultAssigned,
 }
