@@ -115,6 +115,11 @@ const EVM_INFO: &str = " with EVM";
 #[cfg(not(feature = "evm"))]
 const EVM_INFO: &str = "";
 
+#[cfg(feature = "production")]
+const SGX_MODE_INFO: &str = " (production enclave)";
+#[cfg(not(feature = "production"))]
+const SGX_MODE_INFO: &str = " (debug enclave)";
+
 #[cfg(feature = "link-binary")]
 pub type EnclaveWorker = Worker<
 	Config,
@@ -133,8 +138,13 @@ pub(crate) fn main() {
 	let matches = App::from_yaml(yml)
 		.version(VERSION)
 		.about(
-			format!("Integritee {:?} worker{}", WorkerModeProvider::worker_mode(), EVM_INFO)
-				.as_str(),
+			format!(
+				"Integritee {:?} worker{}{}",
+				WorkerModeProvider::worker_mode(),
+				EVM_INFO,
+				SGX_MODE_INFO
+			)
+			.as_str(),
 		)
 		.get_matches();
 
@@ -551,12 +561,9 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 		.expect("our enclave should be registered at this point");
 	trace!("verified that our enclave is registered: {:?}", my_enclave);
 
-	let (we_are_primary_validateer, re_init_parentchain_needed) = match integritee_rpc_api
-		.primary_worker_for_shard(shard, None)
-		.unwrap()
-	{
-		Some(primary_enclave) =>
-			match primary_enclave.instance_signer() {
+	let (we_are_primary_validateer, re_init_parentchain_needed) =
+		match integritee_rpc_api.primary_worker_for_shard(shard, None).unwrap() {
+			Some(primary_enclave) => match primary_enclave.instance_signer() {
 				AnySigner::Known(MultiSigner::Ed25519(primary)) =>
 					if primary.encode() == tee_accountid.encode() {
 						println!("We are primary worker on this shard and we have been previously running.");
@@ -591,23 +598,23 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-		None =>
-			if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
-				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				enclave.init_shard(shard.encode()).unwrap();
-				enclave
-					.init_shard_creation_parentchain_header(
-						shard,
-						&ParentchainId::Integritee,
-						&register_enclave_xt_header,
-					)
-					.unwrap();
-				debug!("shard config should be initialized on integritee network now");
-				(true, true)
-			} else {
-				(true, false)
-			},
-	};
+			None =>
+				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+					println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+					enclave.init_shard(shard.encode()).unwrap();
+					enclave
+						.init_shard_creation_parentchain_header(
+							shard,
+							&ParentchainId::Integritee,
+							&register_enclave_xt_header,
+						)
+						.unwrap();
+					debug!("shard config should be initialized on integritee network now");
+					(true, true)
+				} else {
+					(true, false)
+				},
+		};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();
 
