@@ -83,7 +83,7 @@ where
 	fn record_response_time(&self, source: String, timer: Instant) {
 		self.update_metrics(vec![ExchangeRateOracleMetric::ResponseTime(
 			source,
-			timer.elapsed().as_millis(),
+			timer.elapsed().as_secs().into(),
 		)]);
 	}
 
