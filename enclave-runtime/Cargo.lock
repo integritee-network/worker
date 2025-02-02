@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "enclave-runtime"
-version = "0.15.10"
+version = "0.15.11"
 dependencies = [
  "array-bytes 6.2.2",
  "cid",

@@ -121,29 +121,26 @@ where
 	// Send the extrinsics to the parentchain and wait for InBlock confirmation.
 	for call in extrinsics.into_iter() {
 		let node_api_clone = node_api.clone();
-		tokio_handle.spawn(async move {
-			let encoded_extrinsic = call.encode();
-			debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
+		let encoded_extrinsic = call.encode();
+		debug!("Hex encoded extrinsic to be sent: {}", hex_encode(&encoded_extrinsic));
 
-			println!("[>] Update oracle data (send the extrinsic)");
-			let extrinsic_hash = match node_api_clone.submit_and_watch_opaque_extrinsic_until(
-				&encoded_extrinsic.into(),
-				XtStatus::InBlock,
-			) {
-				Err(e) => {
-					error!("Failed to send extrinsic: {:?}", e);
-					set_extrinsics_inclusion_success(false);
-					return
-				},
-				Ok(report) => {
-					set_extrinsics_inclusion_success(true);
+		println!("[>] Update oracle data (send the extrinsic)");
+		match node_api_clone
+			.submit_and_watch_opaque_extrinsic_until(&encoded_extrinsic.into(), XtStatus::InBlock)
+		{
+			Err(e) => {
+				error!("Failed to send extrinsic: {:?}", e);
+				set_extrinsics_inclusion_success(false);
+				continue
+			},
+			Ok(report) => {
+				set_extrinsics_inclusion_success(true);
+				println!(
+					"[<] Extrinsic got included into a block. Hash: {:?}\n",
 					report.extrinsic_hash
-				},
-			};
-
-			println!("[<] Extrinsic got included into a block. Hash: {:?}\n", extrinsic_hash);
-		});
+				);
+			},
+		};
 	}
-
 	Ok(())
 }

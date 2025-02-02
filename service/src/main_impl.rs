@@ -110,6 +110,16 @@ use tokio::{runtime::Handle, task::JoinHandle, time::Instant};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[cfg(feature = "evm")]
+const EVM_INFO: &str = " with EVM";
+#[cfg(not(feature = "evm"))]
+const EVM_INFO: &str = "";
+
+#[cfg(feature = "production")]
+const SGX_MODE_INFO: &str = " (production enclave)";
+#[cfg(not(feature = "production"))]
+const SGX_MODE_INFO: &str = " (debug enclave)";
+
 #[cfg(feature = "link-binary")]
 pub type EnclaveWorker = Worker<
 	Config,
@@ -125,7 +135,18 @@ pub(crate) fn main() {
 		.init();
 
 	let yml = load_yaml!("cli.yml");
-	let matches = App::from_yaml(yml).get_matches();
+	let matches = App::from_yaml(yml)
+		.version(VERSION)
+		.about(
+			format!(
+				"Integritee {:?} worker{}{}",
+				WorkerModeProvider::worker_mode(),
+				EVM_INFO,
+				SGX_MODE_INFO
+			)
+			.as_str(),
+		)
+		.get_matches();
 
 	let config = Config::from(&matches);
 
@@ -577,10 +598,10 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					);
 				},
 			},
-			None => {
-				println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
-				enclave.init_shard(shard.encode()).unwrap();
+			None =>
 				if WorkerModeProvider::worker_mode() != WorkerMode::Teeracle {
+					println!("We are the primary worker on this shard and the shard is untouched. Will initialize it");
+					enclave.init_shard(shard.encode()).unwrap();
 					enclave
 						.init_shard_creation_parentchain_header(
 							shard,
@@ -592,8 +613,7 @@ fn start_worker<E, T, D, InitializationHandler, WorkerModeProvider>(
 					(true, true)
 				} else {
 					(true, false)
-				}
-			},
+				},
 		};
 	debug!("getting shard creation: {:?}", enclave.get_shard_creation_info(shard));
 	initialization_handler.registered_on_parentchain();

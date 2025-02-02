@@ -1,201 +1,200 @@
 name: "integritee-service"
-version: "0.12.10"
-about: Worker using Intel SGX TEE for Integritee-node
+about: Integritee worker
 authors: "Integritee AG <hello@integritee.network>"
 
 # AppSettings can be defined as a list and are **not** ascii case sensitive
 settings:
-    - ColoredHelp
-    - SubcommandRequired
+  - ColoredHelp
+  - SubcommandRequired
 
 # All subcommands must be listed in the 'subcommand:' object, where the key to
 # the list is the name of the subcommand, and all settings for that command are
 # part of a Hash
 args:
-    - integritee-rpc-url:
-        short: u
-        long: integritee-rpc-url
-        help: Set the url and the protocol of the Integritee RPC endpoint.
-        takes_value: true
-        default_value: "ws://127.0.0.1"
-    - integritee-rpc-port:
-          short: p
-          long: integritee-rpc-port
-          help: Set the port of the Integritee RPC endpoint.
-          takes_value: true
-          default_value: "9944"
-    - target-a-parentchain-rpc-url:
-          long: target-a-parentchain-rpc-url
-          help: Set the url and the protocol of an optional Target A parentchain RPC endpoint that contains your business logic specific pallets.
-          takes_value: true
-          required: false
-    - target-a-parentchain-rpc-port:
-          long: target-a-parentchain-rpc-port
-          help: Set the port of the optional Target A parentchain RPC endpoint.
-          takes_value: true
-          required: false
-    - target-b-parentchain-rpc-url:
-          long: target-b-parentchain-rpc-url
-          help: Set the url and the protocol of an optional Target B parentchain RPC endpoint that contains your business logic specific pallets.
-          takes_value: true
-          required: false
-    - target-b-parentchain-rpc-port:
-          long: target-b-parentchain-rpc-port
-          help: Set the port of the optional Target B parentchain RPC endpoint.
-          takes_value: true
-          required: false
-    - data-dir:
-          short: d
-          long: data-dir
-          help: Data dir where the worker stores it's keys and other data.
-          takes_value: true
-    - ws-external:
-        long: ws-external
-        help: Set this flag in case the worker should listen to external requests.
-    - mu-ra-port:
-        short: r
-        long: mu-ra-port
-        help: Set the websocket port to listen for mu-ra requests
-        takes_value: true
-        default_value: "3443"
-    - trusted-worker-port:
-        short: P
-        long: trusted-worker-port
-        help: Set the trusted websocket port of the worker, running directly in the enclave.
-        takes_value: true
-        default_value: "2000"
-    - untrusted-worker-port:
-        short: w
-        long: untrusted-worker-port
-        help: Set the untrusted websocket port of the worker
-        takes_value: true
-        default_value: "2001"
-    - trusted-external-address:
-        short: T
-        long: trusted-external-address
-        help: Set the trusted worker address to be advertised on the parentchain. If no port is given, the same as in `trusted-worker-port` will be used.
-        takes_value: true
-        required: false
-    - untrusted-external-address:
-        short: U
-        long: untrusted-external-address
-        help: Set the untrusted worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `untrusted-worker-port` will be used.
-        takes_value: true
-        required: false
-    - mu-ra-external-address:
-        short: M
-        long: mu-ra-external-address
-        help: Set the mutual remote attestation worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `mu-ra-port` will be used.
-        takes_value: true
-        required: false
-    - enable-metrics:
-        long: enable-metrics
-        help: Enable the metrics HTTP server to serve metrics
-    - metrics-port:
-        short: i
-        long: metrics-port
-        help: Set the port on which the metrics are served.
-        takes_value: true
-        default_value: "8787"
-        required: false
-    - untrusted-http-port:
-        short: h
-        long: untrusted-http-port
-        help: Set the port for the untrusted HTTP server
-        takes_value: true
-        required: false
-    - clean-reset:
-          long: clean-reset
-          short: c
-          help: Cleans and purges any previous state and key files and generates them anew before starting.
+  - integritee-rpc-url:
+      short: u
+      long: integritee-rpc-url
+      help: Set the url and the protocol of the Integritee RPC endpoint.
+      takes_value: true
+      default_value: "ws://127.0.0.1"
+  - integritee-rpc-port:
+      short: p
+      long: integritee-rpc-port
+      help: Set the port of the Integritee RPC endpoint.
+      takes_value: true
+      default_value: "9944"
+  - target-a-parentchain-rpc-url:
+      long: target-a-parentchain-rpc-url
+      help: Set the url and the protocol of an optional Target A parentchain RPC endpoint that contains your business logic specific pallets.
+      takes_value: true
+      required: false
+  - target-a-parentchain-rpc-port:
+      long: target-a-parentchain-rpc-port
+      help: Set the port of the optional Target A parentchain RPC endpoint.
+      takes_value: true
+      required: false
+  - target-b-parentchain-rpc-url:
+      long: target-b-parentchain-rpc-url
+      help: Set the url and the protocol of an optional Target B parentchain RPC endpoint that contains your business logic specific pallets.
+      takes_value: true
+      required: false
+  - target-b-parentchain-rpc-port:
+      long: target-b-parentchain-rpc-port
+      help: Set the port of the optional Target B parentchain RPC endpoint.
+      takes_value: true
+      required: false
+  - data-dir:
+      short: d
+      long: data-dir
+      help: Data dir where the worker stores it's keys and other data.
+      takes_value: true
+  - ws-external:
+      long: ws-external
+      help: Set this flag in case the worker should listen to external requests.
+  - mu-ra-port:
+      short: r
+      long: mu-ra-port
+      help: Set the websocket port to listen for mu-ra requests
+      takes_value: true
+      default_value: "3443"
+  - trusted-worker-port:
+      short: P
+      long: trusted-worker-port
+      help: Set the trusted websocket port of the worker, running directly in the enclave.
+      takes_value: true
+      default_value: "2000"
+  - untrusted-worker-port:
+      short: w
+      long: untrusted-worker-port
+      help: Set the untrusted websocket port of the worker
+      takes_value: true
+      default_value: "2001"
+  - trusted-external-address:
+      short: T
+      long: trusted-external-address
+      help: Set the trusted worker address to be advertised on the parentchain. If no port is given, the same as in `trusted-worker-port` will be used.
+      takes_value: true
+      required: false
+  - untrusted-external-address:
+      short: U
+      long: untrusted-external-address
+      help: Set the untrusted worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `untrusted-worker-port` will be used.
+      takes_value: true
+      required: false
+  - mu-ra-external-address:
+      short: M
+      long: mu-ra-external-address
+      help: Set the mutual remote attestation worker address to be retrieved by a trusted rpc call. If no port is given, the same as in `mu-ra-port` will be used.
+      takes_value: true
+      required: false
+  - enable-metrics:
+      long: enable-metrics
+      help: Enable the metrics HTTP server to serve metrics
+  - metrics-port:
+      short: i
+      long: metrics-port
+      help: Set the port on which the metrics are served.
+      takes_value: true
+      default_value: "8787"
+      required: false
+  - untrusted-http-port:
+      short: h
+      long: untrusted-http-port
+      help: Set the port for the untrusted HTTP server
+      takes_value: true
+      required: false
+  - clean-reset:
+      long: clean-reset
+      short: c
+      help: Cleans and purges any previous state and key files and generates them anew before starting.
 
 subcommands:
-    - run:
-        about: Start the integritee-service
-        args:
-            - skip-ra:
-                long: skip-ra
-                help: skip remote attestation. Set this flag if running enclave in SW mode
-            - shard:
-                required: false
-                index: 1
-                help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
-            - dev:
-                long: dev
-                short: d
-                help: Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
-            - teeracle-interval:
-                required: false
-                long: teeracle-interval
-                short: i
-                help: Set the teeracle exchange rate update interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
-                takes_value: true
-            - reregister-teeracle-interval:
-                required: false
-                long: reregister
-                help: Set the teeracle reregistration interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
-                takes_value: true
-            - shielding-target:
-                required: false
-                long: shielding-target
-                short: s
-                help: set parentchain target for shielding / unshielding. only relevant for primary worker upon first start for shard. can't be changed later for a shard
-                takes_value: true
-    - request-state:
-        about: (DEPRECATED) join a shard by requesting key provisioning from another worker
-        args:
-            - shard:
-                long: shard
-                required: false
-                help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
-            - skip-ra:
-                  long: skip-ra
-                  help: skip remote attestation. Set this flag if running enclave in SW mode
-    - shielding-key:
-        about: Get the public RSA3072 key from the TEE to be used to encrypt requests
-    - signing-key:
-        about: Get the public ed25519 key the TEE uses to sign messages and extrinsics
-    - dump-ra:
-        about: Perform RA and dump cert to disk
-    - mrenclave:
-        about: Dump mrenclave to stdout. base58 encoded.
-    - init-shard:
-        about: (DEPRECATED) Initialize new shard (do this only if you run the first worker for that shard). if shard is not specified, the MRENCLAVE is used instead
-        args:
-            - shard:
-                required: false
-                multiple: true
-                index: 1
-                help: shard identifier base58 encoded
-    - test:
-          about: Run tests involving the enclave
-          takes_value: true
-          args:
-                - all:
-                    short: a
-                    long: all
-                    help: Run all tests (beware, all corrupts the counter state for some whatever reason...)
-                    takes_value: false
-                - unit:
-                    short: u
-                    long: unit
-                    help: Run unit tests
-                    takes_value: false
-                - ecall:
-                    short: e
-                    long: ecall
-                    help: Run enclave ecall tests
-                    takes_value: false
-                - integration:
-                    short: i
-                    long: integration
-                    help: Run integration tests
-                    takes_value: false
-                - provisioning-server:
-                    long: provisioning-server
-                    help: Run TEE server for MU-RA key provisioning
-                    takes_value: false
-                - provisioning-client:
-                    long: provisioning-client
-                    help: Run TEE client for MU-RA key provisioning
-                    takes_value: false
+  - run:
+      about: Start the integritee-service
+      args:
+        - skip-ra:
+            long: skip-ra
+            help: skip remote attestation. Set this flag if running enclave in SW mode
+        - shard:
+            required: false
+            index: 1
+            help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
+        - dev:
+            long: dev
+            short: d
+            help: Set this flag if running in development mode to bootstrap enclave account on parentchain via //Alice.
+        - teeracle-interval:
+            required: false
+            long: teeracle-interval
+            short: i
+            help: Set the teeracle exchange rate update interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
+            takes_value: true
+        - reregister-teeracle-interval:
+            required: false
+            long: reregister
+            help: Set the teeracle reregistration interval. Example of accepted syntax <5 seconds 15 minutes 2 hours 1 days> or short <5s15m2h1d>
+            takes_value: true
+        - shielding-target:
+            required: false
+            long: shielding-target
+            short: s
+            help: set parentchain target for shielding / unshielding. only relevant for primary worker upon first start for shard. can't be changed later for a shard
+            takes_value: true
+  - request-state:
+      about: (DEPRECATED) join a shard by requesting key provisioning from another worker
+      args:
+        - shard:
+            long: shard
+            required: false
+            help: shard identifier base58 encoded. Defines the state that this worker shall operate on. Default is mrenclave
+        - skip-ra:
+            long: skip-ra
+            help: skip remote attestation. Set this flag if running enclave in SW mode
+  - shielding-key:
+      about: Get the public RSA3072 key from the TEE to be used to encrypt requests
+  - signing-key:
+      about: Get the public ed25519 key the TEE uses to sign messages and extrinsics
+  - dump-ra:
+      about: Perform RA and dump cert to disk
+  - mrenclave:
+      about: Dump mrenclave to stdout. base58 encoded.
+  - init-shard:
+      about: (DEPRECATED) Initialize new shard (do this only if you run the first worker for that shard). if shard is not specified, the MRENCLAVE is used instead
+      args:
+        - shard:
+            required: false
+            multiple: true
+            index: 1
+            help: shard identifier base58 encoded
+  - test:
+      about: Run tests involving the enclave
+      takes_value: true
+      args:
+        - all:
+            short: a
+            long: all
+            help: Run all tests (beware, all corrupts the counter state for some whatever reason...)
+            takes_value: false
+        - unit:
+            short: u
+            long: unit
+            help: Run unit tests
+            takes_value: false
+        - ecall:
+            short: e
+            long: ecall
+            help: Run enclave ecall tests
+            takes_value: false
+        - integration:
+            short: i
+            long: integration
+            help: Run integration tests
+            takes_value: false
+        - provisioning-server:
+            long: provisioning-server
+            help: Run TEE server for MU-RA key provisioning
+            takes_value: false
+        - provisioning-client:
+            long: provisioning-client
+            help: Run TEE client for MU-RA key provisioning
+            takes_value: false
