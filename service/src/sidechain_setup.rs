@@ -59,8 +59,9 @@ pub struct ParentchainIntegriteeSidechainInfoProvider {
 
 impl ParentchainIntegriteeSidechainInfo for ParentchainIntegriteeSidechainInfoProvider {
 	fn last_finalized_block_number(&self) -> ServiceResult<SidechainBlockNumber> {
-		#[cfg(not(feature = "sidechain"))]
-		return Ok(SidechainBlockNumber::from(0u8))
+		#[rustfmt_skip]
+		#[cfg(not(feature = "sidechain"))] 
+		return Ok(SidechainBlockNumber::from(0u8));
 		#[cfg(feature = "sidechain")]
 		self.node_api
 			.latest_sidechain_block_confirmation(&self.shard, None)?
