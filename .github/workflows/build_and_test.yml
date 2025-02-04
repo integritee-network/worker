@@ -61,7 +61,7 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
-          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          SGX_MODE_LOWERCASE=$(echo "${matrix.sgx_mode}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
@@ -432,7 +432,7 @@ jobs:
 
   release-build:
     runs-on: integritee-builder-sgx
-    name: Release Build of teeracle
+    name: Release Builds
     if: startsWith(github.ref, 'refs/tags/')
     needs: [ build-test, integration-tests ]
 
@@ -584,6 +584,18 @@ jobs:
           name: teeracle-cli-${{ github.ref_name }}.tar.gz
           path: .
 
+      - name: Download Teeracle MRENCLAVE
+        uses: actions/download-artifact@v4
+        with:
+          name: mrenclave-hw-teeracle-${{ github.sha }}.hex
+          path: .
+
+      - name: Download sidechain MRENCLAVE
+        uses: actions/download-artifact@v4
+        with:
+          name: mrenclave-hw-sidechain-${{ github.sha }}.hex
+          path: .
+
       #
       # Temporary comment out until we decide what to release
       #
@@ -634,3 +646,5 @@ jobs:
             integritee-client
             integritee-demo-validateer
             enclave.signed.so
+            mrenclave-hw-sidechain-${{ github.sha }}.hex
+            mrenclave-hw-teeracle-${{ github.sha }}.hex
