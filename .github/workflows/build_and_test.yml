@@ -61,8 +61,9 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
-          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          SGX_MODE_LOWERCASE=$(echo "${matrix.sgx_mode}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          echo ${{ env.IMAGE_SUFFIX }}
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
@@ -100,17 +101,6 @@ jobs:
         with:
           name: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
           path: integritee-worker-${{ env.IMAGE_SUFFIX }}.tar.gz
-
-      - name: Create Enclave Digest File
-        run: |
-          mrenclave_hex=$(docker run integritee-worker-${{ env.IMAGE_SUFFIX }} mrenclave | grep -oP ':\s*\K[a-fA-F0-9]+')
-          echo "$mrenclave_hex" > mrenclave-${{ env.IMAGE_SUFFIX }}.hex
-
-      - name: Upload Enclave Digest File
-        uses: actions/upload-artifact@v4
-        with:
-          name: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
-          path: mrenclave-${{ env.IMAGE_SUFFIX }}.hex
 
       - name: Delete images
         run: |
@@ -153,8 +143,9 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
-          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          SGX_MODE_LOWERCASE=$(echo "${matrix.sgx_mode}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          echo ${{ env.IMAGE_SUFFIX }}
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
              echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
              echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
@@ -317,8 +308,9 @@ jobs:
       - name: Set env
         run: |
           version=$RANDOM
-          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          SGX_MODE_LOWERCASE=$(echo "${matrix.sgx_mode}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          echo ${{ env.IMAGE_SUFFIX }}
           echo "FLAVOR_ID=${{ matrix.flavor_id }}" >> $GITHUB_ENV
           echo "PROJECT=${{ matrix.flavor_id }}-${{ matrix.demo_name }}" >> $GITHUB_ENV
           echo "VERSION=dev.$version" >> $GITHUB_ENV
@@ -430,9 +422,9 @@ jobs:
           fi
           docker images --all
 
-  release-build:
+  release-production-build:
     runs-on: integritee-builder-sgx
-    name: Release Build of teeracle
+    name: Release Builds in SGX Production Mode
     if: startsWith(github.ref, 'refs/tags/')
     needs: [ build-test, integration-tests ]
 
@@ -462,8 +454,9 @@ jobs:
         run: |
           fingerprint=$RANDOM
           echo "FINGERPRINT=$fingerprint" >> $GITHUB_ENV
-          SGX_MODE_LOWERCASE=$(echo "${${{ matrix.sgx_mode }},,}")
+          SGX_MODE_LOWERCASE=$(echo "${matrix.sgx_mode}" | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_SUFFIX=$SGX_MODE_LOWERCASE-${{ matrix.flavor_id }}-${{ github.sha }}" >> $GITHUB_ENV
+          echo ${{ env.IMAGE_SUFFIX }}
           if [[ ${{ matrix.sgx_mode }} == 'HW' ]]; then
               echo "DOCKER_DEVICES=--device=/dev/sgx/enclave --device=/dev/sgx/provision" >> $GITHUB_ENV
               echo "DOCKER_VOLUMES=--volume /var/run/aesmd:/var/run/aesmd --volume /etc/sgx_default_qcnl.conf:/etc/sgx_default_qcnl.conf" >> $GITHUB_ENV
@@ -517,6 +510,17 @@ jobs:
           --build-arg WORKER_MODE_ARG=${{ matrix.mode }} --build-arg ADDITIONAL_FEATURES_ARG=${{ matrix.additional_features }}
           -f build.Dockerfile .
 
+      - name: Create Enclave Digest File
+        run: |
+          mrenclave_hex=$(docker run integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} mrenclave | grep -oP ':\s*\K[a-fA-F0-9]+')
+          echo "$mrenclave_hex" > mrenclave-${{ matrix.flavor_id }}-${{ github.ref_name }}.hex
+
+      - name: Upload Enclave Digest File
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrenclave-${{ matrix.flavor_id }}-${{ github.ref_name }}.hex
+          path: mrenclave-${{ matrix.flavor_id }}-${{ github.ref_name }}.hex
+
       - name: Save worker docker image
         run: |
           docker image save integritee/${{ matrix.flavor_id }}:${{ github.ref_name }} | gzip > integritee-worker-${{ matrix.flavor_id }}-${{ github.ref_name }}.tar.gz
@@ -553,7 +557,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Draft Release
     if: startsWith(github.ref, 'refs/tags/')
-    needs: [ build-test, integration-tests, release-build ]
+    needs: [ build-test, integration-tests, release-production-build ]
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
@@ -582,6 +586,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: teeracle-cli-${{ github.ref_name }}.tar.gz
+          path: .
+
+      - name: Download Teeracle MRENCLAVE
+        uses: actions/download-artifact@v4
+        with:
+          name: mrenclave-teeracle-${{ github.ref_name }}.hex
+          path: .
+
+      - name: Download sidechain MRENCLAVE
+        uses: actions/download-artifact@v4
+        with:
+          name: mrenclave-sidechain-${{ github.ref_name }}.hex
           path: .
 
       #
@@ -634,3 +650,5 @@ jobs:
             integritee-client
             integritee-demo-validateer
             enclave.signed.so
+            mrenclave-teeracle-${{ github.ref_name }}.hex
+            mrenclave-sidechain-${{ github.ref_name }}.hex
