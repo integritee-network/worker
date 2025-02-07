@@ -15,7 +15,7 @@
 
 */
 
-use crate::{OpaqueCall, PalletString, ShardIdentifier};
+use crate::{xcm::Location, OpaqueCall, PalletString, ShardIdentifier};
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
@@ -37,6 +37,7 @@ use substrate_api_client::{
 };
 use teeracle_primitives::ExchangeRate;
 use teerex_primitives::{SgxAttestationMethod, SgxStatus};
+
 pub type StorageProof = Vec<Vec<u8>>;
 
 // Basic Types.
@@ -100,7 +101,9 @@ pub trait FilterEvents {
 	type Error: From<ParentchainError> + core::fmt::Debug;
 	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error>;
 
-	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error>;
+	fn get_events<Event: Default + StaticEvent>(
+		&self,
+	) -> core::result::Result<Vec<Event>, Self::Error>;
 }
 
 #[derive(Encode, Decode, Debug)]
@@ -156,9 +159,51 @@ impl core::fmt::Display for BalanceTransfer {
 	}
 }
 
+impl Default for BalanceTransfer {
+	fn default() -> Self {
+		BalanceTransfer { from: [0u8; 32].into(), to: [0u8; 32].into(), amount: 0 }
+	}
+}
+
 impl StaticEvent for BalanceTransfer {
 	const PALLET: &'static str = "Balances";
 	const EVENT: &'static str = "Transfer";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct ForeignAssetsTransferred {
+	pub asset_id: Location,
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl core::fmt::Display for ForeignAssetsTransferred {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"ForeignAssetsTransferred :: asset: {:?}, from: {}, to: {}, amount: {}",
+			&self.asset_id,
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl Default for ForeignAssetsTransferred {
+	fn default() -> Self {
+		ForeignAssetsTransferred {
+			asset_id: Default::default(),
+			from: [0u8; 32].into(),
+			to: [0u8; 32].into(),
+			amount: 0,
+		}
+	}
+}
+impl StaticEvent for ForeignAssetsTransferred {
+	const PALLET: &'static str = "ForeignAssets";
+	const EVENT: &'static str = "Transferred";
 }
 
 #[derive(Encode, Decode, Debug)]

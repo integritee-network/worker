@@ -2228,6 +2228,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
 
 [[package]]
+name = "hex-literal"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
+
+[[package]]
 name = "hmac"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2788,6 +2794,7 @@ version = "0.9.0"
 dependencies = [
  "bs58",
  "env_logger 0.9.3",
+ "hex-literal 0.4.1",
  "ita-sgx-runtime",
  "ita-stf",
  "itc-parentchain",
@@ -6862,7 +6869,7 @@ dependencies = [
  "der 0.6.1",
  "frame-support",
  "hex",
- "hex-literal",
+ "hex-literal 0.3.4",
  "log 0.4.22",
  "parity-scale-codec",
  "ring 0.16.20",

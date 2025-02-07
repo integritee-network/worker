@@ -15,12 +15,22 @@
 
 */
 use codec::Encode;
-use ita_sgx_runtime::Balance;
+use hex_literal::hex;
+use ita_sgx_runtime::{AssetId, Balance};
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
-use itp_types::parentchain::{
-	AccountId, FilterEvents, HandleParentchainEvents, ParentchainError, ParentchainId,
+use itp_types::{
+	parentchain::{
+		AccountId, BalanceTransfer, FilterEvents, ForeignAssetsTransferred,
+		HandleParentchainEvents, ParentchainError, ParentchainId,
+	},
+	xcm::{
+		Junction::{AccountKey20, GlobalConsensus},
+		Junctions::X2,
+		Location,
+		NetworkId::Ethereum,
+	},
 };
 use itp_utils::hex::hex_encode;
 use log::*;
@@ -63,21 +73,59 @@ where
 		events: impl FilterEvents,
 		vault_account: &AccountId,
 	) -> Result<(), Error> {
-		let filter_events = events.get_transfer_events();
 		trace!(
-			"[TargetB] filtering transfer events to shard vault account: {}",
+			"[TargetB] filtering balance transfer events to shard vault account: {}",
 			hex_encode(vault_account.encode().as_slice())
 		);
+		let filter_events = events.get_events::<BalanceTransfer>();
 		if let Ok(events) = filter_events {
 			events
-				.iter()
-				.filter(|&event| event.to == *vault_account)
-				.try_for_each(|event| {
-					info!("[TargetB] found transfer event to shard vault account: {} will shield to {}", event.amount, hex_encode(event.from.encode().as_ref()));
-					Self::shield_funds(executor, &event.from, event.amount)
-				})
-				.map_err(|_| ParentchainError::ShieldFundsFailure)?;
+                .iter()
+                .filter(|&event| event.to == *vault_account)
+                .try_for_each(|event| {
+                    info!("[TargetB] found balance transfer event to shard vault account: {} will shield to {}", event.amount, hex_encode(event.from.encode().as_ref()));
+                    Self::shield_funds(executor, &event.from, event.amount)
+                })
+                .map_err(|_| ParentchainError::ShieldFundsFailure)?;
 		}
+		trace!(
+			"[TargetB] filtering foreign assets transferred events to shard vault account: {}",
+			hex_encode(vault_account.encode().as_slice())
+		);
+		let filter_asset_events = events.get_events::<ForeignAssetsTransferred>();
+		if let Ok(events) = filter_asset_events {
+			events
+                .iter()
+                .filter(|&event| event.to == *vault_account)
+                .try_for_each(|event| {
+                    let stf_asset_id = location_to_sgx_runtime_asset_id(&event.asset_id);
+                    info!("[TargetB] found foreign assets ({:?}) transferred event to shard vault account: {} will shield to {}", stf_asset_id, event.amount, hex_encode(event.from.encode().as_ref()));
+
+                    //Self::shield_assets(executor, location_to_sgx_runtime_asset_id(&event.asset_id), &event.from, event.amount)
+                    Ok(())
+                })
+                .map_err(|_: Error| ParentchainError::ShieldFundsFailure)?;
+		}
+
 		Ok(())
+	}
+}
+
+const USDC_E_CONTRACT_ADDRESS: [u8; 20] = hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+
+fn location_to_sgx_runtime_asset_id(location: &Location) -> Option<AssetId> {
+	if location.parents == 2 {
+		if let X2(junctions) = &location.interior {
+			match junctions.as_slice() {
+				[GlobalConsensus(Ethereum { chain_id: 1 }), AccountKey20 { key: contract, network: None }]
+					if *contract == USDC_E_CONTRACT_ADDRESS =>
+					Some(1),
+				_ => None,
+			}
+		} else {
+			None
+		}
+	} else {
+		None
 	}
 }

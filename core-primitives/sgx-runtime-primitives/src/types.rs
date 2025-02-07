@@ -60,6 +60,8 @@ pub type DigestItem = generic::DigestItem;
 /// A type to hold UTC unix epoch [ms]
 pub type Moment = u64;
 
+pub type AssetId = u32;
+
 pub type Block = BlockG<Header, OpaqueExtrinsic>;
 pub type SignedBlock = SignedBlockG<Block>;
 pub type BlockHash = sp_core::H256;

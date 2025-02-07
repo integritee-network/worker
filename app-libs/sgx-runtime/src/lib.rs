@@ -54,7 +54,8 @@ use sp_version::RuntimeVersion;
 pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
 	types::{
-		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature,
+		AccountData, AccountId, Address, AssetId, Balance, BlockNumber, Hash, Header, Index,
+		Signature,
 	},
 };
 
@@ -71,7 +72,7 @@ pub use frame_support::{
 	StorageValue,
 };
 use frame_support::{
-	traits::{AsEnsureOriginWithArg, ConstU128, ConstU64, ConstU8, EitherOfDiverse},
+	traits::{AsEnsureOriginWithArg, ConstU128, ConstU8, EitherOfDiverse},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -341,8 +342,8 @@ impl pallet_session_proxy::Config for Runtime {
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = u64;
-	type AssetId = u32;
-	type AssetIdParameter = codec::Compact<u32>;
+	type AssetId = AssetId;
+	type AssetIdParameter = codec::Compact<AssetId>;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
