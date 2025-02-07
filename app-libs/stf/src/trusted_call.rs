@@ -43,6 +43,7 @@ use ita_sgx_runtime::{
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{pallet_balances::BalancesCallIndexes, pallet_proxy::ProxyCallIndexes};
+use itp_sgx_runtime_primitives::types::AssetId;
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
@@ -79,6 +80,10 @@ pub enum TrustedCall {
 	waste_time(AccountId, u32) = 11,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
 	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
+	assets_transfer(AccountId, AccountId, AssetId, Balance) = 42,
+	assets_unshield(AccountId, AccountId, AssetId, Balance, ShardIdentifier) = 43,
+	assets_shield(AccountId, AccountId, AssetId, Balance, ParentchainId) = 44,
+	assets_transfer_with_note(AccountId, AccountId, AssetId, Balance, Vec<u8>) = 45,
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
@@ -144,6 +149,10 @@ impl TrustedCall {
 			Self::add_session_proxy(sender_account, ..) => sender_account,
 			Self::note_bloat(sender_account, ..) => sender_account,
 			Self::waste_time(sender_account, ..) => sender_account,
+			Self::assets_transfer(sender_account, ..) => sender_account,
+			Self::assets_unshield(sender_account, ..) => sender_account,
+			Self::assets_shield(sender_account, ..) => sender_account,
+			Self::assets_transfer_with_note(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -551,6 +560,32 @@ where
 				store_note(&delegator, self.call, vec![delegator.clone()])?;
 				Ok(())
 			},
+			TrustedCall::assets_transfer(from, to, asset_id, value) => {
+				std::println!("⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿");
+				Ok(())
+			},
+			TrustedCall::assets_transfer_with_note(from, to, asset_id, value, note) => {
+				std::println!("⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ with note ⣿⣿⣿");
+				Ok(())
+			},
+			TrustedCall::assets_unshield(
+				account_incognito,
+				beneficiary,
+				asset_id,
+				value,
+				shard,
+			) => {
+				std::println!(
+					"⣿STF⣿ 🛡👐 assets_unshield from ⣿⣿⣿ to {}, amount {}",
+					account_id_to_string(&beneficiary),
+					value
+				);
+				Ok(())
+			},
+			TrustedCall::assets_shield(enclave_account, who, asset_id, value, parentchain_id) => {
+				std::println!("⣿STF⣿ 🛡 will shield assets to {}", account_id_to_string(&who));
+				Ok(())
+			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -702,6 +737,13 @@ fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
 		TrustedCall::timestamp_set(..) => Balance::from(0u32),
 		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
 		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
+		TrustedCall::assets_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere,
+		TrustedCall::assets_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
+		TrustedCall::assets_transfer_with_note(_, _, _, _, note) =>
+			one / crate::STF_TX_FEE_UNIT_DIVIDER
+				+ (one.saturating_mul(Balance::from(note.len() as u32)))
+					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
+		TrustedCall::assets_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(any(feature = "test", test))]
 		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
 		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,

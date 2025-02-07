@@ -341,7 +341,7 @@ impl pallet_session_proxy::Config for Runtime {
 
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Balance = u64;
+	type Balance = Balance;
 	type AssetId = AssetId;
 	type AssetIdParameter = codec::Compact<AssetId>;
 	type Currency = Balances;
@@ -417,7 +417,7 @@ construct_runtime!(
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 
-		ForeignAssets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 53,
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 53,
 	}
 );
 
