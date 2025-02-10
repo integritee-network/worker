@@ -54,8 +54,7 @@ use sp_version::RuntimeVersion;
 pub use itp_sgx_runtime_primitives::{
 	constants::SLOT_DURATION,
 	types::{
-		AccountData, AccountId, Address, AssetId, Balance, BlockNumber, Hash, Header, Index,
-		Signature,
+		AccountData, AccountId, Address, Balance, BlockNumber, Hash, Header, Index, Signature,
 	},
 };
 
@@ -76,8 +75,10 @@ use frame_support::{
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
+use ita_assets_map::AssetId;
 use itp_randomness::SgxRandomness;
 use itp_sgx_runtime_primitives::types::Moment;
+pub use pallet_assets::Call as AssetsCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
 pub use pallet_notes::Call as NotesCall;
@@ -343,7 +344,7 @@ impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type AssetIdParameter = codec::Compact<AssetId>;
+	type AssetIdParameter = AssetId;
 	type Currency = Balances;
 	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
 	type ForceOrigin = frame_system::EnsureRoot<AccountId>;

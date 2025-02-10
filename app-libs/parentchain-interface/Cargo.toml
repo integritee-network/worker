@@ -9,6 +9,7 @@ edition = "2021"
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
+ita-assets-map = { path = "../assets-map", default-features = false }
 ita-sgx-runtime = { path = "../sgx-runtime", default-features = false }
 ita-stf = { path = "../stf", default-features = false }
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate", default-features = false }

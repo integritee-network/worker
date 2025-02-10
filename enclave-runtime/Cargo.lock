@@ -1653,6 +1653,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-assets-map"
+version = "0.1.0"
+dependencies = [
+ "hex-literal",
+ "itp-types",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.192",
+]
+
+[[package]]
 name = "ita-oracle"
 version = "0.9.0"
 dependencies = [
@@ -1675,6 +1686,7 @@ version = "0.9.0"
 dependencies = [
  "bs58",
  "hex-literal",
+ "ita-assets-map",
  "ita-sgx-runtime",
  "ita-stf",
  "itc-parentchain",
@@ -1709,6 +1721,7 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "ita-assets-map",
  "itp-randomness",
  "itp-sgx-runtime-primitives",
  "pallet-assets",
@@ -1736,6 +1749,7 @@ version = "0.9.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "ita-assets-map",
  "ita-parentchain-specs",
  "ita-sgx-runtime",
  "itp-hashing",

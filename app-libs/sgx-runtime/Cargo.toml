@@ -12,6 +12,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 
 # local dependencies
+ita-assets-map = { path = "../assets-map", default-features = false }
 itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
 pallet-guess-the-number = { default-features = false, path = "pallets/guess-the-number" }
@@ -47,6 +48,7 @@ sgx = [
 std = [
     "codec/std",
     "scale-info/std",
+    "ita-assets-map/std",
     "itp-sgx-runtime-primitives/std",
     "frame-executive/std",
     "frame-support/std",

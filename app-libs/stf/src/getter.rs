@@ -45,8 +45,9 @@ use crate::{
 	},
 	STF_TX_FEE_UNIT_DIVIDER,
 };
+use ita_assets_map::AssetId;
 use ita_parentchain_specs::MinimalChainSpec;
-use itp_sgx_runtime_primitives::types::{AssetId, Balance, Moment};
+use itp_sgx_runtime_primitives::types::{Balance, Moment};
 use itp_stf_primitives::{
 	error::StfError,
 	traits::{GetDecimals, PoolTransactionValidation},
