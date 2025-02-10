@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "app-libs/assets-map",
     "app-libs/oracle",
     "app-libs/parentchain-interface",
     "app-libs/parentchain-specs",

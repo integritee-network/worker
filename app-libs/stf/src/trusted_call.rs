@@ -32,17 +32,24 @@ use crate::{
 	Getter, STF_SESSION_PROXY_DEPOSIT_DIVIDER, STF_SHIELDING_FEE_AMOUNT_DIVIDER,
 };
 use codec::{Compact, Decode, Encode};
-use frame_support::{ensure, traits::UnfilteredDispatchable};
+use frame_support::{
+	ensure,
+	traits::{fungibles::Inspect, UnfilteredDispatchable},
+};
+use ita_assets_map::{AssetId, AssetInfo, AssetTranslation};
 use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-pub use ita_sgx_runtime::{Balance, Index};
 use ita_sgx_runtime::{
-	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, System,
 };
+pub use ita_sgx_runtime::{Balance, Index};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
-use itp_node_api_metadata::{pallet_balances::BalancesCallIndexes, pallet_proxy::ProxyCallIndexes};
+use itp_node_api_metadata::{
+	pallet_assets::ForeignAssetsCallIndexes, pallet_balances::BalancesCallIndexes,
+	pallet_proxy::ProxyCallIndexes,
+};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
@@ -79,6 +86,10 @@ pub enum TrustedCall {
 	waste_time(AccountId, u32) = 11,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
 	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
+	assets_transfer(AccountId, AccountId, AssetId, Balance) = 42,
+	assets_unshield(AccountId, AccountId, AssetId, Balance, ShardIdentifier) = 43,
+	assets_shield(AccountId, AccountId, AssetId, Balance, ParentchainId) = 44,
+	assets_transfer_with_note(AccountId, AccountId, AssetId, Balance, Vec<u8>) = 45,
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
@@ -144,6 +155,10 @@ impl TrustedCall {
 			Self::add_session_proxy(sender_account, ..) => sender_account,
 			Self::note_bloat(sender_account, ..) => sender_account,
 			Self::waste_time(sender_account, ..) => sender_account,
+			Self::assets_transfer(sender_account, ..) => sender_account,
+			Self::assets_unshield(sender_account, ..) => sender_account,
+			Self::assets_shield(sender_account, ..) => sender_account,
+			Self::assets_transfer_with_note(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -353,7 +368,7 @@ where
 					value
 				);
 				info!(
-					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {}), shard {})",
+					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {:?}), shard {})",
 					account_id_to_string(&account_incognito),
 					account_id_to_string(&beneficiary),
 					value,
@@ -551,6 +566,132 @@ where
 				store_note(&delegator, self.call, vec![delegator.clone()])?;
 				Ok(())
 			},
+			TrustedCall::assets_transfer(from, to, id, amount) => {
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				let symbol = id.symbol().ok_or_else(|| {
+					Self::Error::Dispatch(format!("unsupported asset id {:?}", id))
+				})?;
+				std::println!(
+					"⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ asset {}",
+					symbol
+				);
+				ita_sgx_runtime::AssetsCall::<Runtime>::transfer {
+					id,
+					target: MultiAddress::Id(to.clone()),
+					amount,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("assets_transfer error: {:?}", e.error))
+				})?;
+				store_note(&from, self.call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::assets_transfer_with_note(from, to, id, amount, _note) => {
+				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
+				let symbol = id.symbol().ok_or_else(|| {
+					Self::Error::Dispatch(format!("unsupported asset id {:?}", id))
+				})?;
+				std::println!(
+					"⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ with note ⣿⣿⣿ asset {}",
+					symbol
+				);
+				ita_sgx_runtime::AssetsCall::<Runtime>::transfer {
+					id,
+					target: MultiAddress::Id(to.clone()),
+					amount,
+				}
+				.dispatch_bypass_filter(origin)
+				.map_err(|e| {
+					Self::Error::Dispatch(format!("assets_transfer error: {:?}", e.error))
+				})?;
+				store_note(&from, self.call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::assets_unshield(
+				account_incognito,
+				beneficiary,
+				asset_id,
+				value,
+				shard,
+			) => {
+				let symbol = asset_id.symbol().ok_or_else(|| {
+					Self::Error::Dispatch(format!("unsupported asset id {:?}", asset_id))
+				})?;
+				std::println!(
+					"⣿STF⣿ 🛡👐 assets_unshield {}, from ⣿⣿⣿ to {}, amount {}",
+					symbol,
+					account_id_to_string(&beneficiary),
+					value
+				);
+				info!(
+					"assets_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {:?}), shard {})",
+					account_id_to_string(&account_incognito),
+					account_id_to_string(&beneficiary),
+					value,
+					fee,
+					shard
+				);
+				burn_assets(&account_incognito, value, asset_id)?;
+				store_note(
+					&account_incognito,
+					self.call,
+					vec![account_incognito.clone(), beneficiary.clone()],
+				)?;
+
+				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
+					StfError::Dispatch("shard vault key hasn't been set".to_string())
+				})?;
+				let vault_address = Address::from(vault);
+				let vault_transfer_call = OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.foreign_assets_transfer_keep_alive_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
+					asset_id.into_location(),
+					Address::from(beneficiary),
+					Compact(value),
+				));
+				let call = OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.proxy_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
+					vault_address,
+					None::<ProxyType>,
+					vault_transfer_call,
+				));
+				let mortality =
+					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
+
+				let parentchain_call = match parentchain_id {
+					ParentchainId::Integritee => ParentchainCall::Integritee { call, mortality },
+					ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
+					ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
+				};
+				calls.push(parentchain_call);
+				Ok(())
+			},
+			TrustedCall::assets_shield(enclave_account, who, asset_id, value, parentchain_id) => {
+				ensure_enclave_signer_account(&enclave_account)?;
+				debug!(
+					"assets_shield({}, {}, {:?}, {:?})",
+					account_id_to_string(&who),
+					value,
+					asset_id,
+					parentchain_id
+				);
+				let (_vault_account, vault_parentchain_id) =
+					shard_vault().ok_or(StfError::NoShardVaultAssigned)?;
+				ensure!(
+					parentchain_id == vault_parentchain_id,
+					StfError::WrongParentchainIdForShardVault
+				);
+				std::println!("⣿STF⣿ 🛡 will shield assets to {}", account_id_to_string(&who));
+				shield_assets(&who, value, asset_id)?;
+				store_note(&enclave_account, self.call, vec![who])?;
+				Ok(())
+			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -687,38 +828,71 @@ where
 	}
 }
 
-fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
+#[derive(Debug, Copy, Clone)]
+enum Fee {
+	Free,
+	Native(Balance),
+	Asset(Balance, AssetId),
+}
+fn get_fee_for(tc: &TrustedCallSigned) -> Fee {
 	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
 	match &tc.call {
-		TrustedCall::balance_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::balance_transfer_with_note(_, _, _, note) =>
+		TrustedCall::balance_transfer(..) => Fee::Native(one / crate::STF_TX_FEE_UNIT_DIVIDER),
+		TrustedCall::balance_transfer_with_note(_, _, _, note) => Fee::Native(
 			one / crate::STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32)))
 					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
-		TrustedCall::balance_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
-		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(call),
-		TrustedCall::note_bloat(..) => Balance::from(0u32),
-		TrustedCall::waste_time(..) => Balance::from(0u32),
-		TrustedCall::timestamp_set(..) => Balance::from(0u32),
-		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
-		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
+		),
+		TrustedCall::balance_unshield(..) => Fee::Native(one / crate::STF_TX_FEE_UNIT_DIVIDER * 3),
+		TrustedCall::guess_the_number(call) =>
+			Fee::Native(crate::guess_the_number::get_fee_for(call)),
+		TrustedCall::note_bloat(..) => Fee::Free,
+		TrustedCall::waste_time(..) => Fee::Free,
+		TrustedCall::timestamp_set(..) => Fee::Free,
+		TrustedCall::balance_shield(..) => Fee::Free, //will be charged on recipient, elsewhere
+		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Fee::Free, //will be charged on recipient, elsewhere
+		TrustedCall::assets_shield(..) => Fee::Free, //will be charged on recipient, elsewhere,
+		TrustedCall::assets_unshield(_, _, asset_id, ..) =>
+			Fee::Asset(one / crate::STF_TX_FEE_UNIT_DIVIDER * 3, *asset_id),
+		TrustedCall::assets_transfer_with_note(_, _, asset_id, _, note) => Fee::Asset(
+			one / crate::STF_TX_FEE_UNIT_DIVIDER
+				+ (one.saturating_mul(Balance::from(note.len() as u32)))
+					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
+			*asset_id,
+		),
+		TrustedCall::assets_transfer(_, _, asset_id, ..) =>
+			Fee::Asset(one / crate::STF_TX_FEE_UNIT_DIVIDER, *asset_id),
 		#[cfg(any(feature = "test", test))]
-		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
-		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+		TrustedCall::balance_set_balance(..) => Fee::Free,
+		_ => Fee::Native(one / crate::STF_TX_FEE_UNIT_DIVIDER),
 	}
 }
 
-fn charge_fee(fee: Balance, payer: &AccountId) -> Result<(), StfError> {
-	debug!("attempting to charge fee for TrustedCall");
+fn charge_fee(fee: Fee, payer: &AccountId) -> Result<(), StfError> {
+	if let Fee::Free = fee {
+		return Ok(());
+	}
+	debug!("attempting to charge fee for TrustedCall: {:?}", fee);
 	let fee_recipient: AccountId = enclave_signer_account();
 	let origin = ita_sgx_runtime::RuntimeOrigin::signed(payer.clone());
-	ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-		dest: MultiAddress::Id(fee_recipient),
-		value: fee,
+	match fee {
+		Fee::Native(native_fee) => ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+			dest: MultiAddress::Id(fee_recipient),
+			value: native_fee,
+		}
+		.dispatch_bypass_filter(origin)
+		.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))
+		.map(|_| ()),
+		Fee::Asset(asset_fee, asset_id) => ita_sgx_runtime::AssetsCall::<Runtime>::transfer {
+			id: asset_id,
+			target: MultiAddress::Id(fee_recipient),
+			amount: asset_fee,
+		}
+		.dispatch_bypass_filter(origin)
+		.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))
+		.map(|_| ()),
+		_ => Ok(()),
 	}
-	.dispatch_bypass_filter(origin)
-	.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))?;
-	Ok(())
 }
 
 fn burn_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
@@ -733,6 +907,17 @@ fn burn_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 	.map_err(|e| StfError::Dispatch(format!("Burn funds error: {:?}", e.error)))?;
+	Ok(())
+}
+
+fn burn_assets(account: &AccountId, amount: u128, id: AssetId) -> Result<(), StfError> {
+	ita_sgx_runtime::AssetsCall::<Runtime>::burn {
+		id,
+		who: MultiAddress::Id(account.clone()),
+		amount,
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(enclave_signer_account()))
+	.map_err(|e| StfError::Dispatch(format!("Burn assets error: {:?}", e.error)))?;
 	Ok(())
 }
 
@@ -763,6 +948,43 @@ fn shield_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 	Ok(())
 }
 
+fn shield_assets(account: &AccountId, amount: u128, asset_id: AssetId) -> Result<(), StfError> {
+	//fixme: make fee configurable and send fee to vault account on L2
+	let fee = amount / STF_SHIELDING_FEE_AMOUNT_DIVIDER;
+	// endow fee to enclave (self)
+	let fee_recipient: AccountId = enclave_signer_account();
+
+	// auto-create asset_id
+	if !Assets::asset_exists(asset_id) {
+		debug!("will create new asset with id {:?}", asset_id);
+		ita_sgx_runtime::AssetsCall::<Runtime>::force_create {
+			id: asset_id,
+			owner: enclave_signer_account(),
+			is_sufficient: true,
+			min_balance: 1,
+		}
+		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+		.map_err(|e| StfError::Dispatch(format!("Shield (create asset) error: {:?}", e.error)))?;
+	};
+	ita_sgx_runtime::AssetsCall::<Runtime>::mint {
+		id: asset_id,
+		beneficiary: MultiAddress::Id(fee_recipient.clone()),
+		amount: fee,
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(fee_recipient.clone()))
+	.map_err(|e| StfError::Dispatch(format!("Shield assets error: {:?}", e.error)))?;
+
+	// endow shieding amount - fee to beneficiary
+	ita_sgx_runtime::AssetsCall::<Runtime>::mint {
+		id: asset_id,
+		beneficiary: MultiAddress::Id(account.clone()),
+		amount: amount - fee,
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(fee_recipient))
+	.map_err(|e| StfError::Dispatch(format!("Shield assets error: {:?}", e.error)))?;
+
+	Ok(())
+}
 fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Balance>, StfError> {
 	let delegator = tcs.sender_account();
 	if let Some(delegate) = tcs.delegate.clone() {

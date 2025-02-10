@@ -25,6 +25,7 @@ use sp_std::vec::Vec;
 
 pub mod parentchain;
 pub mod storage;
+pub mod xcm;
 
 /// Substrate runtimes provide no string type. Hence, for arbitrary data of varying length the
 /// `Vec<u8>` is used. In the polkadot-js the typedef `Text` is used to automatically

@@ -19,10 +19,9 @@
 use itc_parentchain_indirect_calls_executor::event_filter::ToEvents;
 use itp_api_client_types::Events;
 
+use crate::StaticEvent;
 use itp_types::{
-	parentchain::{
-		BalanceTransfer, ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents,
-	},
+	parentchain::{ExtrinsicFailed, ExtrinsicStatus, ExtrinsicSuccess, FilterEvents},
 	H256,
 };
 use std::vec::Vec;
@@ -68,12 +67,12 @@ impl FilterEvents for FilterableEvents {
 			.collect())
 	}
 
-	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error> {
+	fn get_events<Event: StaticEvent>(&self) -> core::result::Result<Vec<Event>, Self::Error> {
 		Ok(self
 			.to_events()
 			.iter()
 			.flatten() // flatten filters out the nones
-			.filter_map(|ev| match ev.as_event::<BalanceTransfer>() {
+			.filter_map(|ev| match ev.as_event::<Event>() {
 				Ok(maybe_event) => maybe_event,
 				Err(e) => {
 					log::error!("Could not decode event: {:?}", e);

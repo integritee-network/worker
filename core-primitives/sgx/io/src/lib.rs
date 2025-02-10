@@ -63,6 +63,9 @@ pub fn read<P: AsRef<Path>>(path: P) -> IOResult<Vec<u8>> {
 }
 
 pub fn write<P: AsRef<Path>>(bytes: &[u8], path: P) -> IOResult<()> {
+	if let Some(parent) = path.as_ref().parent() {
+		fs::create_dir_all(parent)?; // Ensure the directory exists
+	}
 	fs::File::create(path).map(|mut f| f.write_all(bytes))?
 }
 

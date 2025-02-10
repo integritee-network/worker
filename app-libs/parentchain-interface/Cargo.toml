@@ -9,6 +9,7 @@ edition = "2021"
 sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
 
 # local dependencies
+ita-assets-map = { path = "../assets-map", default-features = false }
 ita-sgx-runtime = { path = "../sgx-runtime", default-features = false }
 ita-stf = { path = "../stf", default-features = false }
 itc-parentchain = { path = "../../core/parentchain/parentchain-crate", default-features = false }
@@ -24,6 +25,7 @@ bs58 = { version = "0.4.0", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 log = { version = "0.4", default-features = false }
 regex = { optional = true, version = "1.9.5" }
+hex-literal = "0.4.1"
 
 substrate-api-client = { default-features = false, git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
 
