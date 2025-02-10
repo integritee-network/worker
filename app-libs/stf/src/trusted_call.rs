@@ -368,7 +368,7 @@ where
 					value
 				);
 				info!(
-					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {}), shard {})",
+					"balance_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {:?}), shard {})",
 					account_id_to_string(&account_incognito),
 					account_id_to_string(&beneficiary),
 					value,
@@ -624,6 +624,14 @@ where
 					account_id_to_string(&beneficiary),
 					value
 				);
+				info!(
+					"assets_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {:?}), shard {})",
+					account_id_to_string(&account_incognito),
+					account_id_to_string(&beneficiary),
+					value,
+					fee,
+					shard
+				);
 				burn_assets(&account_incognito, value, asset_id)?;
 				store_note(
 					&account_incognito,
@@ -680,6 +688,7 @@ where
 					StfError::WrongParentchainIdForShardVault
 				);
 				std::println!("⣿STF⣿ 🛡 will shield assets to {}", account_id_to_string(&who));
+				shield_assets(&who, value, asset_id)?;
 				store_note(&enclave_account, self.call, vec![who])?;
 				Ok(())
 			},
@@ -819,45 +828,71 @@ where
 	}
 }
 
-fn get_fee_for(tc: &TrustedCallSigned) -> Balance {
+#[derive(Debug, Copy, Clone)]
+enum Fee {
+	Free,
+	Native(Balance),
+	Asset(Balance, AssetId),
+}
+fn get_fee_for(tc: &TrustedCallSigned) -> Fee {
 	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
 	match &tc.call {
-		TrustedCall::balance_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::balance_transfer_with_note(_, _, _, note) =>
+		TrustedCall::balance_transfer(..) => Fee::Native(one / crate::STF_TX_FEE_UNIT_DIVIDER),
+		TrustedCall::balance_transfer_with_note(_, _, _, note) => Fee::Native(
 			one / crate::STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32)))
 					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
-		TrustedCall::balance_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
-		TrustedCall::guess_the_number(call) => crate::guess_the_number::get_fee_for(call),
-		TrustedCall::note_bloat(..) => Balance::from(0u32),
-		TrustedCall::waste_time(..) => Balance::from(0u32),
-		TrustedCall::timestamp_set(..) => Balance::from(0u32),
-		TrustedCall::balance_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
-		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Balance::from(0u32), //will be charged on recipient, elsewhere
-		TrustedCall::assets_shield(..) => Balance::from(0u32), //will be charged on recipient, elsewhere,
-		TrustedCall::assets_unshield(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER * 3,
-		TrustedCall::assets_transfer_with_note(_, _, _, _, note) =>
+		),
+		TrustedCall::balance_unshield(..) => Fee::Native(one / crate::STF_TX_FEE_UNIT_DIVIDER * 3),
+		TrustedCall::guess_the_number(call) =>
+			Fee::Native(crate::guess_the_number::get_fee_for(call)),
+		TrustedCall::note_bloat(..) => Fee::Free,
+		TrustedCall::waste_time(..) => Fee::Free,
+		TrustedCall::timestamp_set(..) => Fee::Free,
+		TrustedCall::balance_shield(..) => Fee::Free, //will be charged on recipient, elsewhere
+		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => Fee::Free, //will be charged on recipient, elsewhere
+		TrustedCall::assets_shield(..) => Fee::Free, //will be charged on recipient, elsewhere,
+		TrustedCall::assets_unshield(_, _, asset_id, ..) =>
+			Fee::Asset(one / crate::STF_TX_FEE_UNIT_DIVIDER * 3, *asset_id),
+		TrustedCall::assets_transfer_with_note(_, _, asset_id, _, note) => Fee::Asset(
 			one / crate::STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32)))
 					/ crate::STF_BYTE_FEE_UNIT_DIVIDER,
-		TrustedCall::assets_transfer(..) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+			*asset_id,
+		),
+		TrustedCall::assets_transfer(_, _, asset_id, ..) =>
+			Fee::Asset(one / crate::STF_TX_FEE_UNIT_DIVIDER, *asset_id),
 		#[cfg(any(feature = "test", test))]
-		TrustedCall::balance_set_balance(..) => Balance::from(0u32),
-		_ => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+		TrustedCall::balance_set_balance(..) => Fee::Free,
+		_ => Fee::Native(one / crate::STF_TX_FEE_UNIT_DIVIDER),
 	}
 }
 
-fn charge_fee(fee: Balance, payer: &AccountId) -> Result<(), StfError> {
-	debug!("attempting to charge fee for TrustedCall");
+fn charge_fee(fee: Fee, payer: &AccountId) -> Result<(), StfError> {
+	if let Fee::Free = fee {
+		return Ok(());
+	}
+	debug!("attempting to charge fee for TrustedCall: {:?}", fee);
 	let fee_recipient: AccountId = enclave_signer_account();
 	let origin = ita_sgx_runtime::RuntimeOrigin::signed(payer.clone());
-	ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
-		dest: MultiAddress::Id(fee_recipient),
-		value: fee,
+	match fee {
+		Fee::Native(native_fee) => ita_sgx_runtime::BalancesCall::<Runtime>::transfer {
+			dest: MultiAddress::Id(fee_recipient),
+			value: native_fee,
+		}
+		.dispatch_bypass_filter(origin)
+		.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))
+		.map(|_| ()),
+		Fee::Asset(asset_fee, asset_id) => ita_sgx_runtime::AssetsCall::<Runtime>::transfer {
+			id: asset_id,
+			target: MultiAddress::Id(fee_recipient),
+			amount: asset_fee,
+		}
+		.dispatch_bypass_filter(origin)
+		.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))
+		.map(|_| ()),
+		_ => Ok(()),
 	}
-	.dispatch_bypass_filter(origin)
-	.map_err(|e| StfError::Dispatch(format!("Fee Payment Error: {:?}", e.error)))?;
-	Ok(())
 }
 
 fn burn_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {

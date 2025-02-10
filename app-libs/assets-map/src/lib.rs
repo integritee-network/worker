@@ -16,6 +16,7 @@
 */
 
 // Explicit mapping between AssetId on L1 and L2
+// All supported assets will be sufficient and eligible to pay fees for own scope
 
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
