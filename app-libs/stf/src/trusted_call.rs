@@ -620,6 +620,9 @@ where
 					fee,
 					shard
 				);
+				let location = asset_id
+					.into_location()
+					.ok_or(StfError::Dispatch("unknown asset id location".into()))?;
 				burn_assets(&account_incognito, value, asset_id)?;
 				store_note(
 					&account_incognito,
@@ -636,8 +639,8 @@ where
 						.get_from_metadata(|m| m.foreign_assets_transfer_keep_alive_call_indexes())
 						.map_err(|_| StfError::InvalidMetadata)?
 						.map_err(|_| StfError::InvalidMetadata)?,
-					asset_id.into_location(),
-					Address::from(beneficiary),
+					location,
+					Address::Id(beneficiary),
 					Compact(value),
 				));
 				let call = OpaqueCall::from_tuple(&(

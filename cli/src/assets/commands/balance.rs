@@ -46,7 +46,7 @@ impl BalanceCommand {
 				None,
 			)
 			.unwrap()
-			.unwrap();
+			.unwrap_or_default();
 		info!("{:?}", asset_account);
 		println!("{}", asset_account.balance);
 		Ok(CliResultOk::Balance { balance: asset_account.balance })

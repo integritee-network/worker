@@ -82,6 +82,12 @@ pub struct AssetAccount {
 	pub extra: (),
 }
 
+impl Default for AssetAccount {
+	fn default() -> Self {
+		Self { balance: 0, is_frozen: false, reason: ExistenceReason::Consumer, extra: () }
+	}
+}
+
 #[derive(Encode, Decode, Copy, Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum ParentchainId {
