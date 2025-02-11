@@ -951,36 +951,36 @@ fn shield_funds(account: &AccountId, amount: u128) -> Result<(), StfError> {
 fn shield_assets(account: &AccountId, amount: u128, asset_id: AssetId) -> Result<(), StfError> {
 	//fixme: make fee configurable and send fee to vault account on L2
 	let fee = amount / STF_SHIELDING_FEE_AMOUNT_DIVIDER;
-	// endow fee to enclave (self)
-	let fee_recipient: AccountId = enclave_signer_account();
+	let sudo_account: AccountId = enclave_signer_account();
 
 	// auto-create asset_id
 	if !Assets::asset_exists(asset_id) {
 		debug!("will create new asset with id {:?}", asset_id);
 		ita_sgx_runtime::AssetsCall::<Runtime>::force_create {
 			id: asset_id,
-			owner: enclave_signer_account(),
+			owner: MultiAddress::Id(sudo_account.clone()),
 			is_sufficient: true,
 			min_balance: 1,
 		}
 		.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
 		.map_err(|e| StfError::Dispatch(format!("Shield (create asset) error: {:?}", e.error)))?;
 	};
+	// endow fee to enclave (self)
 	ita_sgx_runtime::AssetsCall::<Runtime>::mint {
 		id: asset_id,
-		beneficiary: MultiAddress::Id(fee_recipient.clone()),
+		beneficiary: MultiAddress::Id(sudo_account.clone()),
 		amount: fee,
 	}
-	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(fee_recipient.clone()))
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sudo_account.clone()))
 	.map_err(|e| StfError::Dispatch(format!("Shield assets error: {:?}", e.error)))?;
 
-	// endow shieding amount - fee to beneficiary
+	// endow shieding (amount - fee) to beneficiary
 	ita_sgx_runtime::AssetsCall::<Runtime>::mint {
 		id: asset_id,
 		beneficiary: MultiAddress::Id(account.clone()),
 		amount: amount - fee,
 	}
-	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(fee_recipient))
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sudo_account))
 	.map_err(|e| StfError::Dispatch(format!("Shield assets error: {:?}", e.error)))?;
 
 	Ok(())
