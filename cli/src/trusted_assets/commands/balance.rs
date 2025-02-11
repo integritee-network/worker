@@ -40,8 +40,8 @@ impl BalanceCommand {
 			get_basic_signing_info_from_args!(self.account, self.session_proxy, cli, trusted_args);
 		let asset_id = AssetId::try_from(self.asset_id.clone().as_str()).expect("Invalid asset id");
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-			TrustedGetter::asset_balance(sender.clone(), asset_id)
-				.sign(&KeyPair::Sr25519(Box::new(signer.clone()))),
+			TrustedGetter::asset_balance(sender, asset_id)
+				.sign(&KeyPair::Sr25519(Box::new(signer))),
 		));
 		let balance = perform_trusted_operation::<Balance>(cli, trusted_args, &top)
 			.ok()

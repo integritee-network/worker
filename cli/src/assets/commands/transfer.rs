@@ -60,7 +60,7 @@ impl TransferCommand {
 			assets_pallet_instance,
 			"transfer",
 			location,
-			MultiAddress::<AccountId, ()>::Id(to_account.clone()),
+			MultiAddress::<AccountId, ()>::Id(to_account),
 			Compact(self.amount)
 		);
 		info!("encoded call: {}", hex::encode(xt.function.encode()));

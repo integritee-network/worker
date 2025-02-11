@@ -235,12 +235,10 @@ where
 		vec![WorkerRequest::NextNonceFor(vault.public().into())],
 		&parentchain_id,
 	)?;
-	if let Some(response) = responses.get(0) {
-		if let WorkerResponse::NextNonce(Some(nonce)) = response {
-			if *nonce > 0 {
-				warn!("The vault nonce is > 0. This means the shard has been initialized previously but this worker seems to have forgotten about it. Did you do a clean-reset of an already initialized shard? Continuing without re-registering proxy");
-				return Ok(())
-			}
+	if let Some(WorkerResponse::NextNonce(Some(nonce))) = responses.get(0) {
+		if *nonce > 0 {
+			warn!("The vault nonce is > 0. This means the shard has been initialized previously but this worker seems to have forgotten about it. Did you do a clean-reset of an already initialized shard? Continuing without re-registering proxy");
+			return Ok(())
 		}
 	}
 	let nonce_cache = Arc::new(NonceCache::default());
