@@ -7,11 +7,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hex-literal = "0.4.1"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+hex-literal = "0.4.1"
+itp-types = { default-features = false, path = "../../core-primitives/types" }
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 serde = { version = "1.0", default-features = false, features = ["alloc", "derive"] }
-itp-types = { default-features = false, path = "../../core-primitives/types" }
 
 [features]
 default = ["std"]
@@ -19,5 +19,5 @@ default = ["std"]
 std = [
     "codec/std",
     "scale-info/std",
-    "serde/std"
+    "serde/std",
 ]

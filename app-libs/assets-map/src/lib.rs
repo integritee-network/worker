@@ -26,11 +26,14 @@ extern crate core;
 use alloc::sync::Arc;
 use codec::{Decode, Encode, MaxEncodedLen};
 use hex_literal::hex;
-use itp_types::xcm::{
-	Junction::{AccountKey20, GlobalConsensus},
-	Junctions::X2,
-	Location,
-	NetworkId::Ethereum,
+use itp_types::{
+	xcm::{
+		Junction::{AccountKey20, GlobalConsensus},
+		Junctions::X2,
+		Location,
+		NetworkId::Ethereum,
+	},
+	Balance,
 };
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
@@ -88,6 +91,13 @@ impl AssetId {
 		match self {
 			AssetId::USDC_E => Some(FOREIGN_ASSETS),
 			AssetId::UNSUPPORTED => None,
+		}
+	}
+
+	pub fn one_unit(&self) -> Balance {
+		match self {
+			AssetId::USDC_E => 1_000_000, // 6 decimals
+			AssetId::UNSUPPORTED => 1,
 		}
 	}
 }
