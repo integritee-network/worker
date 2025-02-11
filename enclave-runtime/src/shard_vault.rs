@@ -45,8 +45,8 @@ use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_interface::{parentchain_pallet::ParentchainPalletInstancesInterface, ShardVaultQuery};
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_types::{
-	parentchain::{AccountId, Address, Balance, ParentchainId, ProxyType},
-	OpaqueCall, ShardIdentifier,
+	parentchain::{AccountId, Address, Balance, Header, ParentchainId, ProxyType},
+	Nonce, OpaqueCall, ShardIdentifier, WorkerRequest, WorkerResponse,
 };
 use log::*;
 use primitive_types::H256;
@@ -230,7 +230,19 @@ where
 	//this extrinsic must be included in a block before we can move on. otherwise the next will fail
 	ocall_api.send_to_parentchain(xts, &parentchain_id, true)?;
 
-	// we are assuming nonce=0 here.
+	// double-check if vault has been initialized previously
+	let responses = ocall_api.worker_request::<Header, Nonce>(
+		vec![WorkerRequest::NextNonceFor(vault.public().into())],
+		&parentchain_id,
+	)?;
+	if let Some(response) = responses.get(0) {
+		if let WorkerResponse::NextNonce(Some(nonce)) = response {
+			if *nonce > 0 {
+				warn!("The vault nonce is > 0. This means the shard has been initialized previously but this worker seems to have forgotten about it. Did you do a clean-reset of an already initialized shard? Continuing without re-registering proxy");
+				return Ok(())
+			}
+		}
+	}
 	let nonce_cache = Arc::new(NonceCache::default());
 	let vault_extrinsics_factory = enclave_extrinsics_factory
 		.with_signer(StaticExtrinsicSigner::<_, PairSignature>::new(vault), nonce_cache);
