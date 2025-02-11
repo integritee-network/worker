@@ -1,9 +1,9 @@
-// this is a backport of XCMv4 types
+// this is a backport of XCMv5 types
 
 use codec::{Decode, Encode};
 use sp_std::sync::Arc;
 
-/// XCMv4 Junctions
+/// XCMv5 Junctions
 #[derive(Encode, Decode, Debug, Clone)]
 pub struct Location {
 	/// The number of parent junctions at the beginning of this `Location`.
@@ -70,7 +70,6 @@ pub enum Junction {
 	/// An instanced, indexed pallet that forms a constituent part of the context.
 	///
 	/// Generally used when the context is a Frame-based chain.
-	// TODO XCMv4 inner should be `Compact<u32>`.
 	PalletInstance(u8),
 	/// A non-descript index within the context location.
 	///
@@ -111,12 +110,6 @@ pub enum NetworkId {
 	Polkadot,
 	/// The Kusama canary-net Relay-chain.
 	Kusama,
-	/// The Westend testnet Relay-chain.
-	Westend,
-	/// The Rococo testnet Relay-chain.
-	Rococo,
-	/// The Wococo testnet Relay-chain.
-	Wococo,
 	/// An Ethereum network specified by its chain ID.
 	Ethereum {
 		/// The EIP-155 chain ID.
