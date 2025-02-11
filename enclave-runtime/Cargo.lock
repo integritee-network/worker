@@ -2413,6 +2413,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
  "itp-utils",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "serde 1.0.192",

@@ -22,6 +22,7 @@ use core::fmt::Debug;
 use frame_support::pallet_prelude::Pays;
 use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 use itp_utils::stringify::account_id_to_string;
+use pallet_assets::ExistenceReason;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 pub use sidechain_primitives::SidechainBlockConfirmation;
@@ -67,6 +68,19 @@ pub type BlockHash = sp_core::H256;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
+
+// the upstream type has private fields, so we re-define it
+#[derive(Clone, Encode, Debug, Decode, Eq, PartialEq)]
+pub struct AssetAccount {
+	/// The balance.
+	pub balance: Balance,
+	/// Whether the account is frozen.
+	pub is_frozen: bool,
+	/// The reason for the existence of the account.
+	pub reason: ExistenceReason<Balance>,
+	/// Additional "sidecar" data, in case some other pallet wants to use this storage item.
+	pub extra: (),
+}
 
 #[derive(Encode, Decode, Copy, Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]

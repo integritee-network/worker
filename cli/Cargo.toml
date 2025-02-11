@@ -29,8 +29,10 @@ warp = "0.3.7"
 
 # scs / integritee
 enclave-bridge-primitives = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+ita-assets-map = { path = "../app-libs/assets-map" }
 ita-parentchain-interface = { path = "../app-libs/parentchain-interface" }
 pallet-enclave-bridge = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
+pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-evm = { optional = true, git = "https://github.com/integritee-network/frontier.git", branch = "bar/polkadot-v0.9.42" }
 pallet-sidechain = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }
 pallet-teeracle = { git = "https://github.com/integritee-network/pallets.git", branch = "sdk-v0.13.0-polkadot-v0.9.42" }

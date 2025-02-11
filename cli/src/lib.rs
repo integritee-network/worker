@@ -28,6 +28,7 @@ extern crate chrono;
 extern crate env_logger;
 extern crate log;
 
+mod assets;
 mod attesteer;
 mod base_cli;
 mod benchmark;
@@ -36,6 +37,7 @@ mod command_utils;
 mod evm;
 #[cfg(feature = "teeracle")]
 mod oracle;
+mod trusted_assets;
 mod trusted_base_cli;
 mod trusted_cli;
 mod trusted_command_utils;

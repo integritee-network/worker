@@ -18,8 +18,9 @@
 use crate::Cli;
 use base58::FromBase58;
 use chrono::{DateTime, Local, NaiveDateTime};
-use ita_parentchain_interface::integritee::{
-	api_client_types::IntegriteeApi, AccountId, Signature,
+use ita_parentchain_interface::{
+	integritee::{api_client_types::IntegriteeApi, AccountId, Signature},
+	target_b::api_client_types::TargetBApi,
 };
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::api_client::TungsteniteRpcClient;
@@ -45,6 +46,12 @@ pub(crate) fn get_chain_api(cli: &Cli) -> IntegriteeApi {
 	let url = format!("{}:{}", cli.node_url, cli.node_port);
 	info!("connecting to {}", url);
 	IntegriteeApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
+}
+
+pub(crate) fn get_target_b_chain_api(cli: &Cli) -> TargetBApi {
+	let url = format!("{}:{}", cli.node_url, cli.node_port);
+	info!("connecting to {}", url);
+	TargetBApi::new(TungsteniteRpcClient::new(&url, 5).unwrap()).unwrap()
 }
 
 pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {

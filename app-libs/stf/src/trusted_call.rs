@@ -36,7 +36,7 @@ use frame_support::{
 	ensure,
 	traits::{fungibles::Inspect, UnfilteredDispatchable},
 };
-use ita_assets_map::{AssetId, AssetInfo, AssetTranslation};
+use ita_assets_map::{AssetId, AssetTranslation};
 use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -568,13 +568,7 @@ where
 			},
 			TrustedCall::assets_transfer(from, to, id, amount) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
-				let symbol = id.symbol().ok_or_else(|| {
-					Self::Error::Dispatch(format!("unsupported asset id {:?}", id))
-				})?;
-				std::println!(
-					"⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ asset {}",
-					symbol
-				);
+				std::println!("⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ {:?}", id);
 				ita_sgx_runtime::AssetsCall::<Runtime>::transfer {
 					id,
 					target: MultiAddress::Id(to.clone()),
@@ -589,12 +583,9 @@ where
 			},
 			TrustedCall::assets_transfer_with_note(from, to, id, amount, _note) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
-				let symbol = id.symbol().ok_or_else(|| {
-					Self::Error::Dispatch(format!("unsupported asset id {:?}", id))
-				})?;
 				std::println!(
-					"⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ with note ⣿⣿⣿ asset {}",
-					symbol
+					"⣿STF⣿ 🔄 assets_transfer from ⣿⣿⣿ to ⣿⣿⣿ amount ⣿⣿⣿ with note ⣿⣿⣿ {:?}",
+					id
 				);
 				ita_sgx_runtime::AssetsCall::<Runtime>::transfer {
 					id,
@@ -615,14 +606,11 @@ where
 				value,
 				shard,
 			) => {
-				let symbol = asset_id.symbol().ok_or_else(|| {
-					Self::Error::Dispatch(format!("unsupported asset id {:?}", asset_id))
-				})?;
 				std::println!(
-					"⣿STF⣿ 🛡👐 assets_unshield {}, from ⣿⣿⣿ to {}, amount {}",
-					symbol,
+					"⣿STF⣿ 🛡👐 assets_unshield, from ⣿⣿⣿ to {}, amount {} {:?}",
 					account_id_to_string(&beneficiary),
-					value
+					value,
+					asset_id
 				);
 				info!(
 					"assets_unshield(from (L2): {}, to (L1): {}, amount {} (+fee: {:?}), shard {})",

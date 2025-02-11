@@ -21,6 +21,8 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 extern crate alloc;
+extern crate core;
+
 use alloc::sync::Arc;
 use codec::{Decode, Encode, MaxEncodedLen};
 use hex_literal::hex;
@@ -57,14 +59,39 @@ pub enum AssetId {
 
 const USDC_E_CONTRACT_ADDRESS: [u8; 20] = hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
 
-impl AssetInfo for AssetId {
-	fn symbol(&self) -> Option<&str> {
+#[cfg(feature = "std")]
+impl std::fmt::Display for AssetId {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			AssetId::USDC_E => Some("USDC.e"),
+			AssetId::USDC_E => write!(f, "USDC.e"),
+			AssetId::UNSUPPORTED => write!(f, "UNSUPPORTED"),
+		}
+	}
+}
+
+#[cfg(feature = "std")]
+impl TryFrom<&str> for AssetId {
+	type Error = ();
+
+	fn try_from(symbol: &str) -> Result<Self, Self::Error> {
+		match symbol {
+			"USDC.e" => Ok(AssetId::USDC_E),
+			_ => Err(()),
+		}
+	}
+}
+
+const FOREIGN_ASSETS: &str = "ForeignAssets";
+
+impl AssetId {
+	pub fn reserve_instance(&self) -> Option<&str> {
+		match self {
+			AssetId::USDC_E => Some(FOREIGN_ASSETS),
 			AssetId::UNSUPPORTED => None,
 		}
 	}
 }
+
 impl AssetTranslation for AssetId {
 	fn into_location(self) -> Option<Location> {
 		match self {
@@ -98,10 +125,6 @@ impl AssetTranslation for AssetId {
 			None
 		}
 	}
-}
-
-pub trait AssetInfo {
-	fn symbol(&self) -> Option<&str>;
 }
 
 pub trait AssetTranslation {

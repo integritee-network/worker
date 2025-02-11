@@ -4,7 +4,7 @@ use codec::{Decode, Encode};
 use sp_std::sync::Arc;
 
 /// XCMv4 Junctions
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug, Clone)]
 pub struct Location {
 	/// The number of parent junctions at the beginning of this `Location`.
 	pub parents: u8,
@@ -18,7 +18,7 @@ impl Default for Location {
 	}
 }
 
-#[derive(Encode, Decode, Debug)]
+#[derive(Encode, Decode, Debug, Clone)]
 /// XCMv4 Junctions
 pub enum Junctions {
 	/// The interpreting consensus system.
