@@ -19,7 +19,9 @@ use crate::{benchmark::BenchmarkCommand, Cli, CliResult};
 
 #[cfg(feature = "evm")]
 use crate::evm::EvmCommand;
-use crate::{guess_the_number::GuessTheNumberCommand, trusted_base_cli::TrustedBaseCommand};
+use crate::{
+	trusted_base_cli::TrustedBaseCommand, trusted_guess_the_number::GuessTheNumberCommand,
+};
 
 #[derive(Args)]
 pub struct TrustedCli {

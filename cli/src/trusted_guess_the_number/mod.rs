@@ -15,13 +15,10 @@
 
 */
 
-use crate::{
-	guess_the_number::commands::get_attempts::GetAttemptsCommand, trusted_cli::TrustedCli, Cli,
-	CliResult,
-};
+use crate::{trusted_cli::TrustedCli, Cli, CliResult};
 use commands::{
-	get_info::GetInfoCommand, guess::GuessCommand, push_by_one_day::PushByOneDayCommand,
-	set_winnings::SetWinningsCommand,
+	get_attempts::GetAttemptsCommand, get_info::GetInfoCommand, guess::GuessCommand,
+	push_by_one_day::PushByOneDayCommand, set_winnings::SetWinningsCommand,
 };
 
 mod commands;

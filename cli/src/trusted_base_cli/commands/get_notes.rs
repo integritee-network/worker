@@ -99,7 +99,7 @@ impl GetNotesCommand {
 								guess,
 							)) => {
 								println!(
-									"[{}] TrustedCall::guess_the_number::guess sender: {:?}, guess: {}",
+									"[{}] TrustedCall::trusted_guess_the_number::guess sender: {:?}, guess: {}",
 									datetime_str,
 									sender, guess,
 								);
