@@ -42,7 +42,6 @@ use serde::{Deserialize, Serialize};
 	Decode,
 	Encode,
 	Clone,
-	Default,
 	Copy,
 	PartialEq,
 	Eq,
@@ -55,8 +54,6 @@ use serde::{Deserialize, Serialize};
 #[repr(u32)]
 #[allow(non_camel_case_types)]
 pub enum AssetId {
-	#[default]
-	UNSUPPORTED = 0,
 	USDC_E = 1,
 }
 
@@ -67,7 +64,6 @@ impl std::fmt::Display for AssetId {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			AssetId::USDC_E => write!(f, "USDC.e"),
-			AssetId::UNSUPPORTED => write!(f, "UNSUPPORTED"),
 		}
 	}
 }
@@ -87,22 +83,22 @@ impl TryFrom<&str> for AssetId {
 const FOREIGN_ASSETS: &str = "ForeignAssets";
 
 impl AssetId {
+	/// assets pallet instance name on L1. not all future assets may have such
 	pub fn reserve_instance(&self) -> Option<&str> {
 		match self {
 			AssetId::USDC_E => Some(FOREIGN_ASSETS),
-			AssetId::UNSUPPORTED => None,
 		}
 	}
 
 	pub fn one_unit(&self) -> Balance {
 		match self {
 			AssetId::USDC_E => 1_000_000, // 6 decimals
-			AssetId::UNSUPPORTED => 1,
 		}
 	}
 }
 
 impl AssetTranslation for AssetId {
+	/// into XCM location. Only applies to foreign assets
 	fn into_location(self) -> Option<Location> {
 		match self {
 			AssetId::USDC_E => Some(Location {
@@ -112,10 +108,10 @@ impl AssetTranslation for AssetId {
 					AccountKey20 { key: USDC_E_CONTRACT_ADDRESS, network: None },
 				])),
 			}),
-			AssetId::UNSUPPORTED => None,
 		}
 	}
 
+	/// from XCM location. Only applies to foreign assets
 	fn from_location(location: &Location) -> Option<Self>
 	where
 		Self: Sized,
