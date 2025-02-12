@@ -849,7 +849,14 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::assets_transfer(_, _, _asset_id, ..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		TrustedCall::add_session_proxy(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		TrustedCall::send_note(..) => one / STF_TX_FEE_UNIT_DIVIDER,
-
+		#[cfg(feature = "evm")]
+		TrustedCall::evm_call(..) => one / STF_TX_FEE_UNIT_DIVIDER,
+		#[cfg(feature = "evm")]
+		TrustedCall::evm_create(..) => one / STF_TX_FEE_UNIT_DIVIDER,
+		#[cfg(feature = "evm")]
+		TrustedCall::evm_create2(..) => one / STF_TX_FEE_UNIT_DIVIDER,
+		#[cfg(feature = "evm")]
+		TrustedCall::evm_withdraw(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(any(feature = "test", test))]
 		TrustedCall::balance_set_balance(..) => 0,
 		// can be called by anyone so can't be free!
