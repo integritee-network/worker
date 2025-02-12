@@ -18,16 +18,24 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_operation::perform_trusted_operation, Cli, CliResult,
 	CliResultOk,
 };
+use ita_assets_map::AssetId;
 use ita_stf::{Balance, Getter, PublicGetter, TrustedCallSigned};
 use itp_stf_primitives::types::TrustedOperation;
 
 #[derive(Parser)]
-pub struct GetUndistributedFeesCommand {}
+pub struct GetUndistributedFeesCommand {
+	#[clap(short = 'a', long = "asset")]
+	pub asset: Option<String>,
+}
 
 impl GetUndistributedFeesCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+		let maybe_asset_id = self
+			.asset
+			.clone()
+			.map(|id| AssetId::try_from(id.as_str()).expect("Invalid asset id"));
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
-			PublicGetter::undistributed_fees,
+			PublicGetter::undistributed_fees(maybe_asset_id),
 		));
 		let fees: Balance = perform_trusted_operation(cli, trusted_args, &top).unwrap();
 		println!("{:?}", fees);

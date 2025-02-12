@@ -123,7 +123,7 @@ impl PoolTransactionValidation for Getter {
 pub enum PublicGetter {
 	some_value = 0,
 	total_issuance = 1,
-	undistributed_fees = 2,
+	undistributed_fees(Option<AssetId>) = 2,
 	parentchains_info = 10,
 	note_buckets_info = 11,
 	asset_total_issuance(AssetId) = 40,
@@ -308,26 +308,35 @@ impl ExecuteGetter for PublicGetter {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::total_issuance => Some(Balances::total_issuance().encode()),
-			PublicGetter::undistributed_fees => {
+			PublicGetter::undistributed_fees(maybe_asset_id) => {
 				let pot: AccountId = enclave_signer_account();
-				let info = System::account(&pot);
 				debug!("PublicGetter undistributed_fees");
-				debug!("AccountInfo for {} is {:?}", account_id_to_string(&pot), info);
-				let fees = info.data.free;
+				let (fees, one) = if let Some(asset_id) = maybe_asset_id {
+					(Assets::balance(asset_id, &pot), asset_id.one_unit())
+				} else {
+					let info = System::account(&pot);
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&pot), info);
+					(
+						info.data.free,
+						MinimalChainSpec::one_unit(
+							shielding_target_genesis_hash().unwrap_or_default(),
+						),
+					)
+				};
 				// for privacy reasons, we add some noise to the fees.
 				// This avoids leaking the exact number and cost of recent TrustedCalls
-				let noise =
-					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						.checked_div(STF_TX_FEE_UNIT_DIVIDER)
-						.unwrap_or(1)
-						.saturating_mul(SgxRandomness::random_u32(0, 10_000).into())
-						.checked_div(1000)
-						.unwrap_or_default();
+				let noise = one
+					.checked_div(STF_TX_FEE_UNIT_DIVIDER)
+					.unwrap_or(1)
+					.saturating_mul(SgxRandomness::random_u32(0, 10_000).into())
+					.checked_div(1000)
+					.unwrap_or_default();
 				// better to strictly subtract from real value to avoid overpayment errors during distribution
 				let noisy_fees = fees.saturating_sub(noise);
 				std::println!(
-					"⣿STF⣿ 🔍 PublicGetter query: undistributed fees at least {}",
-					noisy_fees
+					"⣿STF⣿ 🔍 PublicGetter query: undistributed fees at least {} for asset {:?}",
+					noisy_fees,
+					maybe_asset_id
 				);
 				Some(noisy_fees.encode())
 			},

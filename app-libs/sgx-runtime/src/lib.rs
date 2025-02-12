@@ -71,7 +71,7 @@ pub use frame_support::{
 	StorageValue,
 };
 use frame_support::{
-	traits::{AsEnsureOriginWithArg, ConstU128, ConstU8, EitherOfDiverse},
+	traits::{ConstU128, ConstU8, EitherOfDiverse, EnsureOriginWithArg},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
@@ -340,13 +340,32 @@ impl pallet_session_proxy::Config for Runtime {
 	type MaxProxiesPerOwner = MaxProxiesPerOwner;
 }
 
+/// always denies creation of assets
+pub struct NoAssetCreators;
+
+impl EnsureOriginWithArg<RuntimeOrigin, AssetId> for NoAssetCreators {
+	type Success = AccountId;
+
+	fn try_origin(
+		o: RuntimeOrigin,
+		_a: &AssetId,
+	) -> sp_std::result::Result<Self::Success, RuntimeOrigin> {
+		Err(o)
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin(_a: &AssetIdForTrustBackedAssets) -> Result<RuntimeOrigin, ()> {
+		Err(())
+	}
+}
+
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type AssetIdParameter = AssetId;
 	type Currency = Balances;
-	type CreateOrigin = EnsureRoot<AccountId>;
+	type CreateOrigin = NoAssetCreators;
 	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ConstU128<1>;
 	type AssetAccountDeposit = ConstU128<10>;
