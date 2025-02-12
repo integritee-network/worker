@@ -346,8 +346,8 @@ impl pallet_assets::Config for Runtime {
 	type AssetId = AssetId;
 	type AssetIdParameter = AssetId;
 	type Currency = Balances;
-	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
-	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type CreateOrigin = EnsureRoot<AccountId>;
+	type ForceOrigin = EnsureRoot<AccountId>;
 	type AssetDeposit = ConstU128<1>;
 	type AssetAccountDeposit = ConstU128<10>;
 	type MetadataDepositBase = ConstU128<1>;
@@ -418,7 +418,7 @@ construct_runtime!(
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 
-		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 53,
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
 
