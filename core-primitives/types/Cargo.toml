@@ -43,6 +43,7 @@ std = [
     "itp-sgx-runtime-primitives/std",
     "itp-stf-primitives/std",
     "itp-utils/std",
+    "pallet-assets/std",
     "pallet-balances/std",
     "serde/std",
     "sidechain-primitives/std",

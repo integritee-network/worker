@@ -49,6 +49,7 @@ default = ["std"]
 std = [
     "bs58/std",
     "codec/std",
+    "ita-assets-map/std",
     "ita-sgx-runtime/std",
     "ita-stf/std",
     "itc-parentchain/std",

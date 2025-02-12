@@ -53,6 +53,7 @@ std = [
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
+    "pallet-assets/std",
     "pallet-evm?/std",
     "pallet-balances/std",
     "pallet-sudo/std",
