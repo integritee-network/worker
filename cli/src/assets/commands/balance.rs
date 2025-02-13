@@ -39,13 +39,13 @@ impl BalanceCommand {
 		let asset_account: AssetAccount =
 			match asset_id.reserve_instance().expect("Invalid asset reserve") {
 				FOREIGN_ASSETS => {
-					let location = asset_id.into_location(api.genesis_hash()).expect(
-						format!(
-							"Invalid asset for parentchain with genesis {}",
-							hex::encode(api.genesis_hash())
-						)
-						.as_str(),
-					);
+					let location =
+						asset_id.into_location(api.genesis_hash()).unwrap_or_else(|| {
+							panic!(
+								"Invalid asset for parentchain with genesis {}",
+								hex::encode(api.genesis_hash())
+							)
+						});
 					info!("Asset location: {:?}", location);
 					api.get_storage_double_map(FOREIGN_ASSETS, "Account", location, accountid, None)
 						.unwrap()
@@ -53,7 +53,12 @@ impl BalanceCommand {
 				},
 				NATIVE_ASSETS => {
 					let native_asset_id =
-						asset_id.into_asset_hub_index(api.genesis_hash()).expect("Invalid asset");
+						asset_id.into_asset_hub_index(api.genesis_hash()).unwrap_or_else(|| {
+							panic!(
+								"Invalid asset for parentchain with genesis {}",
+								hex::encode(api.genesis_hash())
+							)
+						});
 					info!("Native asset id: {:?}", native_asset_id);
 					api.get_storage_double_map(
 						NATIVE_ASSETS,

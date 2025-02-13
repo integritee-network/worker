@@ -138,24 +138,15 @@ impl AssetId {
 	pub fn is_shieldable(&self, genesis_hash: Hash) -> bool {
 		let genesis_hash_hex = hex::encode(genesis_hash);
 		match genesis_hash_hex.as_ref() {
-			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => match self {
-				AssetId::USDT => true,
-				AssetId::USDC => true,
-				AssetId::USDC_E => true,
-				AssetId::ETH => true,
-				AssetId::WETH => true,
-			},
-			ASSET_HUB_PASEO_GENESIS_HASH_HEX => match self {
-				AssetId::USDT => true,
-				AssetId::USDC => true,
-				AssetId::USDC_E => true,
-				AssetId::ETH => true,
-				AssetId::WETH => true,
-			},
-			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => match self {
-				AssetId::USDC_E => true,
-				_ => false,
-			},
+			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => matches!(
+				self,
+				AssetId::USDT | AssetId::USDC | AssetId::USDC_E | AssetId::WETH | AssetId::ETH
+			),
+			ASSET_HUB_PASEO_GENESIS_HASH_HEX => matches!(
+				self,
+				AssetId::USDT | AssetId::USDC | AssetId::USDC_E | AssetId::WETH | AssetId::ETH
+			),
+			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => matches!(self, AssetId::USDC_E),
 			_ => false,
 		}
 	}

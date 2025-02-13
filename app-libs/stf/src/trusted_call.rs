@@ -665,7 +665,7 @@ where
 				store_note(
 					&account_incognito,
 					self.call,
-					vec![account_incognito.clone(), beneficiary.clone()],
+					vec![account_incognito.clone(), beneficiary],
 				)?;
 				let call = OpaqueCall::from_tuple(&(
 					node_metadata_repo

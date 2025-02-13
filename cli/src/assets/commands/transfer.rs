@@ -56,13 +56,12 @@ impl TransferCommand {
 		api.set_signer(from_account.into());
 		let tx_report = match asset_id.reserve_instance().expect("Invalid asset reserve") {
 			FOREIGN_ASSETS => {
-				let location = asset_id.into_location(api.genesis_hash()).expect(
-					format!(
+				let location = asset_id.into_location(api.genesis_hash()).unwrap_or_else(|| {
+					panic!(
 						"Invalid asset for parentchain with genesis {}",
 						hex::encode(api.genesis_hash())
 					)
-					.as_str(),
-				);
+				});
 				info!("AssetId {} location is {:?}", asset_id, location);
 				let xt = compose_extrinsic!(
 					api,
@@ -76,13 +75,13 @@ impl TransferCommand {
 				api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap()
 			},
 			NATIVE_ASSETS => {
-				let native_asset_id = asset_id.into_asset_hub_index(api.genesis_hash()).expect(
-					format!(
-						"Invalid asset for parentchain with genesis {}",
-						hex::encode(api.genesis_hash())
-					)
-					.as_str(),
-				);
+				let native_asset_id =
+					asset_id.into_asset_hub_index(api.genesis_hash()).unwrap_or_else(|| {
+						panic!(
+							"Invalid asset for parentchain with genesis {}",
+							hex::encode(api.genesis_hash())
+						)
+					});
 				info!("AssetId {} native id is {:?}", asset_id, native_asset_id);
 				let xt = compose_extrinsic!(
 					api,
