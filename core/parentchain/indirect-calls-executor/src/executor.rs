@@ -128,8 +128,7 @@ impl<
 		ParentchainEventHandler,
 		TCS,
 		G,
-	>
-where
+	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
@@ -263,8 +262,7 @@ impl<
 		PrivacySidechain,
 		TCS,
 		G,
-	>
-where
+	> where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,

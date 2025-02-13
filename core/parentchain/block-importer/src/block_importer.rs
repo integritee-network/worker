@@ -103,8 +103,7 @@ impl<
 		StfExecutor,
 		ExtrinsicsFactory,
 		IndirectCallsExecutor,
-	>
-where
+	> where
 	ParentchainBlock: ParentchainBlockTrait<Hash = H256, Header = ParentchainHeader>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	ValidatorAccessor: ValidatorAccess<ParentchainBlock> + IdentifyParentchain,

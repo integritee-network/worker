@@ -691,7 +691,7 @@ where
 				ensure_enclave_signer_account(&enclave_account)?;
 				if !asset_id.is_shieldable(shielding_target_genesis_hash().unwrap_or_default()) {
 					error!("preventing to shield unsupported asset: {:?}", asset_id);
-					return Err(StfError::Dispatch("unsuppoted asset for shielding".into()));
+					return Err(StfError::Dispatch("unsuppoted asset for shielding".into()))
 				}
 				debug!(
 					"assets_shield({}, {}, {:?}, {:?})",
