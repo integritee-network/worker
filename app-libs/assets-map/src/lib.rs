@@ -182,7 +182,10 @@ impl AssetTranslation for AssetId {
 					None
 				},
 			AssetId::WETH =>
-				if matches!(genesis_hash_hex.as_ref(), ASSET_HUB_PASEO_GENESIS_HASH_HEX) {
+				if matches!(
+					genesis_hash_hex.as_ref(),
+					ASSET_HUB_PASEO_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+				) {
 					Some(Location {
 						parents: 2,
 						interior: X2(Arc::new([

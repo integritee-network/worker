@@ -38,26 +38,33 @@ impl BalanceCommand {
 		let asset_id = AssetId::try_from(self.asset_id.clone().as_str()).expect("Invalid asset id");
 		let asset_account: AssetAccount =
 			match asset_id.reserve_instance().expect("Invalid asset reserve") {
-				FOREIGN_ASSETS => api
-					.get_storage_double_map(
-						FOREIGN_ASSETS,
+				FOREIGN_ASSETS => {
+					let location = asset_id.into_location(api.genesis_hash()).expect(
+						format!(
+							"Invalid asset for parentchain with genesis {}",
+							hex::encode(api.genesis_hash())
+						)
+						.as_str(),
+					);
+					info!("Asset location: {:?}", location);
+					api.get_storage_double_map(FOREIGN_ASSETS, "Account", location, accountid, None)
+						.unwrap()
+						.unwrap_or_default()
+				},
+				NATIVE_ASSETS => {
+					let native_asset_id =
+						asset_id.into_asset_hub_index(api.genesis_hash()).expect("Invalid asset");
+					info!("Native asset id: {:?}", native_asset_id);
+					api.get_storage_double_map(
+						NATIVE_ASSETS,
 						"Account",
-						asset_id.into_location(api.genesis_hash()).expect("Invalid asset"),
+						native_asset_id,
 						accountid,
 						None,
 					)
 					.unwrap()
-					.unwrap_or_default(),
-				NATIVE_ASSETS => api
-					.get_storage_double_map(
-						FOREIGN_ASSETS,
-						"Account",
-						asset_id.into_asset_hub_index(api.genesis_hash()).expect("Invalid asset"),
-						accountid,
-						None,
-					)
-					.unwrap()
-					.unwrap_or_default(),
+					.unwrap_or_default()
+				},
 				_ => panic!("Invalid asset reserve"),
 			};
 		info!("{:?}", asset_account);

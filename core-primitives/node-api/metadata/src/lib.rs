@@ -29,7 +29,7 @@ use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
 
 pub use crate::error::Error;
-use crate::pallet_assets::ForeignAssetsCallIndexes;
+use crate::pallet_assets::{ForeignAssetsCallIndexes, NativeAssetsCallIndexes};
 pub use itp_api_client_types::{Metadata, MetadataError};
 
 pub mod error;
@@ -54,6 +54,7 @@ pub trait NodeMetadataTrait:
 	+ BalancesCallIndexes
 	+ TimestampCallIndexes
 	+ ForeignAssetsCallIndexes
+	+ NativeAssetsCallIndexes
 {
 }
 impl<
@@ -63,7 +64,8 @@ impl<
 			+ ProxyCallIndexes
 			+ BalancesCallIndexes
 			+ TimestampCallIndexes
-			+ ForeignAssetsCallIndexes,
+			+ ForeignAssetsCallIndexes
+			+ NativeAssetsCallIndexes,
 	> NodeMetadataTrait for T
 {
 }

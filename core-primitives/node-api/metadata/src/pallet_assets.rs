@@ -18,6 +18,7 @@
 use crate::{error::Result, NodeMetadata};
 
 /// Pallet name:
+const NATIVE_ASSETS: &str = "Assets";
 const FOREIGN_ASSETS: &str = "ForeignAssets";
 
 pub trait ForeignAssetsCallIndexes {
@@ -39,5 +40,27 @@ impl ForeignAssetsCallIndexes for NodeMetadata {
 
 	fn foreign_assets_transfer_all_call_indexes(&self) -> Result<[u8; 2]> {
 		self.call_indexes(FOREIGN_ASSETS, "transfer_all")
+	}
+}
+
+pub trait NativeAssetsCallIndexes {
+	fn native_assets_transfer_call_indexes(&self) -> Result<[u8; 2]>;
+
+	fn native_assets_transfer_keep_alive_call_indexes(&self) -> Result<[u8; 2]>;
+
+	fn native_assets_transfer_all_call_indexes(&self) -> Result<[u8; 2]>;
+}
+
+impl NativeAssetsCallIndexes for NodeMetadata {
+	fn native_assets_transfer_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(NATIVE_ASSETS, "transfer")
+	}
+
+	fn native_assets_transfer_keep_alive_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(NATIVE_ASSETS, "transfer_keep_alive")
+	}
+
+	fn native_assets_transfer_all_call_indexes(&self) -> Result<[u8; 2]> {
+		self.call_indexes(NATIVE_ASSETS, "transfer_all")
 	}
 }

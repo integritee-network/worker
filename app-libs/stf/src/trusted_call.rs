@@ -38,7 +38,7 @@ use frame_support::{
 	ensure,
 	traits::{fungibles::Inspect, UnfilteredDispatchable},
 };
-use ita_assets_map::{AssetId, AssetTranslation};
+use ita_assets_map::{AssetId, AssetTranslation, FOREIGN_ASSETS, NATIVE_ASSETS};
 use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
@@ -49,7 +49,8 @@ use ita_sgx_runtime::{
 pub use ita_sgx_runtime::{Balance, Index};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
-	pallet_assets::ForeignAssetsCallIndexes, pallet_balances::BalancesCallIndexes,
+	pallet_assets::{ForeignAssetsCallIndexes, NativeAssetsCallIndexes},
+	pallet_balances::BalancesCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
 use itp_stf_interface::ExecuteCall;
@@ -375,17 +376,16 @@ where
 					value,
 					shard
 				);
-
+				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
+					StfError::Dispatch("shard vault key hasn't been set".to_string())
+				})?;
+				// now that the above hasn't failed, we can execute
 				burn_funds(&account_incognito, value)?;
 				store_note(
 					&account_incognito,
 					self.call,
 					vec![account_incognito.clone(), beneficiary.clone()],
 				)?;
-
-				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
-					StfError::Dispatch("shard vault key hasn't been set".to_string())
-				})?;
 				let vault_address = Address::from(vault);
 				let vault_transfer_call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
@@ -619,29 +619,54 @@ where
 					value,
 					shard
 				);
-				let location = asset_id
-					.into_location(shielding_target_genesis_hash().unwrap_or_default())
-					.ok_or(StfError::Dispatch("unknown asset id location".into()))?;
+				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
+					StfError::Dispatch("shard vault key hasn't been set".to_string())
+				})?;
+				let vault_address = Address::from(vault);
+				let vault_transfer_call = match asset_id.reserve_instance() {
+					Some(FOREIGN_ASSETS) => {
+						let location = asset_id
+							.into_location(shielding_target_genesis_hash().unwrap_or_default())
+							.ok_or(StfError::Dispatch("unknown asset id location".into()))?;
+						OpaqueCall::from_tuple(&(
+							node_metadata_repo
+								.get_from_metadata(|m| {
+									m.foreign_assets_transfer_keep_alive_call_indexes()
+								})
+								.map_err(|_| StfError::InvalidMetadata)?
+								.map_err(|_| StfError::InvalidMetadata)?,
+							location,
+							Address::Id(beneficiary.clone()),
+							Compact(value),
+						))
+					},
+					Some(NATIVE_ASSETS) => {
+						let native_asset_id = asset_id
+							.into_asset_hub_index(
+								shielding_target_genesis_hash().unwrap_or_default(),
+							)
+							.ok_or(StfError::Dispatch("unknown asset index".into()))?;
+						OpaqueCall::from_tuple(&(
+							node_metadata_repo
+								.get_from_metadata(|m| {
+									m.native_assets_transfer_keep_alive_call_indexes()
+								})
+								.map_err(|_| StfError::InvalidMetadata)?
+								.map_err(|_| StfError::InvalidMetadata)?,
+							Compact(native_asset_id),
+							Address::Id(beneficiary.clone()),
+							Compact(value),
+						))
+					},
+					_ => return Err(StfError::Dispatch("unknown asset id reserve".into())),
+				};
+				// now that all the above hasn't failed, we can execute
 				burn_assets(&account_incognito, value, asset_id)?;
 				store_note(
 					&account_incognito,
 					self.call,
 					vec![account_incognito.clone(), beneficiary.clone()],
 				)?;
-
-				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
-					StfError::Dispatch("shard vault key hasn't been set".to_string())
-				})?;
-				let vault_address = Address::from(vault);
-				let vault_transfer_call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.foreign_assets_transfer_keep_alive_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					location,
-					Address::Id(beneficiary),
-					Compact(value),
-				));
 				let call = OpaqueCall::from_tuple(&(
 					node_metadata_repo
 						.get_from_metadata(|m| m.proxy_call_indexes())

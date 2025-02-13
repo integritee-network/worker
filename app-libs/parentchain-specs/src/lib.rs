@@ -45,7 +45,7 @@ pub const LOCAL_TEST_GENESIS_HASH_HEX: &str =
 
 /// LOCAL ASSET_HUB_ROCOCO (brittle)
 pub const ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX: &str =
-	"21dbf9b09d37e069001c57c6f601d516688c4f39c162b015dbe7cd24741b89d9";
+	"af94f065f724b64ec40a7dd7ca3d25b3493d462f1e991b979e7683ae2a5da8d6";
 
 pub struct MinimalChainSpec {}
 

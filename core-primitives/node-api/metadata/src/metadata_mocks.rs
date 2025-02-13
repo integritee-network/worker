@@ -23,7 +23,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 
-use crate::pallet_assets::ForeignAssetsCallIndexes;
+use crate::pallet_assets::{ForeignAssetsCallIndexes, NativeAssetsCallIndexes};
 use itp_api_client_types::Metadata;
 
 impl TryFrom<NodeMetadataMock> for Metadata {
@@ -64,6 +64,10 @@ pub struct NodeMetadataMock {
 	foreign_assets_transfer: u8,
 	foreign_assets_transfer_keep_alive: u8,
 	foreign_assets_transfer_all: u8,
+	native_assets_module: u8,
+	native_assets_transfer: u8,
+	native_assets_transfer_keep_alive: u8,
+	native_assets_transfer_all: u8,
 	runtime_spec_version: u32,
 	runtime_transaction_version: u32,
 }
@@ -99,6 +103,10 @@ impl NodeMetadataMock {
 			foreign_assets_transfer: 8,
 			foreign_assets_transfer_keep_alive: 9,
 			foreign_assets_transfer_all: 32,
+			native_assets_module: 50,
+			native_assets_transfer: 8,
+			native_assets_transfer_keep_alive: 9,
+			native_assets_transfer_all: 32,
 			runtime_spec_version: 25,
 			runtime_transaction_version: 4,
 		}
@@ -194,6 +202,20 @@ impl ForeignAssetsCallIndexes for NodeMetadataMock {
 
 	fn foreign_assets_transfer_all_call_indexes(&self) -> Result<[u8; 2]> {
 		Ok([self.foreign_assets_module, self.foreign_assets_transfer_all])
+	}
+}
+
+impl NativeAssetsCallIndexes for NodeMetadataMock {
+	fn native_assets_transfer_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.native_assets_module, self.native_assets_transfer])
+	}
+
+	fn native_assets_transfer_keep_alive_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.native_assets_module, self.native_assets_transfer_keep_alive])
+	}
+
+	fn native_assets_transfer_all_call_indexes(&self) -> Result<[u8; 2]> {
+		Ok([self.native_assets_module, self.native_assets_transfer_all])
 	}
 }
 impl TimestampCallIndexes for NodeMetadataMock {
