@@ -19,7 +19,7 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use codec::{Compact, Encode};
-use ita_assets_map::{AssetId, AssetTranslation};
+use ita_assets_map::{AssetId, AssetTranslation, FOREIGN_ASSETS, NATIVE_ASSETS};
 use ita_parentchain_interface::integritee::Balance;
 use itp_types::parentchain::AccountId;
 use log::*;
@@ -48,24 +48,47 @@ impl TransferCommand {
 		let to_account = get_accountid_from_str(&self.to);
 		let asset_id = AssetId::try_from(self.asset_id.clone().as_str()).expect("Invalid asset id");
 		let mut api = get_target_b_chain_api(cli);
-		let location = asset_id.into_location(api.genesis_hash()).unwrap();
+
 		info!("from ss58 is {}", from_account.public().to_ss58check());
 		info!("to ss58 is {}", to_account.to_ss58check());
 		info!("Amount {}", self.amount);
-		info!("AssetId {} location is {:?}", asset_id, location);
 
 		api.set_signer(from_account.into());
-		let assets_pallet_instance = asset_id.reserve_instance().unwrap();
-		let xt = compose_extrinsic!(
-			api,
-			assets_pallet_instance,
-			"transfer",
-			location,
-			MultiAddress::<AccountId, ()>::Id(to_account),
-			Compact(self.amount)
-		);
-		info!("encoded call: {}", hex::encode(xt.function.encode()));
-		let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap();
+		let tx_report = match asset_id.reserve_instance().expect("Invalid asset reserve") {
+			FOREIGN_ASSETS => {
+				let location =
+					asset_id.into_location(api.genesis_hash()).expect("Invalid asset reserve");
+				info!("AssetId {} location is {:?}", asset_id, location);
+				let xt = compose_extrinsic!(
+					api,
+					FOREIGN_ASSETS,
+					"transfer",
+					location,
+					MultiAddress::<AccountId, ()>::Id(to_account),
+					Compact(self.amount)
+				);
+				info!("encoded call: {}", hex::encode(xt.function.encode()));
+				api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap()
+			},
+			NATIVE_ASSETS => {
+				let native_asset_id = asset_id
+					.into_asset_hub_index(api.genesis_hash())
+					.expect("Invalid asset reserve");
+				info!("AssetId {} native id is {:?}", asset_id, native_asset_id);
+				let xt = compose_extrinsic!(
+					api,
+					NATIVE_ASSETS,
+					"transfer",
+					Compact(native_asset_id),
+					MultiAddress::<AccountId, ()>::Id(to_account),
+					Compact(self.amount)
+				);
+				info!("encoded call: {}", hex::encode(xt.function.encode()));
+				api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap()
+			},
+			_ => panic!("Invalid asset reserve"),
+		};
+
 		println!(
 			"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
 			tx_report.extrinsic_hash, tx_report.status

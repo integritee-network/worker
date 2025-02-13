@@ -104,8 +104,8 @@ impl TryFrom<&str> for AssetId {
 	}
 }
 
-const FOREIGN_ASSETS: &str = "ForeignAssets";
-const NATIVE_ASSETS: &str = "Assets";
+pub const FOREIGN_ASSETS: &str = "ForeignAssets";
+pub const NATIVE_ASSETS: &str = "Assets";
 
 const ETHEREUM_MAINNET_CHAIN_ID: u64 = 1;
 const ETHEREUM_SEPOLIA_CHAIN_ID: u64 = 11155111;

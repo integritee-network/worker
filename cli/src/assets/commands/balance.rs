@@ -18,7 +18,7 @@ use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api},
 	Cli, CliResult, CliResultOk,
 };
-use ita_assets_map::{AssetId, AssetTranslation};
+use ita_assets_map::{AssetId, AssetTranslation, FOREIGN_ASSETS, NATIVE_ASSETS};
 use itp_types::parentchain::AssetAccount;
 use log::info;
 use substrate_api_client::GetStorage;
@@ -36,17 +36,30 @@ impl BalanceCommand {
 		let api = get_chain_api(cli);
 		let accountid = get_accountid_from_str(&self.account);
 		let asset_id = AssetId::try_from(self.asset_id.clone().as_str()).expect("Invalid asset id");
-
-		let asset_account: AssetAccount = api
-			.get_storage_double_map(
-				"ForeignAssets",
-				"Account",
-				asset_id.into_location(api.genesis_hash()).unwrap(),
-				accountid,
-				None,
-			)
-			.unwrap()
-			.unwrap_or_default();
+		let asset_account: AssetAccount =
+			match asset_id.reserve_instance().expect("Invalid asset reserve") {
+				FOREIGN_ASSETS => api
+					.get_storage_double_map(
+						FOREIGN_ASSETS,
+						"Account",
+						asset_id.into_location(api.genesis_hash()).expect("Invalid asset"),
+						accountid,
+						None,
+					)
+					.unwrap()
+					.unwrap_or_default(),
+				NATIVE_ASSETS => api
+					.get_storage_double_map(
+						FOREIGN_ASSETS,
+						"Account",
+						asset_id.into_asset_hub_index(api.genesis_hash()).expect("Invalid asset"),
+						accountid,
+						None,
+					)
+					.unwrap()
+					.unwrap_or_default(),
+				_ => panic!("Invalid asset reserve"),
+			};
 		info!("{:?}", asset_account);
 		println!("{}", asset_account.balance);
 		Ok(CliResultOk::Balance { balance: asset_account.balance })
