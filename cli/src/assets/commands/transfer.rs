@@ -47,12 +47,13 @@ impl TransferCommand {
 		let from_account = get_pair_from_str(&self.from);
 		let to_account = get_accountid_from_str(&self.to);
 		let asset_id = AssetId::try_from(self.asset_id.clone().as_str()).expect("Invalid asset id");
-		let location = asset_id.into_location().unwrap();
+		let mut api = get_target_b_chain_api(cli);
+		let location = asset_id.into_location(api.genesis_hash()).unwrap();
 		info!("from ss58 is {}", from_account.public().to_ss58check());
 		info!("to ss58 is {}", to_account.to_ss58check());
 		info!("Amount {}", self.amount);
 		info!("AssetId {} location is {:?}", asset_id, location);
-		let mut api = get_target_b_chain_api(cli);
+
 		api.set_signer(from_account.into());
 		let assets_pallet_instance = asset_id.reserve_instance().unwrap();
 		let xt = compose_extrinsic!(

@@ -16,7 +16,7 @@
 */
 use crate::{error::Result, AdditionalParamsOf, CreateExtrinsics};
 use core::marker::PhantomData;
-use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall};
+use itp_types::{parentchain::GenericMortality, Balance, OpaqueCall, H256};
 use sp_runtime::OpaqueExtrinsic;
 use std::vec::Vec;
 
@@ -58,5 +58,9 @@ impl CreateExtrinsics for ExtrinsicsFactoryMock<ParentchainRuntimeConfig> {
 		// 	.map(|_| OpaqueExtrinsic::from_bytes(Vec::new().as_slice()).unwrap())
 		// 	.collect())
 		Ok(Vec::new())
+	}
+
+	fn genesis_hash(&self) -> H256 {
+		H256::default()
 	}
 }

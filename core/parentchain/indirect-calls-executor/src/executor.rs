@@ -128,7 +128,8 @@ impl<
 		ParentchainEventHandler,
 		TCS,
 		G,
-	> where
+	>
+where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,
@@ -147,6 +148,7 @@ impl<
 		&self,
 		block: &ParentchainBlock,
 		events: &[u8],
+		genesis_hash: H256,
 	) -> Result<Option<OpaqueCall>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -172,7 +174,7 @@ impl<
 
 		let shard = self.get_default_shard();
 		if let Ok((vault, _parentchain_id)) = self.stf_enclave_signer.get_shard_vault(&shard) {
-			ParentchainEventHandler::handle_events(self, events, &vault)?;
+			ParentchainEventHandler::handle_events(self, events, &vault, genesis_hash)?;
 		}
 
 		// This would be catastrophic but should never happen
@@ -261,7 +263,8 @@ impl<
 		PrivacySidechain,
 		TCS,
 		G,
-	> where
+	>
+where
 	ShieldingKeyRepository: AccessKey,
 	<ShieldingKeyRepository as AccessKey>::KeyType: ShieldingCryptoDecrypt<Error = itp_sgx_crypto::Error>
 		+ ShieldingCryptoEncrypt<Error = itp_sgx_crypto::Error>,

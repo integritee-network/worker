@@ -41,7 +41,7 @@ impl BalanceCommand {
 			.get_storage_double_map(
 				"ForeignAssets",
 				"Account",
-				asset_id.into_location().unwrap(),
+				asset_id.into_location(api.genesis_hash()).unwrap(),
 				accountid,
 				None,
 			)

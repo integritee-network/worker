@@ -620,7 +620,7 @@ where
 					shard
 				);
 				let location = asset_id
-					.into_location()
+					.into_location(shielding_target_genesis_hash().unwrap_or_default())
 					.ok_or(StfError::Dispatch("unknown asset id location".into()))?;
 				burn_assets(&account_incognito, value, asset_id)?;
 				store_note(
@@ -664,6 +664,10 @@ where
 			},
 			TrustedCall::assets_shield(enclave_account, who, asset_id, value, parentchain_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
+				if !asset_id.is_shieldable(shielding_target_genesis_hash().unwrap_or_default()) {
+					error!("preventing to shield unsupported asset: {:?}", asset_id);
+					return Err(StfError::Dispatch("unsuppoted asset for shielding".into()));
+				}
 				debug!(
 					"assets_shield({}, {}, {:?}, {:?})",
 					account_id_to_string(&who),

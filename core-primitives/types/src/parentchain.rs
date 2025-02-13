@@ -45,6 +45,7 @@ pub type StorageProof = Vec<Vec<u8>>;
 pub type Index = u32;
 pub type Balance = u128;
 pub type Hash = sp_core::H256;
+pub type ParentchainAssetIdNative = u32;
 
 // Account Types.
 pub type AccountId = sp_core::crypto::AccountId32;
@@ -227,6 +228,42 @@ impl StaticEvent for ForeignAssetsTransferred {
 }
 
 #[derive(Encode, Decode, Debug)]
+pub struct NativeAssetsTransferred {
+	pub asset_id: u32,
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl core::fmt::Display for NativeAssetsTransferred {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"NativeAssetsTransferred :: asset: {:?}, from: {}, to: {}, amount: {}",
+			&self.asset_id,
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl Default for NativeAssetsTransferred {
+	fn default() -> Self {
+		NativeAssetsTransferred {
+			asset_id: Default::default(),
+			from: [0u8; 32].into(),
+			to: [0u8; 32].into(),
+			amount: 0,
+		}
+	}
+}
+impl StaticEvent for NativeAssetsTransferred {
+	const PALLET: &'static str = "Assets";
+	const EVENT: &'static str = "Transferred";
+}
+
+#[derive(Encode, Decode, Debug)]
 pub struct AddedSgxEnclave {
 	pub registered_by: AccountId,
 	pub worker_url: Option<PalletString>,
@@ -327,6 +364,7 @@ where
 		executor: &Executor,
 		events: impl FilterEvents,
 		vault_account: &AccountId,
+		genesis_hash: Hash,
 	) -> core::result::Result<(), Error>;
 }
 

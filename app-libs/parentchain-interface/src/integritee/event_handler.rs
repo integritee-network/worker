@@ -27,6 +27,7 @@ use itp_types::parentchain::{
 };
 use itp_utils::hex::hex_encode;
 use log::*;
+use sp_core::H256;
 
 pub struct ParentchainEventHandler {}
 
@@ -65,6 +66,7 @@ where
 		executor: &Executor,
 		events: impl FilterEvents,
 		vault_account: &AccountId,
+		_genesis_hash: H256,
 	) -> Result<(), Error> {
 		let filter_events = events.get_events::<BalanceTransfer>();
 		trace!(

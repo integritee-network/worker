@@ -183,6 +183,7 @@ where
 		_: &Executor,
 		_: impl itp_types::parentchain::FilterEvents,
 		_: &AccountId,
+		_: H256,
 	) -> core::result::Result<(), Error> {
 		Ok(())
 	}

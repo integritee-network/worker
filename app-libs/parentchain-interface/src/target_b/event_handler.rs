@@ -22,7 +22,7 @@ use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
 use itp_types::parentchain::{
 	AccountId, BalanceTransfer, FilterEvents, ForeignAssetsTransferred, HandleParentchainEvents,
-	ParentchainError, ParentchainId,
+	Hash, NativeAssetsTransferred, ParentchainError, ParentchainId,
 };
 use itp_utils::hex::hex_encode;
 use log::*;
@@ -81,6 +81,7 @@ where
 		executor: &Executor,
 		events: impl FilterEvents,
 		vault_account: &AccountId,
+		genesis_hash: Hash,
 	) -> Result<(), Error> {
 		trace!(
 			"[TargetB] filtering balance transfer events to shard vault account: {}",
@@ -101,19 +102,42 @@ where
 			"[TargetB] filtering foreign assets transferred events to shard vault account: {}",
 			hex_encode(vault_account.encode().as_slice())
 		);
-		let filter_asset_events = events.get_events::<ForeignAssetsTransferred>();
-		if let Ok(events) = filter_asset_events {
+		let filter_foreign_asset_events = events.get_events::<ForeignAssetsTransferred>();
+		if let Ok(events) = filter_foreign_asset_events {
 			events
                 .iter()
                 .filter(|&event| event.to == *vault_account)
                 .try_for_each(|event| {
-                    let stf_asset_id = AssetId::from_location(&event.asset_id);
-                    info!("[TargetB] found foreign assets ({:?}) transferred event to shard vault account: {} will shield to {}", stf_asset_id, event.amount, hex_encode(event.from.encode().as_ref()));
-                    Self::shield_funds(executor, &event.from, event.amount, stf_asset_id)
+                    if let Some(stf_asset_id) = AssetId::from_location(&event.asset_id, genesis_hash) {
+                        info!("[TargetB] found foreign assets ({:?}) transferred event to shard vault account: {} will shield to {}", stf_asset_id, event.amount, hex_encode(event.from.encode().as_ref()));
+                        Self::shield_funds(executor, &event.from, event.amount, Some(stf_asset_id))
+                    } else {
+                        warn!("[TargetB] unsupported asset with location ({:?}) has been transferred to shard vault account with amount of {}", event.asset_id, event.amount);
+                        Ok(())
+                    }
                 })
                 .map_err(|_: Error| ParentchainError::ShieldFundsFailure)?;
 		}
-
+		trace!(
+			"[TargetB] filtering native assets transferred events to shard vault account: {}",
+			hex_encode(vault_account.encode().as_slice())
+		);
+		let filter_native_asset_events = events.get_events::<NativeAssetsTransferred>();
+		if let Ok(events) = filter_native_asset_events {
+			events
+				.iter()
+				.filter(|&event| event.to == *vault_account)
+				.try_for_each(|event| {
+					if let Some(stf_asset_id) = AssetId::from_asset_hub_index(event.asset_id, genesis_hash) {
+						info!("[TargetB] found native assets ({:?}) transferred event to shard vault account: {} will shield to {}", stf_asset_id, event.amount, hex_encode(event.from.encode().as_ref()));
+						Self::shield_funds(executor, &event.from, event.amount, Some(stf_asset_id))
+					} else {
+						warn!("[TargetB] unsupported asset with id ({:?}) has been transferred to shard vault account with amount of {}", event.asset_id, event.amount);
+						Ok(())
+					}
+				})
+				.map_err(|_: Error| ParentchainError::ShieldFundsFailure)?;
+		}
 		Ok(())
 	}
 }

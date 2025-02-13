@@ -2775,7 +2775,9 @@ dependencies = [
 name = "ita-assets-map"
 version = "0.1.0"
 dependencies = [
+ "hex",
  "hex-literal 0.4.1",
+ "ita-parentchain-specs",
  "itp-types",
  "parity-scale-codec",
  "scale-info",

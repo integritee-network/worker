@@ -22,35 +22,42 @@
 use itp_types::parentchain::{Balance, Hash};
 use log::warn;
 
-const PASEO_RELAY_GENESIS_HASH_HEX: &str =
+pub const PASEO_RELAY_GENESIS_HASH_HEX: &str =
 	"77afd6190f1554ad45fd0d31aee62aacc33c6db0ea801129acb813f913e0764f";
-const INTEGRITEE_PASEO_GENESIS_HASH_HEX: &str =
+pub const ASSET_HUB_PASEO_GENESIS_HASH_HEX: &str =
+	"d6eec26135305a8ad257a20d003357284c8aa03d0bdb2b357ab0a22371e11ef2";
+pub const INTEGRITEE_PASEO_GENESIS_HASH_HEX: &str =
 	"1b69c462cd7dfea0e855c2008b66490cc8bbe90bc80b297ec0896a1c0941ce15";
-const INTEGRITEE_KUSAMA_GENESIS_HASH_HEX: &str =
+pub const INTEGRITEE_KUSAMA_GENESIS_HASH_HEX: &str =
 	"cdedc8eadbfa209d3f207bba541e57c3c58a667b05a2e1d1e86353c9000758da";
-const KUSAMA_RELAY_GENESIS_HASH_HEX: &str =
+pub const KUSAMA_RELAY_GENESIS_HASH_HEX: &str =
 	"b0a8d493285c2df73290dfb7e61f870f17b41801197a149ca93654499ea3dafe";
-const ASSET_HUB_KUSAMA_GENESIS_HASH_HEX: &str =
+pub const ASSET_HUB_KUSAMA_GENESIS_HASH_HEX: &str =
 	"48239ef607d7928874027a43a67689209727dfb3d3dc5e5b03a39bdc2eda771a";
-const POLKADOT_RELAY_GENESIS_HASH_HEX: &str =
+pub const POLKADOT_RELAY_GENESIS_HASH_HEX: &str =
 	"91b171bb158e2d3848fa23a9f1c25182fb8e20313b2c1eb49219da7a70ce90c3";
-const ASSET_HUB_POLKADOT_GENESIS_HASH_HEX: &str =
+pub const ASSET_HUB_POLKADOT_GENESIS_HASH_HEX: &str =
 	"68d56f15f85d3136970ec16946040bc1752654e906147f7e43e9d539d7c3de2f";
 
-/// modify this for testing if necessary
-const LOCAL_TEST_GENESIS_HASH_HEX: &str =
+/// modify this for testing if necessary (brittle)
+pub const LOCAL_TEST_GENESIS_HASH_HEX: &str =
 	"6ca6d29ad6c4a200c4af356f74f03d6467dbc8a6e9ef225a2e672a990e1c7ead";
+
+/// LOCAL ASSET_HUB_ROCOCO (brittle)
+pub const ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX: &str =
+	"21dbf9b09d37e069001c57c6f601d516688c4f39c162b015dbe7cd24741b89d9";
+
 pub struct MinimalChainSpec {}
 
 impl MinimalChainSpec {
 	pub fn decimals(genesis_hash: Hash) -> u8 {
 		let genesis_hash_hex = hex::encode(genesis_hash);
 		match genesis_hash_hex.as_ref() {
-			PASEO_RELAY_GENESIS_HASH_HEX => 10,
+			PASEO_RELAY_GENESIS_HASH_HEX | ASSET_HUB_PASEO_GENESIS_HASH_HEX => 10,
 			POLKADOT_RELAY_GENESIS_HASH_HEX | ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => 10,
 			KUSAMA_RELAY_GENESIS_HASH_HEX | ASSET_HUB_KUSAMA_GENESIS_HASH_HEX => 12,
 			INTEGRITEE_PASEO_GENESIS_HASH_HEX | INTEGRITEE_KUSAMA_GENESIS_HASH_HEX => 12,
-			LOCAL_TEST_GENESIS_HASH_HEX => 10,
+			LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => 12,
 			_ => {
 				warn!(
 					"parentchain spec for genesis {} unknown. defaulting to 12 decimals",

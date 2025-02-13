@@ -149,7 +149,11 @@ pub fn submit_shielding_call_to_top_pool() {
 	let block_with_shielding_call = create_shielding_call_extrinsic(shard_id, &shielding_key);
 
 	let _ = indirect_calls_executor
-		.execute_indirect_calls_in_extrinsics(&block_with_shielding_call, &Vec::new())
+		.execute_indirect_calls_in_extrinsics(
+			&block_with_shielding_call,
+			&Vec::new(),
+			H256::default(),
+		)
 		.unwrap();
 
 	assert_eq!(1, top_pool_author.get_pending_trusted_calls(shard_id).len());
