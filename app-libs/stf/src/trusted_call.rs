@@ -606,6 +606,10 @@ where
 				value,
 				shard,
 			) => {
+				if !asset_id.is_shieldable(shielding_target_genesis_hash().unwrap_or_default()) {
+					error!("preventing to unshield unsupported asset: {:?}", asset_id);
+					return Err(StfError::Dispatch("unsuppoted asset for un/shielding".into()))
+				}
 				std::println!(
 					"⣿STF⣿ 🛡👐 assets_unshield, from ⣿⣿⣿ to {}, amount {} {:?}",
 					account_id_to_string(&beneficiary),
