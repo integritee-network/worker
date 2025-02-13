@@ -51,6 +51,7 @@ use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
 	pallet_assets::{ForeignAssetsCallIndexes, NativeAssetsCallIndexes},
 	pallet_balances::BalancesCallIndexes,
+	pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
 use itp_stf_interface::ExecuteCall;
@@ -67,6 +68,7 @@ use itp_utils::stringify::account_id_to_string;
 use log::*;
 use pallet_notes::{TimestampedTrustedNote, TrustedNote};
 use sp_core::{
+	blake2_256,
 	crypto::{AccountId32, UncheckedFrom},
 	ed25519,
 };
@@ -85,6 +87,8 @@ pub enum TrustedCall {
 	balance_shield(AccountId, AccountId, Balance, ParentchainId) = 4, // (Root, AccountIncognito, Amount, origin parentchain)
 	balance_transfer_with_note(AccountId, AccountId, Balance, Vec<u8>) = 5,
 	balance_shield_through_enclave_bridge_pallet(AccountId, AccountId, Balance) = 6, // (Root, AccountIncognito, Amount)
+	balance_unshield_through_enclave_bridge_pallet(AccountId, AccountId, Balance, ShardIdentifier) =
+		7, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	note_bloat(AccountId, u32) = 10,
 	waste_time(AccountId, u32) = 11,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
@@ -152,6 +156,8 @@ impl TrustedCall {
 			Self::balance_shield(sender_account, ..) => sender_account,
 			Self::balance_transfer_with_note(sender_account, ..) => sender_account,
 			Self::balance_shield_through_enclave_bridge_pallet(sender_account, ..) =>
+				sender_account,
+			Self::balance_unshield_through_enclave_bridge_pallet(sender_account, ..) =>
 				sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
 			Self::send_note(sender_account, ..) => sender_account,
@@ -291,7 +297,7 @@ where
 		let _role = ensure_authorization(&self)?;
 		// todo! spending limits according to role https://github.com/integritee-network/worker/issues/1656
 		let sender = self.call.sender_account().clone();
-
+		let call_hash = blake2_256(&self.call.encode());
 		let system_nonce = System::account_nonce(&sender);
 		ensure!(self.nonce == system_nonce, Self::Error::InvalidNonce(self.nonce, system_nonce));
 
@@ -364,6 +370,8 @@ where
 				Ok(())
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
+				let (vault, parentchain_id) = shard_vault()
+					.ok_or_else(|| StfError::Dispatch("no shard vault key defined".to_string()))?;
 				std::println!(
 					"⣿STF⣿ 🛡👐 balance_unshield from ⣿⣿⣿ to {}, amount {}",
 					account_id_to_string(&beneficiary),
@@ -376,9 +384,6 @@ where
 					value,
 					shard
 				);
-				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
-					StfError::Dispatch("shard vault key hasn't been set".to_string())
-				})?;
 				// now that the above hasn't failed, we can execute
 				burn_funds(&account_incognito, value)?;
 				store_note(
@@ -412,6 +417,52 @@ where
 					ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
 					ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
 				};
+				calls.push(parentchain_call);
+				Ok(())
+			},
+			TrustedCall::balance_unshield_through_enclave_bridge_pallet(
+				account_incognito,
+				beneficiary,
+				value,
+				shard,
+			) => {
+				if shard_vault().is_some() {
+					return Err(StfError::Dispatch(
+						"shard vault key has been set. you may not use enclave bridge".to_string(),
+					))
+				};
+				std::println!(
+					"⣿STF⣿ 🛡👐 balance_unshield through enclave bridge pallet from ⣿⣿⣿ to {}, amount {}",
+					account_id_to_string(&beneficiary),
+					value
+				);
+				info!(
+					"balance_unshield(from (L2): {}, to (L1): {}, amount {}, shard {})",
+					account_id_to_string(&account_incognito),
+					account_id_to_string(&beneficiary),
+					value,
+					shard
+				);
+				// now that the above hasn't failed, we can execute
+				burn_funds(&account_incognito, value)?;
+				store_note(
+					&account_incognito,
+					self.call,
+					vec![account_incognito.clone(), beneficiary.clone()],
+				)?;
+				let call = OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.unshield_funds_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
+					shard,
+					beneficiary,
+					value,
+					call_hash,
+				));
+				let mortality = get_mortality(ParentchainId::Integritee, 32)
+					.unwrap_or_else(GenericMortality::immortal);
+				let parentchain_call = ParentchainCall::Integritee { call, mortality };
 				calls.push(parentchain_call);
 				Ok(())
 			},
@@ -876,6 +927,8 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => 0, //will be charged on recipient, elsewhere
 		TrustedCall::assets_shield(..) => 0, //will be charged on recipient, elsewhere,
 		TrustedCall::assets_unshield(..) => one / STF_TX_FEE_UNIT_DIVIDER * 3,
+		TrustedCall::balance_unshield_through_enclave_bridge_pallet(..) =>
+			one / STF_TX_FEE_UNIT_DIVIDER * 3,
 		TrustedCall::assets_transfer_with_note(_, _, _asset_id, _, note) =>
 			one / STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,

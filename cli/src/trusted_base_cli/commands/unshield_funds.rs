@@ -42,6 +42,11 @@ pub struct UnshieldFundsCommand {
 
 	/// amount to be transferred
 	amount: Balance,
+
+	/// use enclave bridge instead of shard vault account. Only do this if you know what you're doing
+	#[clap(short, long, action)]
+	enclave_bridge: bool,
+
 	/// session proxy who can sign on behalf of the account
 	#[clap(long)]
 	session_proxy: Option<String>,
@@ -54,20 +59,31 @@ impl UnshieldFundsCommand {
 		let to = get_accountid_from_str(&self.to);
 
 		println!(
-			"send trusted call unshield_funds from {} to {}: {}",
+			"send trusted call unshield_funds from {} to {}: {} {}",
 			sender.to_ss58check(),
 			to.to_ss58check(),
-			self.amount
+			self.amount,
+			if self.enclave_bridge { "through enclave-bridge" } else { "" }
 		);
 
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)
 			.unwrap_or_default();
 
-		let top: TrustedOperation<TrustedCallSigned, Getter> =
+		let top: TrustedOperation<TrustedCallSigned, Getter> = if self.enclave_bridge {
+			TrustedCall::balance_unshield_through_enclave_bridge_pallet(
+				sender,
+				to,
+				self.amount,
+				shard,
+			)
+			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+			.into_trusted_operation(trusted_args.direct)
+		} else {
 			TrustedCall::balance_unshield(sender, to, self.amount, shard)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
+				.into_trusted_operation(trusted_args.direct)
+		};
 
 		if trusted_args.direct {
 			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)
