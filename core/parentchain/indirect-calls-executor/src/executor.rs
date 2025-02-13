@@ -376,7 +376,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new(), H256::default())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
@@ -401,7 +401,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new(), H256::default())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
