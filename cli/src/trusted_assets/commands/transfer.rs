@@ -22,6 +22,8 @@ use crate::{
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
+use base58::ToBase58;
+use ita_assets_map::AssetId;
 use ita_parentchain_interface::integritee::Balance;
 use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
@@ -33,54 +35,61 @@ use sp_core::crypto::Ss58Codec;
 use std::boxed::Box;
 
 #[derive(Parser)]
-pub struct UnshieldFundsCommand {
-	/// Sender's incognito AccountId in ss58check format, mnemonic or hex seed
+pub struct TransferCommand {
+	/// sender's AccountId in ss58check format, mnemonic or hex seed
 	from: String,
 
-	/// Recipient's parentchain AccountId in ss58check format
+	/// recipient's AccountId in ss58check format
 	to: String,
 
 	/// amount to be transferred
 	amount: Balance,
 
-	/// use enclave bridge instead of shard vault account. Only do this if you know what you're doing
-	#[clap(short, long, action)]
-	enclave_bridge: bool,
+	/// Asset ID. must be supported. i.e. 'USDC.e'
+	asset_id: String,
+
+	/// an optional note for the recipient to pass along with the funds
+	note: Option<String>,
 
 	/// session proxy who can sign on behalf of the account
 	#[clap(long)]
 	session_proxy: Option<String>,
 }
 
-impl UnshieldFundsCommand {
+impl TransferCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let (sender, signer, mrenclave, shard) =
 			get_basic_signing_info_from_args!(self.from, self.session_proxy, cli, trusted_args);
 		let to = get_accountid_from_str(&self.to);
-
-		println!(
-			"send trusted call unshield_funds from {} to {}: {} {}",
-			sender.to_ss58check(),
-			to.to_ss58check(),
-			self.amount,
-			if self.enclave_bridge { "through enclave-bridge" } else { "" }
-		);
+		let asset_id = AssetId::try_from(self.asset_id.clone().as_str()).expect("Invalid asset id");
+		info!("from ss58 is {}", sender.to_ss58check());
+		info!("to ss58 is {}", to.to_ss58check());
+		info!("asset_id is {}", asset_id);
 
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)
 			.unwrap_or_default();
 
-		let top: TrustedOperation<TrustedCallSigned, Getter> = if self.enclave_bridge {
-			TrustedCall::balance_unshield_through_enclave_bridge_pallet(
+		println!(
+            "send trusted call transfer asset from {} to {}: {} {}, nonce: {}, signing using mrenclave: {} and shard: {}",
+            sender,
+            to,
+            self.amount,
+			asset_id,
+            nonce, mrenclave.to_base58(), shard.0.to_base58()
+        );
+		let top: TrustedOperation<TrustedCallSigned, Getter> = if let Some(note) = &self.note {
+			TrustedCall::assets_transfer_with_note(
 				sender,
 				to,
+				asset_id,
 				self.amount,
-				shard,
+				note.as_bytes().into(),
 			)
 			.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 			.into_trusted_operation(trusted_args.direct)
 		} else {
-			TrustedCall::balance_unshield(sender, to, self.amount, shard)
+			TrustedCall::assets_transfer(sender, to, asset_id, self.amount)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct)
 		};

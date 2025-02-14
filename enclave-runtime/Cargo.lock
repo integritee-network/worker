@@ -1493,6 +1493,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hex-literal"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1647,6 +1653,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-assets-map"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hex-literal",
+ "ita-parentchain-specs",
+ "itp-types",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.192",
+]
+
+[[package]]
 name = "ita-oracle"
 version = "0.9.0"
 dependencies = [
@@ -1668,6 +1687,8 @@ name = "ita-parentchain-interface"
 version = "0.9.0"
 dependencies = [
  "bs58",
+ "hex-literal",
+ "ita-assets-map",
  "ita-sgx-runtime",
  "ita-stf",
  "itc-parentchain",
@@ -1702,8 +1723,10 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "ita-assets-map",
  "itp-randomness",
  "itp-sgx-runtime-primitives",
+ "pallet-assets",
  "pallet-balances",
  "pallet-evm",
  "pallet-guess-the-number",
@@ -1728,6 +1751,7 @@ version = "0.9.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "ita-assets-map",
  "ita-parentchain-specs",
  "ita-sgx-runtime",
  "itp-hashing",
@@ -2391,6 +2415,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
  "itp-utils",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "serde 1.0.192",
@@ -2969,6 +2994,20 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "pallet-assets"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42#ff24c60ac7d9f87727ecdd0ded9a80c56e4f4b65"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
 
 [[package]]
 name = "pallet-balances"

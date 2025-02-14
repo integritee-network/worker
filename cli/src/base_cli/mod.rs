@@ -68,7 +68,7 @@ pub enum BaseCommand {
 	/// Register TCB info for FMSPC
 	RegisterTcbInfo(RegisterTcbInfoCommand),
 
-	/// Transfer funds from an parentchain account to an incognito account
+	/// Transfer funds from an parentchain account to an incognito account. Do not use this if the shard uses a shard vault! You will lose your funds
 	ShieldFunds(ShieldFundsCommand),
 }
 

@@ -15,13 +15,14 @@
 
 */
 
-use crate::{OpaqueCall, PalletString, ShardIdentifier};
+use crate::{xcm::Location, OpaqueCall, PalletString, ShardIdentifier};
 use alloc::{format, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use frame_support::pallet_prelude::Pays;
 use itp_stf_primitives::traits::{IndirectExecutor, TrustedCallVerification};
 use itp_utils::stringify::account_id_to_string;
+use pallet_assets::ExistenceReason;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 pub use sidechain_primitives::SidechainBlockConfirmation;
@@ -37,12 +38,14 @@ use substrate_api_client::{
 };
 use teeracle_primitives::ExchangeRate;
 use teerex_primitives::{SgxAttestationMethod, SgxStatus};
+
 pub type StorageProof = Vec<Vec<u8>>;
 
 // Basic Types.
 pub type Index = u32;
 pub type Balance = u128;
 pub type Hash = sp_core::H256;
+pub type ParentchainAssetIdNative = u32;
 
 // Account Types.
 pub type AccountId = sp_core::crypto::AccountId32;
@@ -66,6 +69,25 @@ pub type BlockHash = sp_core::H256;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
 pub type Signature = MultiSignature;
+
+// the upstream type has private fields, so we re-define it
+#[derive(Clone, Encode, Debug, Decode, Eq, PartialEq)]
+pub struct AssetAccount {
+	/// The balance.
+	pub balance: Balance,
+	/// Whether the account is frozen.
+	pub is_frozen: bool,
+	/// The reason for the existence of the account.
+	pub reason: ExistenceReason<Balance>,
+	/// Additional "sidecar" data, in case some other pallet wants to use this storage item.
+	pub extra: (),
+}
+
+impl Default for AssetAccount {
+	fn default() -> Self {
+		Self { balance: 0, is_frozen: false, reason: ExistenceReason::Consumer, extra: () }
+	}
+}
 
 #[derive(Encode, Decode, Copy, Clone, Debug, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -100,7 +122,9 @@ pub trait FilterEvents {
 	type Error: From<ParentchainError> + core::fmt::Debug;
 	fn get_extrinsic_statuses(&self) -> core::result::Result<Vec<ExtrinsicStatus>, Self::Error>;
 
-	fn get_transfer_events(&self) -> core::result::Result<Vec<BalanceTransfer>, Self::Error>;
+	fn get_events<Event: Default + StaticEvent>(
+		&self,
+	) -> core::result::Result<Vec<Event>, Self::Error>;
 }
 
 #[derive(Encode, Decode, Debug)]
@@ -156,9 +180,87 @@ impl core::fmt::Display for BalanceTransfer {
 	}
 }
 
+impl Default for BalanceTransfer {
+	fn default() -> Self {
+		BalanceTransfer { from: [0u8; 32].into(), to: [0u8; 32].into(), amount: 0 }
+	}
+}
+
 impl StaticEvent for BalanceTransfer {
 	const PALLET: &'static str = "Balances";
 	const EVENT: &'static str = "Transfer";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct ForeignAssetsTransferred {
+	pub asset_id: Location,
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl core::fmt::Display for ForeignAssetsTransferred {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"ForeignAssetsTransferred :: asset: {:?}, from: {}, to: {}, amount: {}",
+			&self.asset_id,
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl Default for ForeignAssetsTransferred {
+	fn default() -> Self {
+		ForeignAssetsTransferred {
+			asset_id: Default::default(),
+			from: [0u8; 32].into(),
+			to: [0u8; 32].into(),
+			amount: 0,
+		}
+	}
+}
+impl StaticEvent for ForeignAssetsTransferred {
+	const PALLET: &'static str = "ForeignAssets";
+	const EVENT: &'static str = "Transferred";
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct NativeAssetsTransferred {
+	pub asset_id: u32,
+	pub from: AccountId,
+	pub to: AccountId,
+	pub amount: Balance,
+}
+
+impl core::fmt::Display for NativeAssetsTransferred {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!(
+			"NativeAssetsTransferred :: asset: {:?}, from: {}, to: {}, amount: {}",
+			&self.asset_id,
+			account_id_to_string::<AccountId>(&self.from),
+			account_id_to_string::<AccountId>(&self.to),
+			self.amount
+		);
+		write!(f, "{}", message)
+	}
+}
+
+impl Default for NativeAssetsTransferred {
+	fn default() -> Self {
+		NativeAssetsTransferred {
+			asset_id: Default::default(),
+			from: [0u8; 32].into(),
+			to: [0u8; 32].into(),
+			amount: 0,
+		}
+	}
+}
+impl StaticEvent for NativeAssetsTransferred {
+	const PALLET: &'static str = "Assets";
+	const EVENT: &'static str = "Transferred";
 }
 
 #[derive(Encode, Decode, Debug)]
@@ -262,6 +364,7 @@ where
 		executor: &Executor,
 		events: impl FilterEvents,
 		vault_account: &AccountId,
+		genesis_hash: Hash,
 	) -> core::result::Result<(), Error>;
 }
 

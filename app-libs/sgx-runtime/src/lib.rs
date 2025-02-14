@@ -71,12 +71,14 @@ pub use frame_support::{
 	StorageValue,
 };
 use frame_support::{
-	traits::{ConstU8, EitherOfDiverse},
+	traits::{ConstU128, ConstU8, EitherOfDiverse, EnsureOriginWithArg},
 	PalletId,
 };
 use frame_system::{EnsureRoot, EnsureSignedBy};
+use ita_assets_map::AssetId;
 use itp_randomness::SgxRandomness;
 use itp_sgx_runtime_primitives::types::Moment;
+pub use pallet_assets::Call as AssetsCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
 pub use pallet_notes::Call as NotesCall;
@@ -338,6 +340,48 @@ impl pallet_session_proxy::Config for Runtime {
 	type MaxProxiesPerOwner = MaxProxiesPerOwner;
 }
 
+/// always denies creation of assets
+pub struct NoAssetCreators;
+
+impl EnsureOriginWithArg<RuntimeOrigin, AssetId> for NoAssetCreators {
+	type Success = AccountId;
+
+	fn try_origin(
+		o: RuntimeOrigin,
+		_a: &AssetId,
+	) -> sp_std::result::Result<Self::Success, RuntimeOrigin> {
+		Err(o)
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_successful_origin(_a: &AssetIdForTrustBackedAssets) -> Result<RuntimeOrigin, ()> {
+		Err(())
+	}
+}
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type AssetIdParameter = AssetId;
+	type Currency = Balances;
+	type CreateOrigin = NoAssetCreators;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ConstU128<1>;
+	type AssetAccountDeposit = ConstU128<10>;
+	type MetadataDepositBase = ConstU128<1>;
+	type MetadataDepositPerByte = ConstU128<1>;
+	type ApprovalDeposit = ConstU128<1>;
+	type StringLimit = ConstU32<50>;
+	type Freezer = ();
+	type WeightInfo = ();
+	type CallbackHandle = ();
+	type Extra = ();
+	type RemoveItemsLimit = ConstU32<5>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
+}
+
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -360,6 +404,8 @@ construct_runtime!(
 
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
+
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
 
@@ -390,6 +436,8 @@ construct_runtime!(
 
 		Notes: pallet_notes::{Pallet, Call, Storage} = 40,
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
+
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
 

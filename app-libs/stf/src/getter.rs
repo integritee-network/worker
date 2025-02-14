@@ -17,8 +17,8 @@
 
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{
-	Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime,
-	SessionProxy, System,
+	Assets, Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB,
+	Runtime, SessionProxy, System,
 };
 use itp_randomness::{Randomness, SgxRandomness};
 use itp_stf_interface::ExecuteGetter;
@@ -45,6 +45,7 @@ use crate::{
 	},
 	STF_TX_FEE_UNIT_DIVIDER,
 };
+use ita_assets_map::AssetId;
 use ita_parentchain_specs::MinimalChainSpec;
 use itp_sgx_runtime_primitives::types::{Balance, Moment};
 use itp_stf_primitives::{
@@ -122,9 +123,10 @@ impl PoolTransactionValidation for Getter {
 pub enum PublicGetter {
 	some_value = 0,
 	total_issuance = 1,
-	undistributed_fees = 2,
+	undistributed_fees(Option<AssetId>) = 2,
 	parentchains_info = 10,
 	note_buckets_info = 11,
+	asset_total_issuance(AssetId) = 40,
 	guess_the_number(GuessTheNumberPublicGetter) = 50,
 }
 
@@ -136,6 +138,7 @@ pub enum TrustedGetter {
 	account_info(AccountId) = 0,
 	account_info_and_session_proxies(AccountId) = 1,
 	notes_for(AccountId, BucketIndex) = 10,
+	asset_balance(AccountId, AssetId) = 40,
 	guess_the_number(GuessTheNumberTrustedGetter) = 50,
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId) = 90,
@@ -151,6 +154,7 @@ impl TrustedGetter {
 			TrustedGetter::account_info(sender_account) => sender_account,
 			TrustedGetter::account_info_and_session_proxies(sender_account, ..) => sender_account,
 			TrustedGetter::notes_for(sender_account, ..) => sender_account,
+			TrustedGetter::asset_balance(sender_account, ..) => sender_account,
 			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
@@ -249,6 +253,12 @@ impl ExecuteGetter for TrustedGetterSigned {
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: notes for ⣿⣿⣿",);
 				Some(notes.encode())
 			},
+			TrustedGetter::asset_balance(who, asset_id) => {
+				debug!("TrustedGetter asset_balance");
+				let asset_balance = Assets::balance(asset_id, &who);
+				debug!("asset balance for {} is {:?}", account_id_to_string(&who), asset_balance);
+				Some(asset_balance.encode())
+			},
 			TrustedGetter::guess_the_number(getter) => getter.execute(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) => {
@@ -298,26 +308,35 @@ impl ExecuteGetter for PublicGetter {
 		match self {
 			PublicGetter::some_value => Some(42u32.encode()),
 			PublicGetter::total_issuance => Some(Balances::total_issuance().encode()),
-			PublicGetter::undistributed_fees => {
+			PublicGetter::undistributed_fees(maybe_asset_id) => {
 				let pot: AccountId = enclave_signer_account();
-				let info = System::account(&pot);
 				debug!("PublicGetter undistributed_fees");
-				debug!("AccountInfo for {} is {:?}", account_id_to_string(&pot), info);
-				let fees = info.data.free;
+				let (fees, one) = if let Some(asset_id) = maybe_asset_id {
+					(Assets::balance(asset_id, &pot), asset_id.one_unit())
+				} else {
+					let info = System::account(&pot);
+					debug!("AccountInfo for {} is {:?}", account_id_to_string(&pot), info);
+					(
+						info.data.free,
+						MinimalChainSpec::one_unit(
+							shielding_target_genesis_hash().unwrap_or_default(),
+						),
+					)
+				};
 				// for privacy reasons, we add some noise to the fees.
 				// This avoids leaking the exact number and cost of recent TrustedCalls
-				let noise =
-					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						.checked_div(STF_TX_FEE_UNIT_DIVIDER)
-						.unwrap_or(1)
-						.saturating_mul(SgxRandomness::random_u32(0, 10_000).into())
-						.checked_div(1000)
-						.unwrap_or_default();
+				let noise = one
+					.checked_div(STF_TX_FEE_UNIT_DIVIDER)
+					.unwrap_or(1)
+					.saturating_mul(SgxRandomness::random_u32(0, 10_000).into())
+					.checked_div(1000)
+					.unwrap_or_default();
 				// better to strictly subtract from real value to avoid overpayment errors during distribution
 				let noisy_fees = fees.saturating_sub(noise);
 				std::println!(
-					"⣿STF⣿ 🔍 PublicGetter query: undistributed fees at least {}",
-					noisy_fees
+					"⣿STF⣿ 🔍 PublicGetter query: undistributed fees at least {} for asset {:?}",
+					noisy_fees,
+					maybe_asset_id
 				);
 				Some(noisy_fees.encode())
 			},
@@ -359,6 +378,8 @@ impl ExecuteGetter for PublicGetter {
 				let maybe_last = Notes::buckets(Notes::last_bucket_index().unwrap_or_default());
 				Some(BucketRange { maybe_first, maybe_last }.encode())
 			},
+			PublicGetter::asset_total_issuance(asset_id) =>
+				Some(Assets::total_supply(asset_id).encode()),
 			PublicGetter::guess_the_number(getter) => getter.execute(),
 		}
 	}

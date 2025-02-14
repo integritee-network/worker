@@ -67,6 +67,8 @@ pub trait CreateExtrinsics {
 		calls: &[(OpaqueCall, GenericMortality)],
 		extrinsics_params: Option<AdditionalParamsOf<Self::Config, Self::ExtrinsicParams>>,
 	) -> Result<Vec<OpaqueExtrinsic>>;
+
+	fn genesis_hash(&self) -> H256;
 }
 
 pub type AdditionalParamsOf<C, E> =
@@ -176,6 +178,10 @@ where
 		*nonce_lock = Nonce(nonce_value);
 
 		Ok(extrinsics_buffer)
+	}
+
+	fn genesis_hash(&self) -> H256 {
+		self.genesis_hash
 	}
 }
 

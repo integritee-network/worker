@@ -12,6 +12,7 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 scale-info = { version = "2.10.0", default-features = false, features = ["derive"] }
 
 # local dependencies
+ita-assets-map = { path = "../assets-map", default-features = false }
 itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
 pallet-guess-the-number = { default-features = false, path = "pallets/guess-the-number" }
@@ -23,6 +24,7 @@ pallet-session-proxy = { default-features = false, path = "pallets/session-proxy
 frame-executive = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 frame-support = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 frame-system = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-balances = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-sudo = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 pallet-timestamp = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
@@ -46,10 +48,12 @@ sgx = [
 std = [
     "codec/std",
     "scale-info/std",
+    "ita-assets-map/std",
     "itp-sgx-runtime-primitives/std",
     "frame-executive/std",
     "frame-support/std",
     "frame-system/std",
+    "pallet-assets/std",
     "pallet-evm?/std",
     "pallet-balances/std",
     "pallet-sudo/std",

@@ -29,6 +29,7 @@ use codec::{Decode, Encode};
 use sp_core::storage::StorageKey;
 
 pub use crate::error::Error;
+use crate::pallet_assets::{ForeignAssetsCallIndexes, NativeAssetsCallIndexes};
 pub use itp_api_client_types::{Metadata, MetadataError};
 
 pub mod error;
@@ -43,6 +44,7 @@ pub mod pallet_timestamp;
 
 #[cfg(feature = "mocks")]
 pub mod metadata_mocks;
+pub mod pallet_assets;
 
 pub trait NodeMetadataTrait:
 	TeerexCallIndexes
@@ -51,6 +53,8 @@ pub trait NodeMetadataTrait:
 	+ ProxyCallIndexes
 	+ BalancesCallIndexes
 	+ TimestampCallIndexes
+	+ ForeignAssetsCallIndexes
+	+ NativeAssetsCallIndexes
 {
 }
 impl<
@@ -59,7 +63,9 @@ impl<
 			+ SidechainCallIndexes
 			+ ProxyCallIndexes
 			+ BalancesCallIndexes
-			+ TimestampCallIndexes,
+			+ TimestampCallIndexes
+			+ ForeignAssetsCallIndexes
+			+ NativeAssetsCallIndexes,
 	> NodeMetadataTrait for T
 {
 }

@@ -22,10 +22,12 @@ use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
 use itc_parentchain_indirect_calls_executor::error::Error;
 use itp_stf_primitives::{traits::IndirectExecutor, types::TrustedOperation};
 use itp_types::parentchain::{
-	AccountId, FilterEvents, HandleParentchainEvents, ParentchainError, ParentchainId,
+	AccountId, BalanceTransfer, FilterEvents, HandleParentchainEvents, ParentchainError,
+	ParentchainId,
 };
 use itp_utils::hex::hex_encode;
 use log::*;
+use sp_core::H256;
 
 pub struct ParentchainEventHandler {}
 
@@ -64,8 +66,9 @@ where
 		executor: &Executor,
 		events: impl FilterEvents,
 		vault_account: &AccountId,
+		_genesis_hash: H256,
 	) -> Result<(), Error> {
-		let filter_events = events.get_transfer_events();
+		let filter_events = events.get_events::<BalanceTransfer>();
 		trace!(
 			"filtering transfer events to shard vault account: {}",
 			hex_encode(vault_account.encode().as_slice())

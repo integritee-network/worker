@@ -21,6 +21,7 @@ use itp_settings::files::{
 	INTEGRITEE_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, SHARDS_PATH, SIDECHAIN_BLOCKS_DB_STORAGE_PATH,
 	TARGET_A_PARENTCHAIN_LIGHT_CLIENT_DB_PATH, TARGET_B_PARENTCHAIN_LIGHT_CLIENT_DB_PATH,
 };
+use log::info;
 #[cfg(feature = "link-binary")]
 pub(crate) use needs_enclave::{
 	generate_shielding_key_file, generate_signing_key_file, init_shard, initialize_shard_and_keys,
@@ -158,6 +159,7 @@ pub(crate) fn purge_target_b_lcdb_unless_protected(root_directory: &Path) -> Ser
 fn remove_dir_if_it_exists(root_directory: &Path, dir_name: &str) -> ServiceResult<()> {
 	let directory_path = root_directory.join(dir_name);
 	if directory_path.exists() {
+		info!("removing directory: {}", directory_path.display());
 		fs::remove_dir_all(directory_path).map_err(|e| Error::Custom(e.into()))?;
 	}
 	Ok(())

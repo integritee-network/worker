@@ -169,10 +169,11 @@ impl<
 
 			// Execute indirect calls that were found in the extrinsics of the block,
 			// incl. shielding and unshielding.
-			match self
-				.indirect_calls_executor
-				.execute_indirect_calls_in_extrinsics(&block, &raw_events)
-			{
+			match self.indirect_calls_executor.execute_indirect_calls_in_extrinsics(
+				&block,
+				&raw_events,
+				self.extrinsics_factory.genesis_hash(),
+			) {
 				Ok(Some(confirm_processed_parentchain_block_call)) => {
 					let opaque_call = confirm_processed_parentchain_block_call;
 					// if we have significant downtime, this mortality means we will not confirm all imported blocks

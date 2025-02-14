@@ -2228,6 +2228,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ebdb29d2ea9ed0083cd8cece49bbd968021bd99b0849edb4a9a7ee0fdf6a4e0"
 
 [[package]]
+name = "hex-literal"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
+
+[[package]]
 name = "hmac"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2578,6 +2584,7 @@ dependencies = [
  "env_logger 0.9.3",
  "hdrhistogram",
  "hex",
+ "ita-assets-map",
  "ita-parentchain-interface",
  "ita-stf",
  "itc-rpc-client",
@@ -2590,6 +2597,7 @@ dependencies = [
  "itp-utils",
  "its-primitives",
  "log 0.4.22",
+ "pallet-assets",
  "pallet-balances",
  "pallet-enclave-bridge",
  "pallet-evm",
@@ -2764,6 +2772,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ita-assets-map"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hex-literal 0.4.1",
+ "ita-parentchain-specs",
+ "itp-types",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+]
+
+[[package]]
 name = "ita-oracle"
 version = "0.9.0"
 dependencies = [
@@ -2788,6 +2809,8 @@ version = "0.9.0"
 dependencies = [
  "bs58",
  "env_logger 0.9.3",
+ "hex-literal 0.4.1",
+ "ita-assets-map",
  "ita-sgx-runtime",
  "ita-stf",
  "itc-parentchain",
@@ -2828,8 +2851,10 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "ita-assets-map",
  "itp-randomness",
  "itp-sgx-runtime-primitives",
+ "pallet-assets",
  "pallet-balances",
  "pallet-evm",
  "pallet-guess-the-number",
@@ -2855,6 +2880,7 @@ dependencies = [
  "base58",
  "frame-support",
  "frame-system",
+ "ita-assets-map",
  "ita-parentchain-specs",
  "ita-sgx-runtime",
  "itp-hashing",
@@ -3689,6 +3715,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "itp-stf-primitives",
  "itp-utils",
+ "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
  "serde 1.0.193",
@@ -6861,7 +6888,7 @@ dependencies = [
  "der 0.6.1",
  "frame-support",
  "hex",
- "hex-literal",
+ "hex-literal 0.3.4",
  "log 0.4.22",
  "parity-scale-codec",
  "ring 0.16.20",

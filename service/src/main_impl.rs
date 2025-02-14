@@ -174,6 +174,7 @@ pub(crate) fn main() {
 		setup::purge_integritee_lcdb_unless_protected(config.data_dir()).unwrap();
 		setup::purge_target_a_lcdb_unless_protected(config.data_dir()).unwrap();
 		setup::purge_target_b_lcdb_unless_protected(config.data_dir()).unwrap();
+		setup::purge_shards_unless_protected(config.data_dir()).unwrap();
 	}
 
 	// build the entire dependency tree
@@ -264,6 +265,7 @@ pub(crate) fn main() {
 			// we default to purge here because we don't want to leave behind blocks
 			// for deprectated shards in the sidechain_db
 			setup::purge_shards_unless_protected(config.data_dir()).unwrap();
+			// will auto-create folders for new shard
 			setup::initialize_shard_and_keys(enclave.as_ref(), &shard).unwrap();
 		}
 

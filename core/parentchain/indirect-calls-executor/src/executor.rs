@@ -147,6 +147,7 @@ impl<
 		&self,
 		block: &ParentchainBlock,
 		events: &[u8],
+		genesis_hash: H256,
 	) -> Result<Option<OpaqueCall>>
 	where
 		ParentchainBlock: ParentchainBlockTrait<Hash = H256>,
@@ -172,7 +173,7 @@ impl<
 
 		let shard = self.get_default_shard();
 		if let Ok((vault, _parentchain_id)) = self.stf_enclave_signer.get_shard_vault(&shard) {
-			ParentchainEventHandler::handle_events(self, events, &vault)?;
+			ParentchainEventHandler::handle_events(self, events, &vault, genesis_hash)?;
 		}
 
 		// This would be catastrophic but should never happen
@@ -375,7 +376,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new(), H256::default())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());
@@ -400,7 +401,7 @@ mod test {
 			.build();
 
 		indirect_calls_executor
-			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new())
+			.execute_indirect_calls_in_extrinsics(&parentchain_block, &Vec::new(), H256::default())
 			.unwrap();
 
 		assert_eq!(1, top_pool_author.pending_tops(shard_id()).unwrap().len());

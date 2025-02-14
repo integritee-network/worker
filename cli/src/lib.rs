@@ -28,18 +28,20 @@ extern crate chrono;
 extern crate env_logger;
 extern crate log;
 
+mod assets;
 mod attesteer;
 mod base_cli;
 mod benchmark;
 mod command_utils;
 #[cfg(feature = "evm")]
 mod evm;
-mod guess_the_number;
 #[cfg(feature = "teeracle")]
 mod oracle;
+mod trusted_assets;
 mod trusted_base_cli;
 mod trusted_cli;
 mod trusted_command_utils;
+mod trusted_guess_the_number;
 mod trusted_operation;
 
 pub mod commands;
