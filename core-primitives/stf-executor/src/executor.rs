@@ -203,17 +203,21 @@ where
 				hex::encode(storage_hashes[0].clone()),
 				hex::encode(header.hash().encode())
 			);
-			let storage_values = self.ocall_api.get_multiple_storages_verified::<Header, Vec<u8>>(
-				storage_hashes,
-				header,
-				parentchain_id,
-			)?;
-			info!("mirror verified storage_values: {:?}", storage_values);
-
-			let prefixed_state_diff_update = prefix_storage_keys_for_parentchain_mirror(
-				&into_map(storage_values),
-				parentchain_id,
-			);
+			let prefixed_state_diff_update = if let Ok(storage_values) =
+				self.ocall_api.get_multiple_storages_verified::<Header, Vec<u8>>(
+					storage_hashes,
+					header,
+					parentchain_id,
+				) {
+				info!("mirror verified storage_values: {:?}", storage_values);
+				prefix_storage_keys_for_parentchain_mirror(
+					&into_map(storage_values),
+					parentchain_id,
+				)
+			} else {
+				error!("mirror parentchain storage upon block import failed");
+				Default::default()
+			};
 
 			// Update parentchain block data and mirrored state
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;

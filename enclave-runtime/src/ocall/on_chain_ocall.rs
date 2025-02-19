@@ -23,7 +23,10 @@ use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
-use itp_types::{storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256};
+use itp_types::{
+	storage::{StorageEntry, StorageEntryVerified},
+	WorkerRequest, WorkerResponse, H256,
+};
 use itp_utils::hex::hex_encode;
 use log::*;
 use sgx_types::*;
@@ -120,8 +123,15 @@ impl EnclaveOnChainOCallApi for OcallApi {
 
 		let storage_entries = self
 			.worker_request::<ParentchainHeader, Vec<u8>>(requests, parentchain_id)
-			.map(|storages| verify_storage_entries(storages, header))??;
+			.and_then(|responses| {
+				Ok(responses
+					.into_iter()
+					.map(|response| response.into())
+					.collect::<Vec<StorageEntry<_>>>())
+			})?;
+		info!("verifying storage entries");
+		let verified_entries = verify_storage_entries(storage_entries, header)?;
 
-		Ok(storage_entries)
+		Ok(verified_entries)
 	}
 }
