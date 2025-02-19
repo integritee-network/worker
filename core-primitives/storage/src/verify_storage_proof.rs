@@ -1,31 +1,40 @@
 use crate::{error::Error, StorageProofChecker};
-use codec::{Decode, Encode};
+use codec::Decode;
 use frame_support::ensure;
 use itp_types::storage::{StorageEntry, StorageEntryVerified};
 use sp_runtime::traits::Header as HeaderT;
 use sp_std::prelude::Vec;
 
-pub trait VerifyStorageProof<H: HeaderT, V: Encode + Decode + Clone> {
-	fn verify_storage_proof(self, header: &H) -> Result<StorageEntryVerified<V>, Error>;
+pub trait VerifyStorageProof {
+	fn verify_storage_proof<Header: HeaderT, V: Decode>(
+		self,
+		header: &Header,
+	) -> Result<StorageEntryVerified<V>, Error>;
 }
 
-impl<H, V> VerifyStorageProof<H, V> for StorageEntry<V>
-where
-	V: Encode + Decode + Clone,
-	H: HeaderT,
-{
-	fn verify_storage_proof(self, header: &H) -> Result<StorageEntryVerified<V>, Error> {
+impl VerifyStorageProof for StorageEntry<Vec<u8>> {
+	fn verify_storage_proof<Header: HeaderT, V: Decode>(
+		self,
+		header: &Header,
+	) -> Result<StorageEntryVerified<V>, Error> {
 		let proof = self.proof.as_ref().ok_or(Error::NoProofSupplied)?;
-		let actual = StorageProofChecker::<<H as HeaderT>::Hashing>::check_proof(
+		let actual = StorageProofChecker::<<Header as HeaderT>::Hashing>::check_proof(
 			*header.state_root(),
 			&self.key,
 			proof.to_vec(),
 		)?;
 
 		// Todo: Why do they do it like that, we could supply the proof only and get the value from the proof directly??
-		ensure!(actual == self.value.clone().map(|v| v.encode()), Error::WrongValue);
+		ensure!(actual == self.value, Error::WrongValue);
 
-		Ok(StorageEntryVerified { key: self.key, value: self.value })
+		Ok(StorageEntryVerified {
+			key: self.key,
+			value: self
+				.value
+				.map(|v| Decode::decode(&mut v.as_slice()))
+				.transpose()
+				.map_err(Error::Codec)?,
+		})
 	}
 }
 
@@ -35,9 +44,9 @@ pub fn verify_storage_entries<S, Header, V>(
 	header: &Header,
 ) -> Result<Vec<StorageEntryVerified<V>>, Error>
 where
-	S: Into<StorageEntry<V>>,
+	S: Into<StorageEntry<Vec<u8>>>,
 	Header: HeaderT,
-	V: Encode + Decode + Clone,
+	V: Decode,
 {
 	let iter = into_storage_entry_iter(entries);
 	let mut verified_entries = Vec::with_capacity(iter.size_hint().0);
@@ -48,12 +57,11 @@ where
 	Ok(verified_entries)
 }
 
-pub fn into_storage_entry_iter<'a, S, V>(
+pub fn into_storage_entry_iter<'a, S>(
 	source: impl IntoIterator<Item = S> + 'a,
-) -> impl Iterator<Item = StorageEntry<V>> + 'a
+) -> impl Iterator<Item = StorageEntry<Vec<u8>>> + 'a
 where
-	S: Into<StorageEntry<V>>,
-	V: Decode,
+	S: Into<StorageEntry<Vec<u8>>>,
 {
 	source.into_iter().map(|s| s.into())
 }

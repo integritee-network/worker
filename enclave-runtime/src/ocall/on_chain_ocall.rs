@@ -17,16 +17,13 @@
 */
 
 use crate::ocall::{ffi, OcallApi};
-use codec::{Decode, Encode, WrapperTypeEncode};
+use codec::{Decode, Encode};
 use frame_support::ensure;
 use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
-use itp_types::{
-	storage::{StorageEntry, StorageEntryVerified},
-	WorkerRequest, WorkerResponse, H256,
-};
+use itp_types::{storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256};
 use itp_utils::hex::hex_encode;
 use log::*;
 use sgx_types::*;
@@ -95,7 +92,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		Ok(decoded_response)
 	}
 
-	fn get_storage_verified<H: Header<Hash = H256>, V: Encode + Decode + Clone>(
+	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
@@ -110,7 +107,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.ok_or(StorageError::StorageValueUnavailable)?)
 	}
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Encode + Decode + Clone>(
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
@@ -122,16 +119,9 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.collect();
 
 		let storage_entries = self
-			.worker_request::<ParentchainHeader, V>(requests, parentchain_id)
-			.and_then(|responses| {
-				Ok(responses
-					.into_iter()
-					.map(|response| response.into())
-					.collect::<Vec<StorageEntry<V>>>())
-			})?;
+			.worker_request::<ParentchainHeader, Vec<u8>>(requests, parentchain_id)
+			.map(|storages| verify_storage_entries(storages, header))??;
 
-		let verified_entries = verify_storage_entries(storage_entries, header)?;
-
-		Ok(verified_entries)
+		Ok(storage_entries)
 	}
 }

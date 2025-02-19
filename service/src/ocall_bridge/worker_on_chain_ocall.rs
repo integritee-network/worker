@@ -146,11 +146,13 @@ where
 		let resp: Vec<WorkerResponse<ParentchainHeader, Vec<u8>>> = requests
 			.into_iter()
 			.map(|req| match req {
-				WorkerRequest::ChainStorage(key, hash) => {
-					let maybe_opaque_storage =
-						api.get_opaque_storage_by_key(StorageKey(key.clone()), hash).ok().flatten();
+				WorkerRequest::ChainStorage(key, maybe_hash) => {
+					let maybe_opaque_storage = api
+						.get_opaque_storage_by_key(StorageKey(key.clone()), maybe_hash)
+						.ok()
+						.flatten();
 					let maybe_proof = api
-						.get_storage_proof_by_keys(vec![StorageKey(key.clone())], hash)
+						.get_storage_proof_by_keys(vec![StorageKey(key.clone())], maybe_hash)
 						.ok()
 						.flatten()
 						.map(|read_proof| {

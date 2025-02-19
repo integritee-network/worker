@@ -118,7 +118,11 @@ where
 	) {
 		state.execute_with(|| {
 			map_update.into_iter().for_each(|(k, v)| {
-				info!("apply_state_diff (mirror): key = {}, value= {:?}", hex_encode(&k), v);
+				info!(
+					"apply_state_diff (mirror): key = {}, value= {:?}",
+					hex_encode(&k),
+					v.clone().map(|v| hex_encode(&v))
+				);
 				match v {
 					Some(value) => sp_io::storage::set(&k, &value),
 					None => sp_io::storage::clear(&k),
@@ -224,9 +228,21 @@ where
 		let mut full_key = parentchain_mirror_prefix(parentchain_id).as_bytes().to_vec();
 		full_key.extend_from_slice(&parentchain_key);
 		info!("get_parentchain_mirror_state: prefixed key = {}", hex_encode(&full_key));
-		let raw_state = state.get(&full_key);
-		info!("get_parentchain_mirror_state: raw_state: {:?}", raw_state);
-		Decode::decode(&mut raw_state?.as_slice()).ok()
+		let maybe_raw_state = state.get(&full_key);
+		info!(
+			"get_parentchain_mirror_state: raw_state: {:?}",
+			maybe_raw_state.map(|raw| hex_encode(&raw))
+		);
+		if let Some(raw_state) = maybe_raw_state {
+			if let Ok(state) = V::decode(&mut raw_state.as_slice()) {
+				Some(state)
+			} else {
+				warn!("get_parentchain_mirror_state: decode failed");
+				None
+			}
+		} else {
+			None
+		}
 	}
 }
 

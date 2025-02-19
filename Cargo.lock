@@ -3550,7 +3550,6 @@ dependencies = [
  "itp-node-api-metadata-provider",
  "itp-stf-primitives",
  "itp-types",
- "log 0.4.22",
  "parity-scale-codec",
 ]
 

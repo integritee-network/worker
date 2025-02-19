@@ -32,7 +32,6 @@ use itp_types::{
 	parentchain::{AccountId, BlockHash, BlockNumber, ParentchainCall, ParentchainId},
 	Moment, ShardIdentifier,
 };
-use log::info;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;

@@ -131,11 +131,11 @@ pub enum WorkerResponse<H: HeaderTrait, V: Encode + Decode> {
 	NextNonce(Option<Nonce>),
 }
 
-impl<H: HeaderTrait, V: Decode + Encode + Clone> From<WorkerResponse<H, V>> for StorageEntry<V> {
-	fn from(response: WorkerResponse<H, V>) -> Self {
+impl<H: HeaderTrait> From<WorkerResponse<H, Vec<u8>>> for StorageEntry<Vec<u8>> {
+	fn from(response: WorkerResponse<H, Vec<u8>>) -> Self {
 		match response {
 			WorkerResponse::ChainStorage(key, value, proof) => StorageEntry { key, value, proof },
-			_ => StorageEntry { key: Default::default(), value: None, proof: None },
+			_ => StorageEntry::default(),
 		}
 	}
 }
