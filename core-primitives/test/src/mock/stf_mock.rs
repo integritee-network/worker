@@ -57,7 +57,10 @@ pub struct StfMock {
 impl UpdateState<SgxExternalities, SgxExternalitiesDiffType> for StfMock {
 	fn apply_state_diff(_state: &mut SgxExternalities, _map_update: SgxExternalitiesDiffType) {}
 
-	fn storage_hashes_to_update_on_block(_parentchain_id: &ParentchainId) -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block(
+		_parentchain_id: &ParentchainId,
+		_shard: &ShardIdentifier,
+	) -> Vec<Vec<u8>> {
 		vec![]
 	}
 }
@@ -69,11 +72,12 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 
 	fn execute_call(
 		state: &mut SgxExternalities,
+		shard: &ShardIdentifier,
 		call: TrustedCallSignedMock,
 		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, node_metadata_repo))
+		state.execute_with(|| call.execute(calls, shard, node_metadata_repo))
 	}
 
 	fn on_initialize(_state: &mut SgxExternalities, now: Moment) -> Result<(), Self::Error> {
@@ -95,6 +99,14 @@ impl InitState<SgxExternalities, AccountId> for StfMock {
 impl StateGetterInterface<GetterMock, SgxExternalities> for StfMock {
 	fn execute_getter(_state: &mut SgxExternalities, _getter: GetterMock) -> Option<Vec<u8>> {
 		Some(vec![42])
+	}
+
+	fn get_parentchain_mirror_state<V: Decode>(
+		_state: &mut SgxExternalities,
+		_parentchain_key: Vec<u8>,
+		_parentchain_id: &ParentchainId,
+	) -> Option<V> {
+		todo!()
 	}
 }
 
@@ -174,6 +186,7 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 	fn execute(
 		self,
 		_calls: &mut Vec<ParentchainCall>,
+		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
 		match self.call {
@@ -192,7 +205,7 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 		}
 	}
 
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+	fn get_storage_hashes_to_update(self, _shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 		Vec::new()
 	}
 }

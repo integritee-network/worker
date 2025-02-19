@@ -429,7 +429,8 @@ fn test_create_state_diff() {
 	assert_eq!(
 		sender_acc_info.data.free,
 		ita_stf::test_genesis::ENDOWED_ACC_FUNDS
-			- TX_AMOUNT - 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
+			- TX_AMOUNT
+			- 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
 	);
 }
 
@@ -622,7 +623,7 @@ pub fn test_retrieve_events() {
 	)
 	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, &shard, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	assert_eq!(TestStf::get_events(&mut state).len(), 4);
 }
@@ -646,7 +647,7 @@ pub fn test_retrieve_event_count() {
 
 	// when
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, &shard, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	let event_count = TestStf::get_event_count(&mut state);
 	assert_eq!(event_count, 4);
@@ -668,7 +669,7 @@ pub fn test_reset_events() {
 	)
 	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, &shard, trusted_call, &mut opaque_vec, repo).unwrap();
 	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
 	assert_eq!(receiver_acc_info.free, transfer_value);
 	// Ensure that there really have been events generated.

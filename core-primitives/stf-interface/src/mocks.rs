@@ -30,7 +30,7 @@ use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
 	parentchain::{ParentchainCall, ParentchainId},
-	AccountId, Index, Moment,
+	AccountId, Index, Moment, ShardIdentifier,
 };
 
 #[derive(Default)]
@@ -51,7 +51,7 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 		unimplemented!()
 	}
 
-	fn storage_hashes_to_update_on_block(_: &ParentchainId) -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block(_: &ParentchainId, _: &ShardIdentifier) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }
@@ -65,6 +65,7 @@ where
 
 	fn execute_call(
 		_state: &mut State,
+		_shard: &ShardIdentifier,
 		_call: TCS,
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
@@ -85,6 +86,14 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 {
 	fn execute_getter(_state: &mut State, _getter: Getter) -> Option<Vec<u8>> {
 		None
+	}
+
+	fn get_parentchain_mirror_state<V: Decode>(
+		state: &mut State,
+		parentchain_key: Vec<u8>,
+		parentchain_id: &ParentchainId,
+	) -> Option<V> {
+		todo!()
 	}
 }
 
@@ -110,12 +119,13 @@ impl ExecuteCall<NodeMetadataRepository<NodeMetadataMock>> for CallExecutorMock 
 	fn execute(
 		self,
 		_calls: &mut Vec<ParentchainCall>,
+		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
 
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+	fn get_storage_hashes_to_update(self, _shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }

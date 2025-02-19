@@ -51,6 +51,10 @@ pub type CallWorkerFn = ([u8; 2], Request);
 use enclave_bridge_primitives::ShardSignerStatus as ShardSignerStatusGen;
 pub type ShardSignerStatus = ShardSignerStatusGen<AccountId, BlockNumber>;
 pub type ShardStatus = Vec<ShardSignerStatus>;
+
+pub type UpgradableShardConfig =
+	enclave_bridge_primitives::UpgradableShardConfig<AccountId, BlockNumber>;
+
 pub use enclave_bridge_primitives::Request;
 pub use teerex_primitives::{
 	EnclaveFingerprint, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData, SgxStatus,
@@ -127,11 +131,11 @@ pub enum WorkerResponse<H: HeaderTrait, V: Encode + Decode> {
 	NextNonce(Option<Nonce>),
 }
 
-impl<H: HeaderTrait> From<WorkerResponse<H, Vec<u8>>> for StorageEntry<Vec<u8>> {
-	fn from(response: WorkerResponse<H, Vec<u8>>) -> Self {
+impl<H: HeaderTrait, V: Decode + Encode + Clone> From<WorkerResponse<H, V>> for StorageEntry<V> {
+	fn from(response: WorkerResponse<H, V>) -> Self {
 		match response {
 			WorkerResponse::ChainStorage(key, value, proof) => StorageEntry { key, value, proof },
-			_ => StorageEntry::default(),
+			_ => StorageEntry { key: Default::default(), value: None, proof: None },
 		}
 	}
 }

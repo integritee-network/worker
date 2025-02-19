@@ -27,7 +27,7 @@ pub struct StorageEntry<V> {
 
 /// Contains private fields. We don't expose a public constructor. Hence, the only way
 /// to get a `StorageEntryVerified` is via the `VerifyStorageProof` trait.
-#[derive(Default, Clone, Encode, Decode)]
+#[derive(Default, Clone, Encode, Decode, Debug)]
 pub struct StorageEntryVerified<V> {
 	pub key: Vec<u8>,
 	pub value: Option<V>,

@@ -17,13 +17,17 @@
 */
 
 use crate::ocall::{ffi, OcallApi};
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, WrapperTypeEncode};
 use frame_support::ensure;
 use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
 use itp_storage::{verify_storage_entries, Error as StorageError};
-use itp_types::{storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256};
+use itp_types::{
+	storage::{StorageEntry, StorageEntryVerified},
+	WorkerRequest, WorkerResponse, H256,
+};
+use itp_utils::hex::hex_encode;
 use log::*;
 use sgx_types::*;
 use sp_runtime::{traits::Header, OpaqueExtrinsic};
@@ -84,14 +88,14 @@ impl EnclaveOnChainOCallApi for OcallApi {
 
 		let decoded_response: Vec<WorkerResponse<H, V>> = Decode::decode(&mut resp.as_slice())
 			.map_err(|e| {
-				error!("Failed to decode WorkerResponse: {}", e);
+				error!("Failed to decode WorkerResponse: {}. Raw: {}", e, hex_encode(&resp));
 				sgx_status_t::SGX_ERROR_UNEXPECTED
 			})?;
 
 		Ok(decoded_response)
 	}
 
-	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_storage_verified<H: Header<Hash = H256>, V: Encode + Decode + Clone>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
@@ -106,7 +110,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.ok_or(StorageError::StorageValueUnavailable)?)
 	}
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Encode + Decode + Clone>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
@@ -118,9 +122,16 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.collect();
 
 		let storage_entries = self
-			.worker_request::<ParentchainHeader, Vec<u8>>(requests, parentchain_id)
-			.map(|storages| verify_storage_entries(storages, header))??;
+			.worker_request::<ParentchainHeader, V>(requests, parentchain_id)
+			.and_then(|responses| {
+				Ok(responses
+					.into_iter()
+					.map(|response| response.into())
+					.collect::<Vec<StorageEntry<V>>>())
+			})?;
 
-		Ok(storage_entries)
+		let verified_entries = verify_storage_entries(storage_entries, header)?;
+
+		Ok(verified_entries)
 	}
 }

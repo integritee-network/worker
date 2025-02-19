@@ -22,7 +22,7 @@
 
 extern crate alloc;
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{collections::BTreeMap, format, string::String, sync::Arc, vec::Vec};
 use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_node_api_metadata::NodeMetadataTrait;
@@ -30,8 +30,9 @@ use itp_node_api_metadata_provider::AccessNodeMetadata;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
 	parentchain::{AccountId, BlockHash, BlockNumber, ParentchainCall, ParentchainId},
-	Moment,
+	Moment, ShardIdentifier,
 };
+use log::info;
 
 #[cfg(feature = "mocks")]
 pub mod mocks;
@@ -62,7 +63,10 @@ pub trait ShardCreationQuery<S> {
 pub trait UpdateState<State, StateDiff> {
 	/// Updates a given state for
 	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
-	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>>;
+	fn storage_hashes_to_update_on_block(
+		parentchain_id: &ParentchainId,
+		shard: &ShardIdentifier,
+	) -> Vec<Vec<u8>>;
 }
 
 /// Interface to execute state mutating calls on a state.
@@ -77,6 +81,7 @@ where
 	/// Execute a call on a specific state. Callbacks are added as an `OpaqueCall`.
 	fn execute_call(
 		state: &mut State,
+		shard: &ShardIdentifier,
 		call: TCS,
 		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
@@ -93,6 +98,12 @@ where
 pub trait StateGetterInterface<G, S> {
 	/// Execute a getter on a specific state.
 	fn execute_getter(state: &mut S, getter: G) -> Option<Vec<u8>>;
+
+	fn get_parentchain_mirror_state<V: Decode>(
+		state: &mut S,
+		parentchain_key: Vec<u8>,
+		parentchain_id: &ParentchainId,
+	) -> Option<V>;
 }
 
 /// Trait used to abstract the call execution.
@@ -107,11 +118,12 @@ where
 	fn execute(
 		self,
 		calls: &mut Vec<ParentchainCall>,
+		shard: &ShardIdentifier,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
 
 	/// Get storages hashes that should be updated for a specific call.
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
+	fn get_storage_hashes_to_update(self, shard: &ShardIdentifier) -> Vec<Vec<u8>>;
 }
 
 /// Trait used to abstract the getter execution.
@@ -144,4 +156,23 @@ impl ShardCreationInfo {
 			ParentchainId::TargetB => self.target_b,
 		}
 	}
+}
+
+pub fn parentchain_mirror_prefix(parentchain_id: &ParentchainId) -> String {
+	format!("L1MirrorFor{:?}", *parentchain_id)
+}
+
+/// when we mirror opaque state from L1 to L2, we want to prefix the keys in order to avoid clashes
+pub fn prefix_storage_keys_for_parentchain_mirror(
+	state_diff_update: &BTreeMap<Vec<u8>, Option<Vec<u8>>>,
+	parentchain_id: &ParentchainId,
+) -> BTreeMap<Vec<u8>, Option<Vec<u8>>> {
+	state_diff_update
+		.iter()
+		.map(|(key, value)| {
+			let mut prefixed_key = parentchain_mirror_prefix(parentchain_id).as_bytes().to_vec();
+			prefixed_key.extend(key);
+			(prefixed_key, value.clone())
+		})
+		.collect()
 }

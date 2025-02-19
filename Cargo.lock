@@ -3370,6 +3370,7 @@ version = "0.9.0"
 dependencies = [
  "derive_more",
  "itp-api-client-types",
+ "itp-types",
  "parity-scale-codec",
  "sp-core",
 ]
@@ -3549,6 +3550,7 @@ dependencies = [
  "itp-node-api-metadata-provider",
  "itp-stf-primitives",
  "itp-types",
+ "log 0.4.22",
  "parity-scale-codec",
 ]
 

@@ -22,7 +22,10 @@ use crate::{
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
-use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
+use frame_support::{
+	metadata::StorageHasher,
+	traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable},
+};
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 };
@@ -30,16 +33,19 @@ use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_interface::{
+	parentchain_mirror_prefix,
 	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, ShardCreationInfo, ShardCreationQuery, ShardVaultQuery,
 	StateCallInterface, StateGetterInterface, UpdateState,
 };
-use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
-use itp_storage::storage_value_key;
+use itp_stf_primitives::{
+	error::StfError, traits::TrustedCallVerification, types::ShardIdentifier,
+};
+use itp_storage::{storage_map_key, storage_value_key};
 use itp_types::parentchain::{AccountId, Hash, ParentchainCall, ParentchainId};
-use itp_utils::stringify::account_id_to_string;
+use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
 use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
@@ -112,6 +118,7 @@ where
 	) {
 		state.execute_with(|| {
 			map_update.into_iter().for_each(|(k, v)| {
+				info!("apply_state_diff (mirror): key = {}, value= {:?}", hex_encode(&k), v);
 				match v {
 					Some(value) => sp_io::storage::set(&k, &value),
 					None => sp_io::storage::clear(&k),
@@ -120,13 +127,36 @@ where
 		});
 	}
 
-	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>> {
-		// Get all shards that are currently registered.
+	fn storage_hashes_to_update_on_block(
+		parentchain_id: &ParentchainId,
+		shard: &ShardIdentifier,
+	) -> Vec<Vec<u8>> {
+		let mut key_hashes = Vec::new();
 		match parentchain_id {
-			ParentchainId::Integritee => vec![], // shards_key_hash() moved to stf_executor and is currently unused
+			ParentchainId::Integritee => vec![
+				key_hashes.push(storage_map_key(
+					"EnclaveBridge",
+					"ShardConfigRegistry",
+					&shard,
+					&StorageHasher::Blake2_128Concat,
+				)),
+				/*				key_hashes.push(storage_map_key(
+					"EnclaveBridge",
+					"ShardStatus",
+					&shard,
+					&StorageHasher::Blake2_128Concat,
+				)),
+				key_hashes.push(storage_map_key(
+					"Sidechain",
+					"LatestSidechainBlockConfirmation",
+					&shard,
+					&StorageHasher::Blake2_128Concat,
+				)),*/
+			], // shards_key_hash() moved to stf_executor and is currently unused
 			ParentchainId::TargetA => vec![],
 			ParentchainId::TargetB => vec![],
-		}
+		};
+		key_hashes
 	}
 }
 
@@ -152,11 +182,12 @@ where
 
 	fn execute_call(
 		state: &mut State,
+		shard: &ShardIdentifier,
 		call: TCS,
 		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, node_metadata_repo))
+		state.execute_with(|| call.execute(calls, shard, node_metadata_repo))
 	}
 
 	fn on_initialize(state: &mut State, now: Moment) -> Result<(), Self::Error> {
@@ -183,6 +214,19 @@ where
 {
 	fn execute_getter(state: &mut State, getter: G) -> Option<Vec<u8>> {
 		state.execute_with(|| getter.execute())
+	}
+
+	fn get_parentchain_mirror_state<V: Decode>(
+		state: &mut State,
+		parentchain_key: Vec<u8>,
+		parentchain_id: &ParentchainId,
+	) -> Option<V> {
+		let mut full_key = parentchain_mirror_prefix(parentchain_id).as_bytes().to_vec();
+		full_key.extend_from_slice(&parentchain_key);
+		info!("get_parentchain_mirror_state: prefixed key = {}", hex_encode(&full_key));
+		let raw_state = state.get(&full_key);
+		info!("get_parentchain_mirror_state: raw_state: {:?}", raw_state);
+		Decode::decode(&mut raw_state?.as_slice()).ok()
 	}
 }
 

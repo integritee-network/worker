@@ -22,7 +22,7 @@ use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface, sudo_pallet::SudoPalletInterface,
 	system_pallet::SystemPalletAccountInterface, InitState, StateCallInterface,
 };
-use itp_stf_primitives::types::{AccountId, Signature};
+use itp_stf_primitives::types::{AccountId, ShardIdentifier, Signature};
 use itp_types::parentchain::ParentchainId;
 use sp_core::{
 	ed25519::{Pair as Ed25519Pair, Signature as Ed25519Signature},
@@ -63,7 +63,14 @@ pub fn shield_funds_increments_signer_account_nonce() {
 	);
 
 	let repo = Arc::new(NodeMetadataRepository::new(NodeMetadataMock::new()));
-	StfState::execute_call(&mut state, shield_funds_call, &mut Vec::new(), repo).unwrap();
+	StfState::execute_call(
+		&mut state,
+		&ShardIdentifier::default(),
+		shield_funds_call,
+		&mut Vec::new(),
+		repo,
+	)
+	.unwrap();
 	assert_eq!(1, StfState::get_account_nonce(&mut state, &enclave_signer_account_id));
 }
 

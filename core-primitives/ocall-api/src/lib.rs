@@ -102,14 +102,14 @@ pub trait EnclaveOnChainOCallApi: Clone + Send + Sync {
 		parentchain_id: &ParentchainId,
 	) -> SgxResult<Vec<WorkerResponse<H, V>>>;
 
-	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_storage_verified<H: Header<Hash = H256>, V: Encode + Decode + Clone>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
 		parentchain_id: &ParentchainId,
 	) -> Result<StorageEntryVerified<V>>;
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Encode + Decode + Clone>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,

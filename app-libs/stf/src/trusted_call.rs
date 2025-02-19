@@ -292,6 +292,7 @@ where
 	fn execute(
 		self,
 		calls: &mut Vec<ParentchainCall>,
+		shard: &ShardIdentifier,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		let _role = ensure_authorization(&self)?;
@@ -424,24 +425,26 @@ where
 				account_incognito,
 				beneficiary,
 				value,
-				shard,
+				call_shard,
 			) => {
 				if shard_vault().is_some() {
 					return Err(StfError::Dispatch(
 						"shard vault key has been set. you may not use enclave bridge".to_string(),
 					))
 				};
+				if !(*shard == call_shard) {
+					return Err(StfError::Dispatch("wrong shard".to_string()))
+				}
 				std::println!(
 					"⣿STF⣿ 🛡👐 balance_unshield through enclave bridge pallet from ⣿⣿⣿ to {}, amount {}",
 					account_id_to_string(&beneficiary),
 					value
 				);
 				info!(
-					"balance_unshield(from (L2): {}, to (L1): {}, amount {}, shard {})",
+					"balance_unshield(from (L2): {}, to (L1): {}, amount {})",
 					account_id_to_string(&account_incognito),
 					account_id_to_string(&beneficiary),
 					value,
-					shard
 				);
 				// now that the above hasn't failed, we can execute
 				burn_funds(&account_incognito, value)?;
@@ -655,11 +658,14 @@ where
 				beneficiary,
 				asset_id,
 				value,
-				shard,
+				call_shard,
 			) => {
 				if !asset_id.is_shieldable(shielding_target_genesis_hash().unwrap_or_default()) {
 					error!("preventing to unshield unsupported asset: {:?}", asset_id);
 					return Err(StfError::Dispatch("unsuppoted asset for un/shielding".into()))
+				}
+				if !(*shard == call_shard) {
+					return Err(StfError::Dispatch("wrong shard".to_string()))
 				}
 				std::println!(
 					"⣿STF⣿ 🛡👐 assets_unshield, from ⣿⣿⣿ to {}, amount {} {:?}",
@@ -668,11 +674,10 @@ where
 					asset_id
 				);
 				info!(
-					"assets_unshield(from (L2): {}, to (L1): {}, amount {}, shard {})",
+					"assets_unshield(from (L2): {}, to (L1): {}, amount {})",
 					account_id_to_string(&account_incognito),
 					account_id_to_string(&beneficiary),
-					value,
-					shard
+					value
 				);
 				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
 					StfError::Dispatch("shard vault key hasn't been set".to_string())
@@ -883,19 +888,19 @@ where
 				info!("Trying to create evm contract with address {:?}", contract_address);
 				Ok(())
 			},
-			TrustedCall::guess_the_number(call) => call.execute(calls, node_metadata_repo),
+			TrustedCall::guess_the_number(call) => call.execute(calls, &shard, node_metadata_repo),
 		}?;
 		Ok(())
 	}
 
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
+	fn get_storage_hashes_to_update(self, shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 		let mut key_hashes = Vec::new();
 		match self.call {
 			TrustedCall::noop(..) => debug!("No storage updates needed..."),
 			TrustedCall::guess_the_number(call) =>
 				key_hashes.append(&mut <GuessTheNumberTrustedCall as ExecuteCall<
 					NodeMetadataRepository,
-				>>::get_storage_hashes_to_update(call)),
+				>>::get_storage_hashes_to_update(call, shard)),
 			_ => debug!("No storage updates needed..."),
 		};
 		key_hashes
