@@ -22,10 +22,7 @@ use crate::{
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
-use frame_support::{
-	metadata::StorageHasher,
-	traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable},
-};
+use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 };
@@ -47,7 +44,7 @@ use itp_stf_interface::{
 use itp_stf_primitives::{
 	error::StfError, traits::TrustedCallVerification, types::ShardIdentifier,
 };
-use itp_storage::{storage_map_key, storage_value_key};
+use itp_storage::storage_value_key;
 use itp_types::parentchain::{AccountId, Hash, ParentchainCall, ParentchainId};
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;

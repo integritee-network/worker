@@ -22,7 +22,7 @@ use frame_support::ensure;
 use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
-use itp_storage::{verify_storage_entries, Error as StorageError, Error::StorageValueUnavailable};
+use itp_storage::{verify_storage_entries, Error::StorageValueUnavailable};
 use itp_types::{
 	storage::{StorageEntry, StorageEntryVerified},
 	WorkerRequest, WorkerResponse, H256,

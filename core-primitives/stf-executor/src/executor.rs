@@ -22,9 +22,7 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use itp_enclave_metrics::EnclaveMetric;
-use itp_node_api::metadata::{
-	pallet_enclave_bridge::ENCLAVE_BRIDGE, provider::AccessNodeMetadata, NodeMetadataTrait,
-};
+use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
 use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
@@ -39,12 +37,10 @@ use itp_stf_primitives::{
 	types::{ShardIdentifier, TrustedOperation, TrustedOperationOrHash},
 };
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
-use itp_storage::{keys::storage_value_key, storage_map_key, StorageHasher};
+use itp_storage::keys::storage_value_key;
 use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
-	parentchain::{
-		BlockNumber, Header as ParentchainHeader, Header, ParentchainCall, ParentchainId,
-	},
+	parentchain::{BlockNumber, Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
 	Balance, UpgradableShardConfig, H256,
 };

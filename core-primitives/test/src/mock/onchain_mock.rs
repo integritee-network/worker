@@ -20,7 +20,7 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
-	EnclaveSidechainOCallApi, Error,
+	EnclaveSidechainOCallApi,
 };
 use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_storage::Error::StorageValueUnavailable;

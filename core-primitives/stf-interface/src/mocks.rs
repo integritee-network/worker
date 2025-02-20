@@ -89,9 +89,9 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 	}
 
 	fn get_parentchain_mirror_state<V: Decode>(
-		state: &mut State,
-		parentchain_key: Vec<u8>,
-		parentchain_id: &ParentchainId,
+		_state: &mut State,
+		_parentchain_key: Vec<u8>,
+		_parentchain_id: &ParentchainId,
 	) -> Option<V> {
 		todo!()
 	}
