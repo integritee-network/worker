@@ -52,6 +52,8 @@ use enclave_bridge_primitives::ShardSignerStatus as ShardSignerStatusGen;
 pub type ShardSignerStatus = ShardSignerStatusGen<AccountId, BlockNumber>;
 pub type ShardStatus = Vec<ShardSignerStatus>;
 
+pub type ShardConfig = enclave_bridge_primitives::ShardConfig<AccountId>;
+
 pub type UpgradableShardConfig =
 	enclave_bridge_primitives::UpgradableShardConfig<AccountId, BlockNumber>;
 

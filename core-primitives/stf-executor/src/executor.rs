@@ -42,7 +42,7 @@ use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
 	parentchain::{BlockNumber, Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	Balance, UpgradableShardConfig, H256,
+	Balance, ShardConfig, UpgradableShardConfig, H256,
 };
 use log::*;
 use sp_runtime::traits::Header as HeaderTrait;
@@ -278,35 +278,24 @@ where
 		let mut state = prepare_state_function(state);
 		let mut executed_and_failed_calls = Vec::<ExecutedOperation<TCS, G>>::new();
 
+		let maintenance_mode =
+			get_active_shard_config::<StateHandler, Stf, G, PH>(shard, header, &mut state)
+				.map_or(false, |shard_config| shard_config.maintenance_mode);
+
 		// i.e. setting timestamp of new block
 		Stf::on_initialize(&mut state, now_as_millis()).unwrap_or_else(|e| {
 			error!("on_initialize failed: {:?}", e);
 		});
 
-		if let Some(upgradable_shard_config) =
-			Stf::get_parentchain_mirror_state::<UpgradableShardConfig>(
-				&mut state,
-				EnclaveBridgeStorage::upgradable_shard_config(*shard),
-				&ParentchainId::Integritee,
-			) {
-			let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
-				(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
-			{
-				info!("pending shard config upgrade at block {}", upgrade_block);
-				if *header.number() >= upgrade_block.into() {
-					pending_upgrade
-				} else {
-					upgradable_shard_config.active_config
-				}
-			} else {
-				upgradable_shard_config.active_config
-			};
-			info!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
-			info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
-		}
-
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
+			if maintenance_mode {
+				// let all calls fail and don't process any state transitions
+				executed_and_failed_calls.push(ExecutedOperation::failed(
+					TrustedOperationOrHash::Operation(trusted_call_signed.clone().into()),
+				));
+				break
+			}
 			// Break if allowed time window is over.
 			if ends_at < duration_now() {
 				info!("stopping execution of further trusted calls because slot time is up");
@@ -378,6 +367,45 @@ fn into_map(
 // todo: we need to clarify where these functions belong and if we need them at all. moved them from ita-stf but we can no longer depend on that
 pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u8>> {
 	Vec::new()
+}
+
+fn get_active_shard_config<StateHandler, Stf, G, PH>(
+	shard: &ShardIdentifier,
+	header: &PH,
+	state: &mut <StateHandler as HandleState>::StateT,
+) -> Option<ShardConfig>
+where
+	Stf: UpdateState<
+			StateHandler::StateT,
+			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
+		> + StateGetterInterface<G, StateHandler::StateT>,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + GetDecimals,
+	PH: HeaderTrait<Hash = H256>,
+{
+	Stf::get_parentchain_mirror_state::<UpgradableShardConfig>(
+		state,
+		EnclaveBridgeStorage::upgradable_shard_config(*shard),
+		&ParentchainId::Integritee,
+	)
+	.map(|upgradable_shard_config| {
+		let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
+			(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
+		{
+			trace!("pending shard config upgrade at block {}", upgrade_block);
+			if *header.number() >= upgrade_block.into() {
+				pending_upgrade
+			} else {
+				upgradable_shard_config.active_config
+			}
+		} else {
+			upgradable_shard_config.active_config
+		};
+		trace!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
+		info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
+		actual_shard_config
+	})
 }
 
 /// assumes a common structure of sgx_runtime and extracts interesting metrics
