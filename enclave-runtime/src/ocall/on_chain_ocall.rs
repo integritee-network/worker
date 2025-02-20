@@ -129,8 +129,15 @@ impl EnclaveOnChainOCallApi for OcallApi {
 					.map(|response| response.into())
 					.collect::<Vec<StorageEntry<_>>>())
 			})?;
-		info!("verifying storage entries");
-		let verified_entries = verify_storage_entries(storage_entries, header)?;
+		info!(
+			"verifying storage entry proofs for {} values. first: {:?}",
+			storage_entries.len(),
+			hex_encode(&storage_entries[0].value.clone().unwrap_or_default())
+		);
+		let verified_entries = verify_storage_entries(storage_entries, header).map_err(|e| {
+			warn!("Failed to verify storage entry proofs: {:?}", e);
+			e
+		})?;
 
 		Ok(verified_entries)
 	}

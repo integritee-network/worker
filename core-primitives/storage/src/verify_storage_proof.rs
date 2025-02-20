@@ -1,5 +1,5 @@
 use crate::{error::Error, StorageProofChecker};
-use codec::Decode;
+use codec::{Decode, Encode};
 use frame_support::ensure;
 use itp_types::storage::{StorageEntry, StorageEntryVerified};
 use sp_runtime::traits::Header as HeaderT;
