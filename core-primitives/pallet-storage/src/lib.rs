@@ -23,11 +23,20 @@ impl StoragePrefix for EnclaveBridgeStorage {
 
 pub trait EnclaveBridgeStorageKeys {
 	fn shard_status<T: Encode>(shard: T) -> Vec<u8>;
+	fn upgradable_shard_config<T: Encode>(shard: T) -> Vec<u8>;
 }
 
 impl<S: StoragePrefix> EnclaveBridgeStorageKeys for S {
 	fn shard_status<T: Encode>(shard: T) -> Vec<u8> {
 		storage_map_key(Self::prefix(), "ShardStatus", &shard, &StorageHasher::Blake2_128Concat)
+	}
+	fn upgradable_shard_config<T: Encode>(shard: T) -> Vec<u8> {
+		storage_map_key(
+			Self::prefix(),
+			"ShardConfigRegistry",
+			&shard,
+			&StorageHasher::Blake2_128Concat,
+		)
 	}
 }
 

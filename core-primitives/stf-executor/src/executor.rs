@@ -26,6 +26,7 @@ use itp_node_api::metadata::{
 	pallet_enclave_bridge::ENCLAVE_BRIDGE, provider::AccessNodeMetadata, NodeMetadataTrait,
 };
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
+use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
 	parentchain_pallet::ParentchainPalletInstancesInterface,
@@ -198,57 +199,56 @@ where
 		if let Some(shard_id) = shards.get(0) {
 			debug!("Update STF storage upon block import!");
 
-			if let Ok(upgradable_shard_config) =
-				self.ocall_api.get_storage_verified::<Header, UpgradableShardConfig>(
-					storage_map_key(
-						"EnclaveBridge",
-						"ShardConfigRegistry",
-						&shard_id,
-						&StorageHasher::Blake2_128Concat,
-					),
-					header,
-					parentchain_id,
-				) {
-				let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
-					(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
-				{
-					info!(
-						"[{:?}] pending shard config upgrade at block {}",
-						parentchain_id, upgrade_block
-					);
-					if header.number >= upgrade_block {
-						pending_upgrade
-					} else {
-						upgradable_shard_config.active_config
-					}
-				} else {
-					upgradable_shard_config.active_config
-				};
-				info!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
-				info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
-			};
-
 			/*
-						let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id, &shard_id);
-						info!(
-							"parentchain storage_hash to mirror: 0x{} at header 0x{}",
-							hex::encode(storage_hashes[0].clone()),
-							hex::encode(header.hash().encode())
-						);
-						let prefixed_state_diff_update = if let Ok(storage_values) = self
-							.ocall_api
-							.get_multiple_opaque_storages_verified(storage_hashes, header, parentchain_id)
-						{
-							info!("mirror verified storage_values: {:?}", storage_values);
-							prefix_storage_keys_for_parentchain_mirror(
-								&into_map(storage_values),
+						if let Ok(upgradable_shard_config) =
+							self.ocall_api.get_storage_verified::<Header, UpgradableShardConfig>(
+								storage_map_key(
+									"EnclaveBridge",
+									"ShardConfigRegistry",
+									&shard_id,
+									&StorageHasher::Blake2_128Concat,
+								),
+								header,
 								parentchain_id,
-							)
-						} else {
-							error!("mirror parentchain storage upon block import failed");
-							Default::default()
+							) {
+							let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
+								(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
+							{
+								info!(
+									"[{:?}] pending shard config upgrade at block {}",
+									parentchain_id, upgrade_block
+								);
+								if header.number >= upgrade_block {
+									pending_upgrade
+								} else {
+									upgradable_shard_config.active_config
+								}
+							} else {
+								upgradable_shard_config.active_config
+							};
+							info!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
+							info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
 						};
 			*/
+			let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id, &shard_id);
+			info!(
+				"parentchain storage_hash to mirror: 0x{} at header 0x{}",
+				hex::encode(storage_hashes[0].clone()),
+				hex::encode(header.hash().encode())
+			);
+			let prefixed_state_diff_update = if let Ok(storage_values) = self
+				.ocall_api
+				.get_multiple_opaque_storages_verified(storage_hashes, header, parentchain_id)
+			{
+				info!("mirror verified storage_values: {:?}", storage_values);
+				prefix_storage_keys_for_parentchain_mirror(
+					&into_map(storage_values),
+					parentchain_id,
+				)
+			} else {
+				error!("mirror parentchain storage upon block import failed");
+				Default::default()
+			};
 			// Update parentchain block data and mirrored state
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
 			match parentchain_id {
@@ -260,7 +260,7 @@ where
 					Stf::update_parentchain_target_b_block(&mut state, header.clone()),
 			}?;
 			// opaque mirroring of state from L1 to L2 (prefixed)
-			// Stf::apply_state_diff(&mut state, prefixed_state_diff_update.into());
+			Stf::apply_state_diff(&mut state, prefixed_state_diff_update.into());
 			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}
 		Ok(())
@@ -317,17 +317,26 @@ where
 			error!("on_initialize failed: {:?}", e);
 		});
 
-		if let Some(shard_config) = Stf::get_parentchain_mirror_state::<UpgradableShardConfig>(
-			&mut state,
-			storage_map_key(
-				ENCLAVE_BRIDGE,
-				"ShardConfigRegistry",
-				shard,
-				&StorageHasher::Blake2_128Concat,
-			),
-			&ParentchainId::Integritee,
-		) {
-			info!("current shard config (mirror): {:?}", &shard_config);
+		if let Some(upgradable_shard_config) =
+			Stf::get_parentchain_mirror_state::<UpgradableShardConfig>(
+				&mut state,
+				EnclaveBridgeStorage::upgradable_shard_config(*shard),
+				&ParentchainId::Integritee,
+			) {
+			let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
+				(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
+			{
+				info!("pending shard config upgrade at block {}", upgrade_block);
+				if *header.number() >= upgrade_block.into() {
+					pending_upgrade
+				} else {
+					upgradable_shard_config.active_config
+				}
+			} else {
+				upgradable_shard_config.active_config
+			};
+			info!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
+			info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
 		}
 
 		// Iterate through all calls until time is over.

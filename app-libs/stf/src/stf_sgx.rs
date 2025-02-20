@@ -30,6 +30,10 @@ use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
+use itp_pallet_storage::{
+	EnclaveBridgeStorage, EnclaveBridgeStorageKeys, SidechainPalletStorage,
+	SidechainPalletStorageKeys,
+};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_interface::{
@@ -135,32 +139,15 @@ where
 		parentchain_id: &ParentchainId,
 		shard: &ShardIdentifier,
 	) -> Vec<Vec<u8>> {
-		let mut key_hashes = Vec::new();
 		match parentchain_id {
 			ParentchainId::Integritee => vec![
-				key_hashes.push(storage_map_key(
-					"EnclaveBridge",
-					"ShardConfigRegistry",
-					&shard,
-					&StorageHasher::Blake2_128Concat,
-				)),
-				/*				key_hashes.push(storage_map_key(
-					"EnclaveBridge",
-					"ShardStatus",
-					&shard,
-					&StorageHasher::Blake2_128Concat,
-				)),
-				key_hashes.push(storage_map_key(
-					"Sidechain",
-					"LatestSidechainBlockConfirmation",
-					&shard,
-					&StorageHasher::Blake2_128Concat,
-				)),*/
+				EnclaveBridgeStorage::shard_status(*shard),
+				EnclaveBridgeStorage::upgradable_shard_config(*shard),
+				SidechainPalletStorage::latest_sidechain_block_confirmation(*shard),
 			], // shards_key_hash() moved to stf_executor and is currently unused
 			ParentchainId::TargetA => vec![],
 			ParentchainId::TargetB => vec![],
-		};
-		key_hashes
+		}
 	}
 }
 
