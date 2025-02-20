@@ -95,6 +95,7 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		Ok(decoded_response)
 	}
 
+	/// get verified L1 storage entiry
 	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
@@ -134,11 +135,6 @@ impl EnclaveOnChainOCallApi for OcallApi {
 					.map(|response| response.into())
 					.collect::<Vec<StorageEntry<_>>>())
 			})?;
-		info!(
-			"verifying storage entry proofs for {} values. first: {:?}",
-			storage_entries.len(),
-			hex_encode(&storage_entries[0].value.clone().unwrap_or_default())
-		);
 		let verified_entries = verify_storage_entries(storage_entries, header).map_err(|e| {
 			warn!("Failed to verify storage entry proofs: {:?}", e);
 			e

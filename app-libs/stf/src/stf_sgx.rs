@@ -119,7 +119,7 @@ where
 	) {
 		state.execute_with(|| {
 			map_update.into_iter().for_each(|(k, v)| {
-				info!(
+				trace!(
 					"apply_state_diff (mirror): key = {}, value= {:?}",
 					hex_encode(&k),
 					v.clone().map(|v| hex_encode(&v))
@@ -211,9 +211,9 @@ where
 	) -> Option<V> {
 		let mut full_key = parentchain_mirror_prefix(parentchain_id).as_bytes().to_vec();
 		full_key.extend_from_slice(&parentchain_key);
-		info!("get_parentchain_mirror_state: prefixed key = {}", hex_encode(&full_key));
+		trace!("get_parentchain_mirror_state: prefixed key = {}", hex_encode(&full_key));
 		let maybe_raw_state = state.get(&full_key);
-		info!(
+		trace!(
 			"get_parentchain_mirror_state: raw_state: {:?}",
 			maybe_raw_state.map(|raw| hex_encode(&raw))
 		);
