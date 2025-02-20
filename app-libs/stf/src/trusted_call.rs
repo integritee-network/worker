@@ -892,19 +892,6 @@ where
 		}?;
 		Ok(())
 	}
-
-	fn get_storage_hashes_to_update(self, shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-		let mut key_hashes = Vec::new();
-		match self.call {
-			TrustedCall::noop(..) => debug!("No storage updates needed..."),
-			TrustedCall::guess_the_number(call) =>
-				key_hashes.append(&mut <GuessTheNumberTrustedCall as ExecuteCall<
-					NodeMetadataRepository,
-				>>::get_storage_hashes_to_update(call, shard)),
-			_ => debug!("No storage updates needed..."),
-		};
-		key_hashes
-	}
 }
 
 #[derive(Debug, Copy, Clone)]

@@ -207,13 +207,6 @@ impl ExecuteGetter for Getter {
 			Getter::public(g) => g.execute(),
 		}
 	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		match self {
-			Getter::trusted(g) => g.get_storage_hashes_to_update(),
-			Getter::public(g) => g.get_storage_hashes_to_update(),
-		}
-	}
 }
 
 impl ExecuteGetter for TrustedGetterSigned {
@@ -290,16 +283,6 @@ impl ExecuteGetter for TrustedGetterSigned {
 					None
 				},
 		}
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		let mut key_hashes = Vec::new();
-		match self.getter {
-			TrustedGetter::guess_the_number(getter) =>
-				key_hashes.append(&mut getter.get_storage_hashes_to_update()),
-			_ => debug!("No storage updates needed..."),
-		};
-		key_hashes
 	}
 }
 
@@ -382,16 +365,6 @@ impl ExecuteGetter for PublicGetter {
 				Some(Assets::total_supply(asset_id).encode()),
 			PublicGetter::guess_the_number(getter) => getter.execute(),
 		}
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		let mut key_hashes = Vec::new();
-		match self {
-			Self::guess_the_number(getter) =>
-				key_hashes.append(&mut getter.get_storage_hashes_to_update()),
-			_ => debug!("No storage updates needed..."),
-		};
-		key_hashes
 	}
 }
 

@@ -68,9 +68,6 @@ where
 		let mut state = State::new(Default::default());
 
 		state.execute_with(|| {
-			// Do not set genesis for pallets that are meant to be on-chain
-			// use get_storage_hashes_to_update instead.
-
 			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &0u128.encode());
 			sp_io::storage::set(&storage_value_key("Balances", "CreationFee"), &1u128.encode());
 			sp_io::storage::set(&storage_value_key("Balances", "TransferFee"), &1u128.encode());

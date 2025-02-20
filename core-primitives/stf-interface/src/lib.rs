@@ -120,17 +120,12 @@ where
 		shard: &ShardIdentifier,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error>;
-
-	/// Get storages hashes that should be updated for a specific call.
-	fn get_storage_hashes_to_update(self, shard: &ShardIdentifier) -> Vec<Vec<u8>>;
 }
 
 /// Trait used to abstract the getter execution.
 pub trait ExecuteGetter {
 	/// Execute a getter.
 	fn execute(self) -> Option<Vec<u8>>;
-	/// Get storages hashes that should be updated for a specific getter.
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>>;
 }
 
 #[derive(Debug, Clone, Copy, Encode, Decode)]

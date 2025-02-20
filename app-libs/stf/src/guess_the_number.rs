@@ -134,11 +134,6 @@ where
 		}?;
 		Ok(())
 	}
-
-	fn get_storage_hashes_to_update(self, _shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-		debug!("No storage updates needed...");
-		Vec::new()
-	}
 }
 
 pub fn get_fee_for(tc: &GuessTheNumberTrustedCall) -> Balance {
@@ -184,10 +179,6 @@ impl ExecuteGetter for GuessTheNumberPublicGetter {
 			},
 		}
 	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
-	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -209,9 +200,5 @@ impl ExecuteGetter for GuessTheNumberTrustedGetter {
 		match self {
 			Self::attempts { origin } => Some(GuessTheNumber::guess_attempts(&origin).encode()),
 		}
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
 	}
 }

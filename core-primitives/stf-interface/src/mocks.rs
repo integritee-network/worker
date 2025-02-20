@@ -124,20 +124,12 @@ impl ExecuteCall<NodeMetadataRepository<NodeMetadataMock>> for CallExecutorMock 
 	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
-
-	fn get_storage_hashes_to_update(self, _shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-		unimplemented!()
-	}
 }
 
 pub struct GetterExecutorMock;
 
 impl ExecuteGetter for GetterExecutorMock {
 	fn execute(self) -> Option<Vec<u8>> {
-		unimplemented!()
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }

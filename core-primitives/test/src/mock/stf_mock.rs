@@ -204,10 +204,6 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 			},
 		}
 	}
-
-	fn get_storage_hashes_to_update(self, _shard: &ShardIdentifier) -> Vec<Vec<u8>> {
-		Vec::new()
-	}
 }
 
 impl TrustedCallVerification for TrustedCallSignedMock {
