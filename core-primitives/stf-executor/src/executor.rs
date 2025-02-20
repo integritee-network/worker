@@ -198,7 +198,7 @@ where
 		if let Some(shard_id) = shards.get(0) {
 			debug!("Update STF storage upon block import!");
 
-			if let Ok(storage_value_verified) =
+			if let Ok(upgradable_shard_config) =
 				self.ocall_api.get_storage_verified::<Header, UpgradableShardConfig>(
 					storage_map_key(
 						"EnclaveBridge",
@@ -209,29 +209,23 @@ where
 					header,
 					parentchain_id,
 				) {
-				if let Some(upgradable_shard_config) = storage_value_verified.value {
-					let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) = (
-						upgradable_shard_config.upgrade_at,
-						upgradable_shard_config.pending_upgrade,
-					) {
-						info!(
-							"[{:?}] pending shard config upgrade at block {}",
-							parentchain_id, upgrade_block
-						);
-						if header.number >= upgrade_block {
-							pending_upgrade
-						} else {
-							upgradable_shard_config.active_config
-						}
+				let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
+					(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
+				{
+					info!(
+						"[{:?}] pending shard config upgrade at block {}",
+						parentchain_id, upgrade_block
+					);
+					if header.number >= upgrade_block {
+						pending_upgrade
 					} else {
 						upgradable_shard_config.active_config
-					};
-					info!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
-					info!(
-						"ShardConfig::maintenance_mode = {}",
-						actual_shard_config.maintenance_mode
-					);
-				}
+					}
+				} else {
+					upgradable_shard_config.active_config
+				};
+				info!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
+				info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
 			};
 
 			/*
@@ -243,7 +237,7 @@ where
 						);
 						let prefixed_state_diff_update = if let Ok(storage_values) = self
 							.ocall_api
-							.get_multiple_storages_verified(storage_hashes, header, parentchain_id)
+							.get_multiple_opaque_storages_verified(storage_hashes, header, parentchain_id)
 						{
 							info!("mirror verified storage_values: {:?}", storage_values);
 							prefix_storage_keys_for_parentchain_mirror(

@@ -22,7 +22,7 @@ use frame_support::ensure;
 use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
-use itp_storage::{verify_storage_entries, Error as StorageError};
+use itp_storage::{verify_storage_entries, Error as StorageError, Error::StorageValueUnavailable};
 use itp_types::{
 	storage::{StorageEntry, StorageEntryVerified},
 	WorkerRequest, WorkerResponse, H256,
@@ -100,22 +100,27 @@ impl EnclaveOnChainOCallApi for OcallApi {
 		storage_hash: Vec<u8>,
 		header: &H,
 		parentchain_id: &ParentchainId,
-	) -> Result<StorageEntryVerified<V>> {
+	) -> Result<V> {
 		// the code below seems like an overkill, but it is surprisingly difficult to
 		// get an owned value from a `Vec` without cloning.
-		Ok(self
-			.get_multiple_storages_verified(vec![storage_hash], header, parentchain_id)?
+		let opaque_value_verified = self
+			.get_multiple_opaque_storages_verified(vec![storage_hash], header, parentchain_id)?
 			.into_iter()
 			.next()
-			.ok_or(StorageError::StorageValueUnavailable)?)
+			.map(|sv| sv.value)
+			.flatten()
+			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))?;
+		Decode::decode(&mut opaque_value_verified.as_slice())
+			.map_err(|e| itp_ocall_api::Error::Codec(e.into()))
 	}
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+	/// this returns opaque/encoded values as we can't assume all values are of same type
+	fn get_multiple_opaque_storages_verified<H: Header<Hash = H256>>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
 		parentchain_id: &ParentchainId,
-	) -> Result<Vec<StorageEntryVerified<V>>> {
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>> {
 		let requests = storage_hashes
 			.into_iter()
 			.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))

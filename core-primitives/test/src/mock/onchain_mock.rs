@@ -20,7 +20,7 @@ use codec::{Decode, Encode};
 use core::fmt::Debug;
 use itp_ocall_api::{
 	EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi,
-	EnclaveSidechainOCallApi,
+	EnclaveSidechainOCallApi, Error,
 };
 use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_storage::Error::StorageValueUnavailable;
@@ -198,27 +198,27 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 		storage_hash: Vec<u8>,
 		header: &Header,
 		parentchain_id: &ParentchainId,
-	) -> Result<StorageEntryVerified<V>, itp_ocall_api::Error> {
-		self.get_multiple_storages_verified(vec![storage_hash], header, parentchain_id)?
+	) -> Result<V, itp_ocall_api::Error> {
+		let opaque_value_verified = self
+			.get_multiple_opaque_storages_verified(vec![storage_hash], header, parentchain_id)?
 			.into_iter()
 			.next()
-			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))
+			.map(|sv| sv.value)
+			.flatten()
+			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))?;
+		Decode::decode(&mut opaque_value_verified.as_slice())
+			.map_err(|e| itp_ocall_api::Error::Codec(e.into()))
 	}
 
-	fn get_multiple_storages_verified<Header: HeaderTrait<Hash = H256>, V: Decode>(
+	fn get_multiple_opaque_storages_verified<Header: HeaderTrait<Hash = H256>>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &Header,
 		_: &ParentchainId,
-	) -> Result<Vec<StorageEntryVerified<V>>, itp_ocall_api::Error> {
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>, itp_ocall_api::Error> {
 		let mut entries = Vec::with_capacity(storage_hashes.len());
 		for hash in storage_hashes.into_iter() {
-			let value = self
-				.get_at_header(header, &hash)
-				.map(|val| Decode::decode(&mut val.as_slice()))
-				.transpose()
-				.map_err(itp_ocall_api::Error::Codec)?;
-
+			let value = self.get_at_header(header, &hash).map(|v| v.clone());
 			entries.push(StorageEntryVerified::new(hash, value))
 		}
 		Ok(entries)
