@@ -18,11 +18,15 @@
 #[cfg(feature = "test")]
 use crate::test_genesis::test_genesis_setup;
 use crate::{
-	helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault},
+	helpers::{
+		enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault,
+		shielding_target_genesis_hash,
+	},
 	Stf, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
+use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
 	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
 };
@@ -45,10 +49,10 @@ use itp_stf_primitives::{
 	error::StfError, traits::TrustedCallVerification, types::ShardIdentifier,
 };
 use itp_storage::storage_value_key;
-use itp_types::parentchain::{AccountId, Hash, ParentchainCall, ParentchainId};
+use itp_types::parentchain::{AccountId, BlockNumber, Hash, ParentchainCall, ParentchainId};
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
-use sp_runtime::traits::StaticLookup;
+use sp_runtime::{traits::StaticLookup, SaturatedConversion};
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
 
 impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
@@ -185,6 +189,17 @@ where
 		});
 		Ok(())
 	}
+
+	fn maintenance_mode_tasks(_state: &mut State, age_blocks: i32) -> Result<(), Self::Error> {
+		if BlockNumber::saturated_from(age_blocks)
+			> MinimalChainSpec::maintenance_mode_duration_before_retirement(
+				shielding_target_genesis_hash().unwrap_or_default(),
+			) {
+			warn!("Maintenance mode has expired. Executing shard retirement tasks");
+		}
+		Ok(())
+	}
+
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
 		trace!("on_finalize called");
 

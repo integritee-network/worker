@@ -45,7 +45,7 @@ use itp_types::{
 	Balance, ShardConfig, UpgradableShardConfig, H256,
 };
 use log::*;
-use sp_runtime::traits::Header as HeaderTrait;
+use sp_runtime::{traits::Header as HeaderTrait, SaturatedConversion};
 use std::{
 	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec,
 	vec::Vec,
@@ -266,7 +266,7 @@ where
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities, TCS, G>>
 	where
-		PH: HeaderTrait<Hash = H256>,
+		PH: HeaderTrait<Hash = H256, Number = BlockNumber>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
 		let started_at = duration_now();
@@ -278,9 +278,13 @@ where
 		let mut state = prepare_state_function(state);
 		let mut executed_and_failed_calls = Vec::<ExecutedOperation<TCS, G>>::new();
 
-		let maintenance_mode =
-			get_active_shard_config::<StateHandler, Stf, G, PH>(shard, header, &mut state)
-				.map_or(false, |shard_config| shard_config.maintenance_mode);
+		let (maintenance_mode, maintenance_mode_age) =
+			get_active_shard_config::<StateHandler, Stf, G, PH>(shard, header, &mut state).map_or(
+				(false, 0),
+				|(shard_config, maybe_age)| {
+					(shard_config.maintenance_mode, maybe_age.unwrap_or_default())
+				},
+			);
 
 		// i.e. setting timestamp of new block
 		Stf::on_initialize(&mut state, now_as_millis()).unwrap_or_else(|e| {
@@ -373,7 +377,7 @@ fn get_active_shard_config<StateHandler, Stf, G, PH>(
 	shard: &ShardIdentifier,
 	header: &PH,
 	state: &mut <StateHandler as HandleState>::StateT,
-) -> Option<ShardConfig>
+) -> Option<(ShardConfig, Option<i32>)>
 where
 	Stf: UpdateState<
 			StateHandler::StateT,
@@ -382,7 +386,7 @@ where
 	StateHandler: HandleState<HashType = H256>,
 	StateHandler::StateT: SgxExternalitiesTrait + Encode,
 	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + GetDecimals,
-	PH: HeaderTrait<Hash = H256>,
+	PH: HeaderTrait<Hash = H256, Number = BlockNumber>,
 {
 	Stf::get_parentchain_mirror_state::<UpgradableShardConfig>(
 		state,
@@ -390,21 +394,24 @@ where
 		&ParentchainId::Integritee,
 	)
 	.map(|upgradable_shard_config| {
-		let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
+		let (actual_shard_config, maybe_age) = if let (Some(upgrade_block), Some(pending_upgrade)) =
 			(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
 		{
 			trace!("pending shard config upgrade at block {}", upgrade_block);
-			if *header.number() >= upgrade_block.into() {
-				pending_upgrade
+			let age = i32::saturated_from(
+				i64::from(*header.number()).saturating_sub(upgrade_block.into()),
+			);
+			if age >= 0 {
+				(pending_upgrade, Some(age))
 			} else {
-				upgradable_shard_config.active_config
+				(upgradable_shard_config.active_config, None)
 			}
 		} else {
-			upgradable_shard_config.active_config
+			(upgradable_shard_config.active_config, None)
 		};
 		trace!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
-		info!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
-		actual_shard_config
+		trace!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
+		(actual_shard_config, maybe_age)
 	})
 }
 

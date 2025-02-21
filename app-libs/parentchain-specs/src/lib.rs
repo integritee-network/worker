@@ -19,7 +19,8 @@
 
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
-use itp_types::parentchain::{Balance, Hash};
+
+use itp_types::parentchain::{Balance, BlockNumber, Hash};
 use log::warn;
 
 pub const PASEO_RELAY_GENESIS_HASH_HEX: &str =
@@ -69,5 +70,18 @@ impl MinimalChainSpec {
 	}
 	pub fn one_unit(genesis_hash: Hash) -> Balance {
 		10u128.pow(Self::decimals(genesis_hash) as u32)
+	}
+
+	/// maintenance mode should be a temporary measure.
+	/// If a problem can't be resolved within the time specified here, the shard should be retired to avoid loss of user funds
+	pub fn maintenance_mode_duration_before_retirement(genesis_hash: Hash) -> BlockNumber {
+		let genesis_hash_hex = hex::encode(genesis_hash);
+		match genesis_hash_hex.as_ref() {
+			PASEO_RELAY_GENESIS_HASH_HEX
+			| ASSET_HUB_PASEO_GENESIS_HASH_HEX
+			| INTEGRITEE_PASEO_GENESIS_HASH_HEX => 7200, // 24h at 12s block time
+			LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => 50, // 10 min at 12s block time
+			_ => 216_000, // 30d for all production chains
+		}
 	}
 }

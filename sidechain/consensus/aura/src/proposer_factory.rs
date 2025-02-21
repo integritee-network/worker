@@ -22,7 +22,7 @@ use ita_stf::{Getter, TrustedCallSigned};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::H256;
+use itp_types::{parentchain::BlockNumber, H256};
 use its_block_composer::ComposeBlock;
 use its_consensus_common::{Environment, Error as ConsensusError};
 use its_primitives::traits::{
@@ -31,7 +31,7 @@ use its_primitives::traits::{
 };
 use its_state::{SidechainState, SidechainSystemExt};
 use sp_runtime::{
-	traits::{Block, NumberFor},
+	traits::{Block, Header, NumberFor},
 	MultiSignature,
 };
 use std::{marker::PhantomData, sync::Arc};
@@ -72,6 +72,7 @@ impl<
 	for ProposerFactory<ParentchainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
 where
 	NumberFor<ParentchainBlock>: BlockNumberOps,
+	ParentchainBlock::Header: Header<Number = BlockNumber>,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
 		+ 'static,
 	SignedSidechainBlock::Block: SidechainBlockTrait<Public = sp_core::ed25519::Public>,

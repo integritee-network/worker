@@ -141,6 +141,7 @@ pub enum TrustedCall {
 		Option<U256>,
 		Vec<(H160, Vec<H256>)>,
 	) = 93,
+	force_unshield_all(AccountId, AccountId, Option<AssetId>) = 254, // (Root, Account, AssetId or native)
 	#[cfg(any(feature = "test", test))]
 	balance_set_balance(AccountId, AccountId, Balance, Balance) = 255,
 }
@@ -177,6 +178,7 @@ impl TrustedCall {
 			#[cfg(feature = "evm")]
 			Self::evm_create2(sender_account, ..) => sender_account,
 			Self::guess_the_number(call) => call.sender_account(),
+			Self::force_unshield_all(sender_account, ..) => sender_account,
 		}
 	}
 }
@@ -370,9 +372,18 @@ where
 				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
 			},
-			TrustedCall::balance_unshield(account_incognito, beneficiary, value, shard) => {
-				let (vault, parentchain_id) = shard_vault()
-					.ok_or_else(|| StfError::Dispatch("no shard vault key defined".to_string()))?;
+			TrustedCall::balance_unshield(account_incognito, beneficiary, value, call_shard) => {
+				if !(*shard == call_shard) {
+					return Err(StfError::Dispatch("wrong shard".to_string()))
+				}
+				let parentchain_call = parentchain_vault_proxy_call(
+					unshield_native_from_vault_parentchain_call(
+						&beneficiary,
+						value,
+						node_metadata_repo.clone(),
+					)?,
+					node_metadata_repo.clone(),
+				)?;
 				std::println!(
 					"⣿STF⣿ 🛡👐 balance_unshield from ⣿⣿⣿ to {}, amount {}",
 					account_id_to_string(&beneficiary),
@@ -387,37 +398,11 @@ where
 				);
 				// now that the above hasn't failed, we can execute
 				burn_funds(&account_incognito, value)?;
-				store_note(
+				let _ = store_note(
 					&account_incognito,
 					self.call,
 					vec![account_incognito.clone(), beneficiary.clone()],
-				)?;
-				let vault_address = Address::from(vault);
-				let vault_transfer_call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					Address::from(beneficiary),
-					Compact(value),
-				));
-				let call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.proxy_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					vault_address,
-					None::<ProxyType>,
-					vault_transfer_call,
-				));
-				let mortality =
-					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
-
-				let parentchain_call = match parentchain_id {
-					ParentchainId::Integritee => ParentchainCall::Integritee { call, mortality },
-					ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
-					ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
-				};
+				);
 				calls.push(parentchain_call);
 				Ok(())
 			},
@@ -435,6 +420,16 @@ where
 				if !(*shard == call_shard) {
 					return Err(StfError::Dispatch("wrong shard".to_string()))
 				}
+				let call = OpaqueCall::from_tuple(&(
+					node_metadata_repo
+						.get_from_metadata(|m| m.unshield_funds_call_indexes())
+						.map_err(|_| StfError::InvalidMetadata)?
+						.map_err(|_| StfError::InvalidMetadata)?,
+					shard,
+					beneficiary.clone(),
+					value,
+					call_hash,
+				));
 				std::println!(
 					"⣿STF⣿ 🛡👐 balance_unshield through enclave bridge pallet from ⣿⣿⣿ to {}, amount {}",
 					account_id_to_string(&beneficiary),
@@ -448,21 +443,11 @@ where
 				);
 				// now that the above hasn't failed, we can execute
 				burn_funds(&account_incognito, value)?;
-				store_note(
+				let _ = store_note(
 					&account_incognito,
 					self.call,
 					vec![account_incognito.clone(), beneficiary.clone()],
-				)?;
-				let call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.unshield_funds_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					shard,
-					beneficiary,
-					value,
-					call_hash,
-				));
+				);
 				let mortality = get_mortality(ParentchainId::Integritee, 32)
 					.unwrap_or_else(GenericMortality::immortal);
 				let parentchain_call = ParentchainCall::Integritee { call, mortality };
@@ -484,8 +469,8 @@ where
 					StfError::WrongParentchainIdForShardVault
 				);
 				std::println!("⣿STF⣿ 🛡 will shield to {}", account_id_to_string(&who));
+				store_note(&enclave_account, self.call, vec![who.clone()])?;
 				shield_funds(&who, value)?;
-				store_note(&enclave_account, self.call, vec![who])?;
 				Ok(())
 			},
 			TrustedCall::balance_shield_through_enclave_bridge_pallet(
@@ -679,47 +664,15 @@ where
 					account_id_to_string(&beneficiary),
 					value
 				);
-				let (vault, parentchain_id) = shard_vault().ok_or_else(|| {
-					StfError::Dispatch("shard vault key hasn't been set".to_string())
-				})?;
-				let vault_address = Address::from(vault);
-				let vault_transfer_call = match asset_id.reserve_instance() {
-					Some(FOREIGN_ASSETS) => {
-						let location = asset_id
-							.into_location(shielding_target_genesis_hash().unwrap_or_default())
-							.ok_or(StfError::Dispatch("unknown asset id location".into()))?;
-						OpaqueCall::from_tuple(&(
-							node_metadata_repo
-								.get_from_metadata(|m| {
-									m.foreign_assets_transfer_keep_alive_call_indexes()
-								})
-								.map_err(|_| StfError::InvalidMetadata)?
-								.map_err(|_| StfError::InvalidMetadata)?,
-							location,
-							Address::Id(beneficiary.clone()),
-							Compact(value),
-						))
-					},
-					Some(NATIVE_ASSETS) => {
-						let native_asset_id = asset_id
-							.into_asset_hub_index(
-								shielding_target_genesis_hash().unwrap_or_default(),
-							)
-							.ok_or(StfError::Dispatch("unknown asset index".into()))?;
-						OpaqueCall::from_tuple(&(
-							node_metadata_repo
-								.get_from_metadata(|m| {
-									m.native_assets_transfer_keep_alive_call_indexes()
-								})
-								.map_err(|_| StfError::InvalidMetadata)?
-								.map_err(|_| StfError::InvalidMetadata)?,
-							Compact(native_asset_id),
-							Address::Id(beneficiary.clone()),
-							Compact(value),
-						))
-					},
-					_ => return Err(StfError::Dispatch("unknown asset id reserve".into())),
-				};
+				let parentchain_call = parentchain_vault_proxy_call(
+					unshield_assets_parentchain_call(
+						&beneficiary,
+						value,
+						asset_id,
+						node_metadata_repo.clone(),
+					)?,
+					node_metadata_repo.clone(),
+				)?;
 				// now that all the above hasn't failed, we can execute
 				burn_assets(&account_incognito, value, asset_id)?;
 				store_note(
@@ -727,23 +680,6 @@ where
 					self.call,
 					vec![account_incognito.clone(), beneficiary],
 				)?;
-				let call = OpaqueCall::from_tuple(&(
-					node_metadata_repo
-						.get_from_metadata(|m| m.proxy_call_indexes())
-						.map_err(|_| StfError::InvalidMetadata)?
-						.map_err(|_| StfError::InvalidMetadata)?,
-					vault_address,
-					None::<ProxyType>,
-					vault_transfer_call,
-				));
-				let mortality =
-					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
-
-				let parentchain_call = match parentchain_id {
-					ParentchainId::Integritee => ParentchainCall::Integritee { call, mortality },
-					ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
-					ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
-				};
 				calls.push(parentchain_call);
 				Ok(())
 			},
@@ -767,8 +703,8 @@ where
 					StfError::WrongParentchainIdForShardVault
 				);
 				std::println!("⣿STF⣿ 🛡 will shield assets to {}", account_id_to_string(&who));
+				store_note(&enclave_account, self.call, vec![who.clone()])?;
 				shield_assets(&who, value, asset_id)?;
-				store_note(&enclave_account, self.call, vec![who])?;
 				Ok(())
 			},
 			#[cfg(feature = "evm")]
@@ -889,6 +825,66 @@ where
 				Ok(())
 			},
 			TrustedCall::guess_the_number(call) => call.execute(calls, &shard, node_metadata_repo),
+			TrustedCall::force_unshield_all(_, who, maybe_asset_id) => {
+				if let Some(asset_id) = maybe_asset_id {
+					let balance = Assets::balance(asset_id, &who);
+					let unshield_amount =
+						balance.saturating_sub(asset_id.one_unit() / STF_TX_FEE_UNIT_DIVIDER * 3);
+					let parentchain_call = parentchain_vault_proxy_call(
+						unshield_assets_parentchain_call(
+							&who,
+							unshield_amount,
+							asset_id,
+							node_metadata_repo.clone(),
+						)?,
+						node_metadata_repo.clone(),
+					)?;
+					std::println!(
+						"⣿STF⣿ 🛡👐 force unshield all for {}, value {} {:?} ",
+						account_id_to_string(&who),
+						unshield_amount,
+						asset_id
+					);
+					// now that all the above hasn't failed, we can execute
+					store_note(&who, self.call, vec![who.clone()])?;
+					burn_assets(&who, balance, asset_id)?;
+					calls.push(parentchain_call);
+				} else {
+					let info = System::account(&who);
+					let balance = info.data.free.saturating_add(info.data.reserved);
+					let unshield_amount = balance.saturating_sub(
+						MinimalChainSpec::one_unit(
+							shielding_target_genesis_hash().unwrap_or_default(),
+						) / STF_TX_FEE_UNIT_DIVIDER
+							* 3,
+					);
+					let parentchain_call = parentchain_vault_proxy_call(
+						unshield_native_from_vault_parentchain_call(
+							&who,
+							unshield_amount,
+							node_metadata_repo.clone(),
+						)?,
+						node_metadata_repo.clone(),
+					)?;
+					std::println!(
+						"⣿STF⣿ 🛡👐 force unshield all for {}, value {} native",
+						account_id_to_string(&who),
+						unshield_amount,
+					);
+					// now that all the above hasn't failed, we can execute
+					store_note(&who, self.call, vec![who.clone()])?;
+					ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
+						who: MultiAddress::Id(who.clone()),
+						new_free: 0,
+					}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					.map_err(|e| {
+						Self::Error::Dispatch(format!("Balance burn balance error: {:?}", e.error))
+					})?;
+					calls.push(parentchain_call);
+				}
+				Ok(())
+			},
 		}?;
 		Ok(())
 	}
@@ -937,6 +933,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::evm_withdraw(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(any(feature = "test", test))]
 		TrustedCall::balance_set_balance(..) => 0,
+		TrustedCall::force_unshield_all(..) => 0,
 		// can be called by anyone so can't be free!
 		TrustedCall::noop(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 	};
@@ -1078,6 +1075,97 @@ fn shield_assets(account: &AccountId, amount: u128, asset_id: AssetId) -> Result
 
 	Ok(())
 }
+
+fn unshield_native_from_vault_parentchain_call<NodeMetadataRepository>(
+	beneficiary: &AccountId,
+	value: Balance,
+	node_metadata_repo: Arc<NodeMetadataRepository>,
+) -> Result<OpaqueCall, StfError>
+where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+{
+	Ok(OpaqueCall::from_tuple(&(
+		node_metadata_repo
+			.get_from_metadata(|m| m.transfer_keep_alive_call_indexes())
+			.map_err(|_| StfError::InvalidMetadata)?
+			.map_err(|_| StfError::InvalidMetadata)?,
+		Address::from(beneficiary.clone()),
+		Compact(value),
+	)))
+}
+fn unshield_assets_parentchain_call<NodeMetadataRepository>(
+	beneficiary: &AccountId,
+	value: Balance,
+	asset_id: AssetId,
+	node_metadata_repo: Arc<NodeMetadataRepository>,
+) -> Result<OpaqueCall, StfError>
+where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+{
+	match asset_id.reserve_instance() {
+		Some(FOREIGN_ASSETS) => {
+			let location = asset_id
+				.into_location(shielding_target_genesis_hash().unwrap_or_default())
+				.ok_or(StfError::Dispatch("unknown asset id location".into()))?;
+			Ok(OpaqueCall::from_tuple(&(
+				node_metadata_repo
+					.get_from_metadata(|m| m.foreign_assets_transfer_keep_alive_call_indexes())
+					.map_err(|_| StfError::InvalidMetadata)?
+					.map_err(|_| StfError::InvalidMetadata)?,
+				location,
+				Address::Id(beneficiary.clone()),
+				Compact(value),
+			)))
+		},
+		Some(NATIVE_ASSETS) => {
+			let native_asset_id = asset_id
+				.into_asset_hub_index(shielding_target_genesis_hash().unwrap_or_default())
+				.ok_or(StfError::Dispatch("unknown asset index".into()))?;
+			Ok(OpaqueCall::from_tuple(&(
+				node_metadata_repo
+					.get_from_metadata(|m| m.native_assets_transfer_keep_alive_call_indexes())
+					.map_err(|_| StfError::InvalidMetadata)?
+					.map_err(|_| StfError::InvalidMetadata)?,
+				Compact(native_asset_id),
+				Address::Id(beneficiary.clone()),
+				Compact(value),
+			)))
+		},
+		_ => Err(StfError::Dispatch("unknown asset id reserve".into())),
+	}
+}
+
+fn parentchain_vault_proxy_call<NodeMetadataRepository>(
+	call: OpaqueCall,
+	node_metadata_repo: Arc<NodeMetadataRepository>,
+) -> Result<ParentchainCall, StfError>
+where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+{
+	let (vault, parentchain_id) = shard_vault()
+		.ok_or_else(|| StfError::Dispatch("shard vault key hasn't been set".to_string()))?;
+	let vault_address = Address::from(vault);
+	let call = OpaqueCall::from_tuple(&(
+		node_metadata_repo
+			.get_from_metadata(|m| m.proxy_call_indexes())
+			.map_err(|_| StfError::InvalidMetadata)?
+			.map_err(|_| StfError::InvalidMetadata)?,
+		vault_address,
+		None::<ProxyType>,
+		call,
+	));
+	let mortality = get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
+
+	Ok(match parentchain_id {
+		ParentchainId::Integritee => ParentchainCall::Integritee { call, mortality },
+		ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
+		ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
+	})
+}
+
 fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Balance>, StfError> {
 	let delegator = tcs.sender_account();
 	if let Some(delegate) = tcs.delegate.clone() {

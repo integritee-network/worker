@@ -84,6 +84,14 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		trace!("on_initialize called at epoch {}", now);
 		Ok(())
 	}
+
+	fn maintenance_mode_tasks(
+		_state: &mut SgxExternalities,
+		_age_blocks: i32,
+	) -> Result<(), Self::Error> {
+		todo!()
+	}
+
 	fn on_finalize(_state: &mut SgxExternalities) -> Result<(), Self::Error> {
 		trace!("on_finalize called");
 		Ok(())

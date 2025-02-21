@@ -76,6 +76,11 @@ where
 	fn on_initialize(_state: &mut State, _now: Moment) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
+
+	fn maintenance_mode_tasks(_state: &mut State, _age_blocks: i32) -> Result<(), Self::Error> {
+		todo!()
+	}
+
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
