@@ -90,7 +90,13 @@ where
 	fn on_initialize(state: &mut State, now: Moment) -> Result<(), Self::Error>;
 
 	/// to be executed after initialize before all other calls if shard is in maintenance mode
-	fn maintenance_mode_tasks(state: &mut State, age_blocks: i32) -> Result<(), Self::Error>;
+	fn maintenance_mode_tasks(
+		age_blocks: i32,
+		state: &mut State,
+		shard: &itp_stf_primitives::types::ShardIdentifier,
+		calls: &mut Vec<ParentchainCall>,
+		node_metadata_repo: Arc<NodeMetadataRepository>,
+	) -> Result<(), Self::Error>;
 
 	/// to be executed after any TrustedCalls in this batch/block
 	fn on_finalize(state: &mut State) -> Result<(), Self::Error>;

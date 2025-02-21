@@ -22,13 +22,14 @@ use crate::{
 		enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault,
 		shielding_target_genesis_hash,
 	},
-	Stf, ENCLAVE_ACCOUNT_KEY,
+	Stf, TrustedCall, TrustedCallSigned, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
 use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
-	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ExistentialDeposit, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
+	ParentchainInstanceTargetB,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_pallet_storage::{
@@ -46,10 +47,15 @@ use itp_stf_interface::{
 	StateCallInterface, StateGetterInterface, UpdateState,
 };
 use itp_stf_primitives::{
-	error::StfError, traits::TrustedCallVerification, types::ShardIdentifier,
+	error::StfError,
+	traits::TrustedCallVerification,
+	types::{ShardIdentifier, Signature},
 };
 use itp_storage::storage_value_key;
-use itp_types::parentchain::{AccountId, BlockNumber, Hash, ParentchainCall, ParentchainId};
+use itp_types::{
+	parentchain::{AccountId, BlockNumber, Hash, ParentchainCall, ParentchainId},
+	Nonce,
+};
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
 use sp_runtime::{traits::StaticLookup, SaturatedConversion};
@@ -70,20 +76,6 @@ where
 
 		state.execute_with(|| {
 			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &0u128.encode());
-			sp_io::storage::set(&storage_value_key("Balances", "CreationFee"), &1u128.encode());
-			sp_io::storage::set(&storage_value_key("Balances", "TransferFee"), &1u128.encode());
-			sp_io::storage::set(
-				&storage_value_key("Balances", "TransactionBaseFee"),
-				&1u128.encode(),
-			);
-			sp_io::storage::set(
-				&storage_value_key("Balances", "TransactionByteFee"),
-				&1u128.encode(),
-			);
-			sp_io::storage::set(
-				&storage_value_key("Balances", "ExistentialDeposit"),
-				&1u128.encode(),
-			);
 		});
 
 		#[cfg(feature = "test")]
@@ -190,14 +182,65 @@ where
 		Ok(())
 	}
 
-	fn maintenance_mode_tasks(_state: &mut State, age_blocks: i32) -> Result<(), Self::Error> {
+	fn maintenance_mode_tasks(
+		age_blocks: i32,
+		state: &mut State,
+		shard: &ShardIdentifier,
+		calls: &mut Vec<ParentchainCall>,
+		node_metadata_repo: Arc<NodeMetadataRepository>,
+	) -> Result<(), Self::Error> {
 		if BlockNumber::saturated_from(age_blocks)
 			> MinimalChainSpec::maintenance_mode_duration_before_retirement(
 				shielding_target_genesis_hash().unwrap_or_default(),
 			) {
 			warn!("Maintenance mode has expired. Executing shard retirement tasks");
+			// find one account with nonzero balance: assets first, then native
+			state.execute_with(|| {
+				// TODO: this is only for native. do it for all assets too
+				// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks
+				let accounts: Vec<(AccountId, Nonce)> =
+					frame_system::Account::<ita_sgx_runtime::Runtime>::iter()
+						.filter_map(|(account_id, account_info)| {
+							(account_info.data.free > ExistentialDeposit::get())
+								.then_some((account_id, account_info.nonce))
+						})
+						.collect();
+				info!("found {} accounts to recover", accounts.len());
+				// we won't put this call through the TOP pool. No signature check will happen.
+				// We just want to use the handy ExecuteCall trait
+				let fake_signature =
+					Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
+				for (account, nonce) in accounts {
+					info!("force unshield for {:?}", account);
+					let tcs = TrustedCallSigned {
+						call: TrustedCall::force_unshield_all(
+							account.clone(),
+							account.clone(),
+							None,
+						),
+						nonce,
+						delegate: None,
+						signature: fake_signature.clone(),
+					};
+					// Replace with `inspect_err` once it's stable.
+					tcs.execute(calls, shard, node_metadata_repo.clone())
+						.map_err(|e| {
+							error!("Failed to force-unshield for {:?}: {:?}", account, e);
+							()
+						})
+						.ok();
+				}
+				Ok(())
+			})
+		} else {
+			info!(
+				"Maintenance mode is active and retirement will start in {} parentchain blocks",
+				MinimalChainSpec::maintenance_mode_duration_before_retirement(
+					shielding_target_genesis_hash().unwrap_or_default(),
+				) - BlockNumber::saturated_from(age_blocks)
+			);
+			Ok(())
 		}
-		Ok(())
 	}
 
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {

@@ -77,7 +77,13 @@ where
 		unimplemented!()
 	}
 
-	fn maintenance_mode_tasks(_state: &mut State, _age_blocks: i32) -> Result<(), Self::Error> {
+	fn maintenance_mode_tasks(
+		_age_blocks: i32,
+		_state: &mut State,
+		_shard: &itp_stf_primitives::types::ShardIdentifier,
+		_calls: &mut Vec<ParentchainCall>,
+		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
+	) -> Result<(), Self::Error> {
 		todo!()
 	}
 

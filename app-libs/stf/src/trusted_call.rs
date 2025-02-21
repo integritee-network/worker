@@ -848,7 +848,9 @@ where
 					// now that all the above hasn't failed, we can execute
 					store_note(&who, self.call, vec![who.clone()])?;
 					burn_assets(&who, balance, asset_id)?;
-					calls.push(parentchain_call);
+					if unshield_amount > 0 {
+						calls.push(parentchain_call);
+					}
 				} else {
 					let info = System::account(&who);
 					let balance = info.data.free.saturating_add(info.data.reserved);
@@ -881,7 +883,9 @@ where
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Balance burn balance error: {:?}", e.error))
 					})?;
-					calls.push(parentchain_call);
+					if unshield_amount > 0 {
+						calls.push(parentchain_call);
+					}
 				}
 				Ok(())
 			},

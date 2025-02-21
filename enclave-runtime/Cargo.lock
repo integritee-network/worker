@@ -1767,6 +1767,7 @@ dependencies = [
  "itp-types",
  "itp-utils",
  "log",
+ "pallet-assets",
  "pallet-balances",
  "pallet-notes",
  "pallet-parentchain",

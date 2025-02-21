@@ -291,10 +291,29 @@ where
 			error!("on_initialize failed: {:?}", e);
 		});
 
+		if maintenance_mode {
+			let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
+			Stf::maintenance_mode_tasks(
+				maintenance_mode_age,
+				&mut state,
+				&shard,
+				&mut extrinsic_call_backs,
+				self.node_metadata_repo.clone(),
+			)
+			.map_err(|e| error!("maintenance_mode tasks failed: {:?}", e))
+			.ok();
+			// we're hacking our unshielding calls into the queue
+			executed_and_failed_calls.push(ExecutedOperation::success(
+				H256::default(),
+				TrustedOperationOrHash::Hash(H256::default()),
+				extrinsic_call_backs,
+			));
+		}
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
 			if maintenance_mode {
 				// let all calls fail and don't process any state transitions
+				// TODO: execute shielding calls to avoid loss of funds
 				executed_and_failed_calls.push(ExecutedOperation::failed(
 					TrustedOperationOrHash::Operation(trusted_call_signed.clone().into()),
 				));

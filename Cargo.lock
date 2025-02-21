@@ -2896,6 +2896,7 @@ dependencies = [
  "itp-types",
  "itp-utils",
  "log 0.4.22",
+ "pallet-assets",
  "pallet-balances",
  "pallet-notes",
  "pallet-parentchain",
