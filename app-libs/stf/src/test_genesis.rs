@@ -26,10 +26,10 @@ use sp_runtime::MultiAddress;
 use std::{format, vec, vec::Vec};
 
 #[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-#[cfg(feature = "evm")]
 use crate::evm_helpers::get_evm_account;
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+use itp_utils::stringify::account_id_to_string;
 
 type Seed = [u8; 32];
 
@@ -106,9 +106,12 @@ pub fn endow(
 			.map_err(|e| StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error)))
 			.unwrap();
 
-			let print_public: [u8; 32] = account.clone().into();
-			let account_info = System::account(&&print_public.into());
-			debug!("{:?} balance is {}", print_public, account_info.data.free);
+			let account_info = System::account(&account);
+			info!(
+				"endowed {}. balance is {}",
+				account_id_to_string(&account),
+				account_info.data.free
+			);
 		}
 	});
 }

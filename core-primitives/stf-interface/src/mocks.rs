@@ -78,7 +78,6 @@ where
 	}
 
 	fn maintenance_mode_tasks(
-		_age_blocks: i32,
 		_state: &mut State,
 		_shard: &itp_stf_primitives::types::ShardIdentifier,
 		_calls: &mut Vec<ParentchainCall>,

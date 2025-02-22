@@ -91,7 +91,6 @@ where
 
 	/// to be executed after initialize before all other calls if shard is in maintenance mode
 	fn maintenance_mode_tasks(
-		age_blocks: i32,
 		state: &mut State,
 		shard: &itp_stf_primitives::types::ShardIdentifier,
 		calls: &mut Vec<ParentchainCall>,

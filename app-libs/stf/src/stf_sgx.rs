@@ -183,64 +183,60 @@ where
 	}
 
 	fn maintenance_mode_tasks(
-		age_blocks: i32,
 		state: &mut State,
 		shard: &ShardIdentifier,
 		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		if BlockNumber::saturated_from(age_blocks)
-			> MinimalChainSpec::maintenance_mode_duration_before_retirement(
+		state.execute_with(|| {
+			/*			if BlockNumber::saturated_from(age_blocks)
+			>= MinimalChainSpec::maintenance_mode_duration_before_retirement(
 				shielding_target_genesis_hash().unwrap_or_default(),
-			) {
+			) {*/
 			warn!("Maintenance mode has expired. Executing shard retirement tasks");
 			// find one account with nonzero balance: assets first, then native
-			state.execute_with(|| {
-				// TODO: this is only for native. do it for all assets too
-				// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks
-				let accounts: Vec<(AccountId, Nonce)> =
-					frame_system::Account::<ita_sgx_runtime::Runtime>::iter()
-						.filter_map(|(account_id, account_info)| {
-							(account_info.data.free > ExistentialDeposit::get())
-								.then_some((account_id, account_info.nonce))
-						})
-						.collect();
-				info!("found {} accounts to recover", accounts.len());
-				// we won't put this call through the TOP pool. No signature check will happen.
-				// We just want to use the handy ExecuteCall trait
-				let fake_signature =
-					Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
-				for (account, nonce) in accounts {
-					info!("force unshield for {:?}", account);
-					let tcs = TrustedCallSigned {
-						call: TrustedCall::force_unshield_all(
-							account.clone(),
-							account.clone(),
-							None,
-						),
-						nonce,
-						delegate: None,
-						signature: fake_signature.clone(),
-					};
-					// Replace with `inspect_err` once it's stable.
-					tcs.execute(calls, shard, node_metadata_repo.clone())
-						.map_err(|e| {
-							error!("Failed to force-unshield for {:?}: {:?}", account, e);
-							()
-						})
-						.ok();
-				}
-				Ok(())
-			})
-		} else {
-			info!(
-				"Maintenance mode is active and retirement will start in {} parentchain blocks",
-				MinimalChainSpec::maintenance_mode_duration_before_retirement(
-					shielding_target_genesis_hash().unwrap_or_default(),
-				) - BlockNumber::saturated_from(age_blocks)
-			);
+
+			// TODO: this is only for native. do it for all assets too
+			// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks
+			let accounts: Vec<(AccountId, Nonce)> =
+				frame_system::Account::<ita_sgx_runtime::Runtime>::iter()
+					.filter_map(|(account_id, account_info)| {
+						(account_info.data.free > ExistentialDeposit::get())
+							.then_some((account_id, account_info.nonce))
+					})
+					.collect();
+			info!("found {} accounts to recover", accounts.len());
+			// we won't put this call through the TOP pool. No signature check will happen.
+			// We just want to use the handy ExecuteCall trait
+			let fake_signature =
+				Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
+			for (account, nonce) in accounts {
+				info!("force unshield for {:?}", account);
+				let tcs = TrustedCallSigned {
+					call: TrustedCall::force_unshield_all(account.clone(), account.clone(), None),
+					nonce,
+					delegate: None,
+					signature: fake_signature.clone(),
+				};
+				// Replace with `inspect_err` once it's stable.
+				tcs.execute(calls, shard, node_metadata_repo.clone())
+					.map_err(|e| {
+						error!("Failed to force-unshield for {:?}: {:?}", account, e);
+						()
+					})
+					.ok();
+			}
 			Ok(())
-		}
+			/*	} else {
+				info!(
+					"Maintenance mode is active and retirement will start in {} parentchain blocks",
+					MinimalChainSpec::maintenance_mode_duration_before_retirement(
+						shielding_target_genesis_hash().unwrap_or_default(),
+					) - BlockNumber::saturated_from(age_blocks)
+				);
+				Ok(())
+			}*/
+		})
 	}
 
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {

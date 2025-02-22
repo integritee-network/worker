@@ -162,12 +162,12 @@ where
 								.map(|bytes| bytes.0)
 								.collect::<Vec<Vec<u8>>>()
 						});
-					info!("(mirror) ocall fetched key: {}", hex_encode(&key));
-					info!(
+					trace!("(mirror) ocall fetched key: {}", hex_encode(&key));
+					trace!(
 						"(mirror) ocall fetched storage: {:?}",
 						maybe_opaque_storage.clone().map(|v| hex_encode(&v))
 					);
-					info!(
+					trace!(
 						"(mirror) ocall fetched proof: {:?}",
 						maybe_proof.clone().map(|v| hex_encode(&v.encode()))
 					);
