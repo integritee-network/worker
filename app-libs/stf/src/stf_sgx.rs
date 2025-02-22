@@ -16,11 +16,11 @@
 */
 
 #[cfg(feature = "test")]
-use crate::test_genesis::test_genesis_setup;
+use crate::test_genesis::{test_genesis_endowees, test_genesis_setup};
 use crate::{
 	helpers::{
-		enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault,
-		shielding_target_genesis_hash,
+		enclave_signer_account, get_shard_status, get_shard_vaults, shard_creation_info,
+		shard_vault, shielding_target_genesis_hash,
 	},
 	Stf, TrustedCall, TrustedCallSigned, ENCLAVE_ACCOUNT_KEY,
 };
@@ -58,7 +58,7 @@ use itp_types::{
 };
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
-use sp_runtime::{traits::StaticLookup, SaturatedConversion};
+use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
 
 impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
@@ -194,11 +194,29 @@ where
 				shielding_target_genesis_hash().unwrap_or_default(),
 			) {*/
 			warn!("Maintenance mode has expired. Executing shard retirement tasks");
-			// find one account with nonzero balance: assets first, then native
+
+			let mut accounts_to_ignore = Vec::new();
+			accounts_to_ignore.push(enclave_signer_account());
+			#[cfg(feature = "test")]
+			accounts_to_ignore.extend(
+				test_genesis_endowees()
+					.iter()
+					.map(|(a, _)| a.clone())
+					.collect::<Vec<AccountId>>(),
+			);
+			if let Some(validateers) = get_shard_status(shard).map(|shard_status| {
+				shard_status
+					.iter()
+					.map(|signer_status| signer_status.signer.clone())
+					.collect::<Vec<AccountId>>()
+			}) {
+				accounts_to_ignore.extend(validateers);
+			}
 
 			// TODO: this is only for native. do it for all assets too
 			// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks
-			let accounts: Vec<(AccountId, Nonce)> =
+			// find all accounts with nonzero balance: assets first, then native
+			let mut accounts: Vec<(AccountId, Nonce)> =
 				frame_system::Account::<ita_sgx_runtime::Runtime>::iter()
 					.filter_map(|(account_id, account_info)| {
 						(account_info.data.free > ExistentialDeposit::get())
@@ -206,6 +224,8 @@ where
 					})
 					.collect();
 			info!("found {} accounts to recover", accounts.len());
+			accounts.retain(|(x, _)| !accounts_to_ignore.contains(x));
+			info!("will unshield {} accounts (ignoring some technical accounts)", accounts.len());
 			// we won't put this call through the TOP pool. No signature check will happen.
 			// We just want to use the handy ExecuteCall trait
 			let fake_signature =

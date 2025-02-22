@@ -62,17 +62,20 @@ pub fn test_genesis_setup(state: &mut impl SgxExternalitiesTrait) {
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
-	let mut endowees: Vec<(AccountId32, Balance)> = vec![
-		(endowed_account().public().into(), ENDOWED_ACC_FUNDS),
-		(second_endowed_account().public().into(), SECOND_ENDOWED_ACC_FUNDS),
-		(ALICE_ENCODED.into(), ALICE_FUNDS),
-	];
+	let mut endowees = test_genesis_endowees();
 
 	append_funded_alice_evm_account(&mut endowees);
 
 	endow(state, endowees);
 }
 
+pub fn test_genesis_endowees() -> Vec<(AccountId32, Balance)> {
+	vec![
+		(endowed_account().public().into(), ENDOWED_ACC_FUNDS),
+		(second_endowed_account().public().into(), SECOND_ENDOWED_ACC_FUNDS),
+		(ALICE_ENCODED.into(), ALICE_FUNDS),
+	]
+}
 #[cfg(feature = "evm")]
 fn append_funded_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance)>) {
 	let alice_evm = get_evm_account(&ALICE_ENCODED.into());
