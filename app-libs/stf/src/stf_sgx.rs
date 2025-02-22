@@ -26,9 +26,10 @@ use crate::{
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
+use ita_assets_map::AssetId;
 use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
-	ExistentialDeposit, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
+	Assets, ExistentialDeposit, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
 	ParentchainInstanceTargetB,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
@@ -230,8 +231,37 @@ where
 			// We just want to use the handy ExecuteCall trait
 			let fake_signature =
 				Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
+			let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
 			for (account, nonce) in accounts {
+				let mut nonce = nonce;
 				info!("force unshield for {:?}", account);
+				for asset_id in AssetId::all_shieldable(genesis_hash) {
+					info!("force unshield asset {:?} balance", asset_id);
+					if Assets::balance(asset_id, &account) > 0 {
+						let tcs = TrustedCallSigned {
+							call: TrustedCall::force_unshield_all(
+								account.clone(),
+								account.clone(),
+								Some(asset_id),
+							),
+							nonce,
+							delegate: None,
+							signature: fake_signature.clone(),
+						};
+						// Replace with `inspect_err` once it's stable.
+						tcs.execute(calls, shard, node_metadata_repo.clone())
+							.map_err(|e| {
+								error!(
+									"Failed to force-unshield {:?} for {:?}: {:?}",
+									asset_id, account, e
+								);
+								()
+							})
+							.ok();
+						nonce += 1;
+					}
+				}
+				info!("force unshield native balance");
 				let tcs = TrustedCallSigned {
 					call: TrustedCall::force_unshield_all(account.clone(), account.clone(), None),
 					nonce,
@@ -241,7 +271,7 @@ where
 				// Replace with `inspect_err` once it's stable.
 				tcs.execute(calls, shard, node_metadata_repo.clone())
 					.map_err(|e| {
-						error!("Failed to force-unshield for {:?}: {:?}", account, e);
+						error!("Failed to force-unshield native for {:?}: {:?}", account, e);
 						()
 					})
 					.ok();

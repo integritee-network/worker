@@ -21,7 +21,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate alloc;
 
-use alloc::sync::Arc;
+use alloc::{sync::Arc, vec, vec::Vec};
 use codec::{Decode, Encode, MaxEncodedLen};
 use hex_literal::hex;
 use ita_parentchain_specs::{
@@ -136,18 +136,18 @@ impl AssetId {
 	}
 
 	pub fn is_shieldable(&self, genesis_hash: Hash) -> bool {
+		Self::all_shieldable(genesis_hash).contains(self)
+	}
+
+	pub fn all_shieldable(genesis_hash: Hash) -> Vec<Self> {
 		let genesis_hash_hex = hex::encode(genesis_hash);
 		match genesis_hash_hex.as_ref() {
-			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => matches!(
-				self,
-				AssetId::USDT | AssetId::USDC | AssetId::USDC_E | AssetId::WETH | AssetId::ETH
-			),
-			ASSET_HUB_PASEO_GENESIS_HASH_HEX => matches!(
-				self,
-				AssetId::USDT | AssetId::USDC | AssetId::USDC_E | AssetId::WETH | AssetId::ETH
-			),
-			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => matches!(self, AssetId::USDC_E),
-			_ => false,
+			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX =>
+				vec![AssetId::USDT, AssetId::USDC, AssetId::USDC_E, AssetId::WETH, AssetId::ETH],
+			ASSET_HUB_PASEO_GENESIS_HASH_HEX =>
+				vec![AssetId::USDT, AssetId::USDC, AssetId::USDC_E, AssetId::WETH, AssetId::ETH],
+			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => vec![AssetId::USDC_E],
+			_ => vec![],
 		}
 	}
 }
