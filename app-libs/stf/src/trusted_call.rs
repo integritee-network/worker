@@ -44,7 +44,8 @@ use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use ita_sgx_runtime::{
 	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, System,
+	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, ShardManagement,
+	System,
 };
 pub use ita_sgx_runtime::{Balance, Index};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
@@ -299,6 +300,7 @@ where
 	) -> Result<(), Self::Error> {
 		let _role = ensure_authorization(&self)?;
 		// todo! spending limits according to role https://github.com/integritee-network/worker/issues/1656
+		ensure!(may_execute(&self), Self::Error::Filtered);
 		let sender = self.call.sender_account().clone();
 		let call_hash = blake2_256(&self.call.encode());
 		let system_nonce = System::account_nonce(&sender);
@@ -1173,6 +1175,30 @@ where
 		ParentchainId::TargetA => ParentchainCall::TargetA { call, mortality },
 		ParentchainId::TargetB => ParentchainCall::TargetB { call, mortality },
 	})
+}
+
+/// depending on the current shard status, we may want to filter specific calls
+fn may_execute(tcs: &TrustedCallSigned) -> bool {
+	if let Some((config, _)) = ShardManagement::upgradable_shard_config() {
+		// TODO: we could check for a pending upgrade too, but as the shard will be touched frequently,
+		// this should work fine as L1 takes care of turning pending into active
+		if config.active_config.maintenance_mode {
+			info!("We're in maintenance mode. Checking call filter rules");
+			return match tcs.call {
+				// we want to allow shielding calls as we can't prevent them and can't catch up later
+				TrustedCall::balance_shield(..) => true,
+				TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => true,
+				TrustedCall::assets_shield(..) => true,
+				// permissioned calls are ok
+				TrustedCall::timestamp_set(..) => true,
+				// everything else is disabled during maintenance mode
+				_ => false,
+			}
+		}
+	} else {
+		warn!("failed to apply call filter because mirrored shard config not available");
+	}
+	true
 }
 
 fn ensure_authorization(tcs: &TrustedCallSigned) -> Result<SessionProxyRole<Balance>, StfError> {

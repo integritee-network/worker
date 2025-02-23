@@ -282,7 +282,7 @@ where
 			get_active_shard_config::<StateHandler, Stf, G, PH>(shard, header, &mut state)
 				.map_or(false, |shard_config| shard_config.maintenance_mode);
 
-		// i.e. setting timestamp of new block
+		// i.e. setting timestamp of new block and acting on mirrored state from last imported parentchain block
 		Stf::on_initialize(&mut state, shard, *header.number(), now_as_millis()).unwrap_or_else(
 			|e| {
 				error!("on_initialize failed: {:?}", e);
@@ -314,14 +314,6 @@ where
 		}
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
-			if maintenance_mode {
-				// let all calls fail and don't process any state transitions
-				// TODO: execute shielding calls to avoid loss of funds
-				executed_and_failed_calls.push(ExecutedOperation::failed(
-					TrustedOperationOrHash::Operation(trusted_call_signed.clone().into()),
-				));
-				continue
-			}
 			// Break if allowed time window is over.
 			if ends_at < duration_now() {
 				info!("stopping execution of further trusted calls because slot time is up");

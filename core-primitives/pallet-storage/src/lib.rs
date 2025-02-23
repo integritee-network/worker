@@ -1,9 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Encode;
+use hex_literal::hex;
 use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
 use itp_types::{AccountId, ShardIdentifier};
 use sp_std::prelude::Vec;
+
+// this is a hack, just couldn't find the twox128 input to get this key
+const PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX: [u8; 16] = hex!("4e7b9012096b41c4eb3aaf947f6ea429");
 
 // Separate the prefix from the rest because in our case we changed the storage prefix due to
 // the rebranding. With the below implementation of the `TeerexStorageKeys`, we could simply
@@ -41,7 +45,9 @@ impl<S: StoragePrefix> EnclaveBridgeStorageKeys for S {
 	}
 
 	fn pallet_version() -> Vec<u8> {
-		storage_value_key(Self::prefix(), "PalletVersion")
+		let mut bytes = sp_core::twox_128(Self::prefix().as_bytes()).to_vec();
+		bytes.extend(PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX.to_vec());
+		bytes
 	}
 }
 
@@ -70,7 +76,9 @@ impl<S: StoragePrefix> TeerexStorageKeys for S {
 	}
 
 	fn pallet_version() -> Vec<u8> {
-		storage_value_key(Self::prefix(), "PalletVersion")
+		let mut bytes = sp_core::twox_128(Self::prefix().as_bytes()).to_vec();
+		bytes.extend(PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX.to_vec());
+		bytes
 	}
 }
 
@@ -99,6 +107,8 @@ impl<S: StoragePrefix> SidechainPalletStorageKeys for S {
 	}
 
 	fn pallet_version() -> Vec<u8> {
-		storage_value_key(Self::prefix(), "PalletVersion")
+		let mut bytes = sp_core::twox_128(Self::prefix().as_bytes()).to_vec();
+		bytes.extend(PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX.to_vec());
+		bytes
 	}
 }

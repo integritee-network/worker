@@ -132,11 +132,11 @@ where
 	) -> Vec<Vec<u8>> {
 		match parentchain_id {
 			ParentchainId::Integritee => vec![
+				<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
 				EnclaveBridgeStorage::shard_status(*shard),
 				EnclaveBridgeStorage::upgradable_shard_config(*shard),
-				<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
-				SidechainPalletStorage::latest_sidechain_block_confirmation(*shard),
 				<SidechainPalletStorage as EnclaveBridgeStorageKeys>::pallet_version(),
+				SidechainPalletStorage::latest_sidechain_block_confirmation(*shard),
 			], // shards_key_hash() moved to stf_executor and is currently unused
 			ParentchainId::TargetA => vec![],
 			ParentchainId::TargetB => vec![],
@@ -187,11 +187,12 @@ where
 			sp_io::storage::set(&storage_value_key("Timestamp", "DidUpdate"), &true.encode());
 			<Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(now.into());
 			// ensure we're assuming the correct storage encoding based on pallet version
-			if Some(1)
-				== get_mirrored_parentchain_storage_by_key_hash(
-					<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
-					&ParentchainId::Integritee,
-				) {
+			if get_mirrored_parentchain_storage_by_key_hash::<u16>(
+				<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
+				&ParentchainId::Integritee,
+			)
+			.map_or(false, |v| v <= 1)
+			{
 				if let Some(config) = get_mirrored_parentchain_storage_by_key_hash(
 					EnclaveBridgeStorage::upgradable_shard_config(shard),
 					&ParentchainId::Integritee,

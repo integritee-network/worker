@@ -2133,9 +2133,11 @@ dependencies = [
 name = "itp-pallet-storage"
 version = "0.9.0"
 dependencies = [
+ "hex-literal",
  "itp-storage",
  "itp-types",
  "parity-scale-codec",
+ "sp-core",
  "sp-std",
 ]
 
