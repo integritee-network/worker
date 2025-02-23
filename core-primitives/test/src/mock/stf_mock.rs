@@ -122,7 +122,7 @@ impl StateGetterInterface<GetterMock, SgxExternalities> for StfMock {
 		_parentchain_key: Vec<u8>,
 		_parentchain_id: &ParentchainId,
 	) -> Option<V> {
-		todo!()
+		None
 	}
 }
 
