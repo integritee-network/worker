@@ -375,7 +375,7 @@ where
 				Ok(())
 			},
 			TrustedCall::balance_unshield(account_incognito, beneficiary, value, call_shard) => {
-				if !(*shard == call_shard) {
+				if *shard != call_shard {
 					return Err(StfError::Dispatch("wrong shard".to_string()))
 				}
 				let parentchain_call = parentchain_vault_proxy_call(
@@ -384,7 +384,7 @@ where
 						value,
 						node_metadata_repo.clone(),
 					)?,
-					node_metadata_repo.clone(),
+					node_metadata_repo,
 				)?;
 				std::println!(
 					"⣿STF⣿ 🛡👐 balance_unshield from ⣿⣿⣿ to {}, amount {}",
@@ -403,7 +403,7 @@ where
 				let _ = store_note(
 					&account_incognito,
 					self.call,
-					vec![account_incognito.clone(), beneficiary.clone()],
+					vec![account_incognito.clone(), beneficiary],
 				);
 				calls.push(parentchain_call);
 				Ok(())
@@ -419,7 +419,7 @@ where
 						"shard vault key has been set. you may not use enclave bridge".to_string(),
 					))
 				};
-				if !(*shard == call_shard) {
+				if *shard != call_shard {
 					return Err(StfError::Dispatch("wrong shard".to_string()))
 				}
 				let call = OpaqueCall::from_tuple(&(
@@ -448,7 +448,7 @@ where
 				let _ = store_note(
 					&account_incognito,
 					self.call,
-					vec![account_incognito.clone(), beneficiary.clone()],
+					vec![account_incognito.clone(), beneficiary],
 				);
 				let mortality = get_mortality(ParentchainId::Integritee, 32)
 					.unwrap_or_else(GenericMortality::immortal);
@@ -651,7 +651,7 @@ where
 					error!("preventing to unshield unsupported asset: {:?}", asset_id);
 					return Err(StfError::Dispatch("unsuppoted asset for un/shielding".into()))
 				}
-				if !(*shard == call_shard) {
+				if *shard != call_shard {
 					return Err(StfError::Dispatch("wrong shard".to_string()))
 				}
 				std::println!(
@@ -673,7 +673,7 @@ where
 						asset_id,
 						node_metadata_repo.clone(),
 					)?,
-					node_metadata_repo.clone(),
+					node_metadata_repo,
 				)?;
 				// now that all the above hasn't failed, we can execute
 				burn_assets(&account_incognito, value, asset_id)?;
@@ -826,7 +826,7 @@ where
 				info!("Trying to create evm contract with address {:?}", contract_address);
 				Ok(())
 			},
-			TrustedCall::guess_the_number(call) => call.execute(calls, &shard, node_metadata_repo),
+			TrustedCall::guess_the_number(call) => call.execute(calls, shard, node_metadata_repo),
 			TrustedCall::unshield_all(who, beneficiary, maybe_asset_id) => {
 				if let Some(asset_id) = maybe_asset_id {
 					let balance = Assets::balance(asset_id, &who);
@@ -839,7 +839,7 @@ where
 							asset_id,
 							node_metadata_repo.clone(),
 						)?,
-						node_metadata_repo.clone(),
+						node_metadata_repo,
 					)?;
 					std::println!(
 						"⣿STF⣿ 🛡👐 unshield all from (L2): {}, to (L1): {}, value {} {:?} ",
@@ -860,8 +860,7 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER
-							* 3,
+						) / STF_TX_FEE_UNIT_DIVIDER * 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(
@@ -869,7 +868,7 @@ where
 							unshield_amount,
 							node_metadata_repo.clone(),
 						)?,
-						node_metadata_repo.clone(),
+						node_metadata_repo,
 					)?;
 					std::println!(
 						"⣿STF⣿ 🛡👐 force unshield all for {}, value {} native",
@@ -879,7 +878,7 @@ where
 					// now that all the above hasn't failed, we can execute
 					store_note(&who, self.call, vec![who.clone()])?;
 					ita_sgx_runtime::BalancesCall::<Runtime>::force_set_balance {
-						who: MultiAddress::Id(who.clone()),
+						who: MultiAddress::Id(who),
 						new_free: 0,
 					}
 					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())

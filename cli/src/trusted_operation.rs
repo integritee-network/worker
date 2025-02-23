@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	Cli,
 };
-use base58::{FromBase58, ToBase58};
+use base58::ToBase58;
 use codec::{Decode, Encode, Input};
 use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedCallSigned};

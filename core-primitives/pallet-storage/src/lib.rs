@@ -2,7 +2,7 @@
 
 use codec::Encode;
 use hex_literal::hex;
-use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
+use itp_storage::{storage_map_key, StorageHasher};
 use itp_types::{AccountId, ShardIdentifier};
 use sp_std::prelude::Vec;
 

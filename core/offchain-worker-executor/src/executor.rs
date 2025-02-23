@@ -84,8 +84,7 @@ impl<
 		Stf,
 		TCS,
 		G,
-	>
-where
+	> where
 	ParentchainBlock: Block<Hash = H256>,
 	ParentchainBlock::Header: Header<Number = BlockNumber>,
 	StfExecutor: StateUpdateProposer<TCS, G>,

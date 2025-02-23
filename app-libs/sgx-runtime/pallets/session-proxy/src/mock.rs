@@ -16,15 +16,10 @@
 */
 pub use crate as dut;
 
-use frame_support::{
-	ord_parameter_types, parameter_types,
-	traits::{ConstU8, EitherOfDiverse},
-	PalletId,
-};
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
-use frame_system::{EnsureRoot, EnsureSignedBy};
-use itp_randomness::MockRandomness;
-use sp_core::{crypto::AccountId32, ConstU32, H256};
+
+use sp_core::{crypto::AccountId32, H256};
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	generic,

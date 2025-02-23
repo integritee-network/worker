@@ -5,10 +5,10 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-hex-literal = "0.4.1"
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
-sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+hex-literal = "0.4.1"
 sp-core = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+sp-std = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
 #local deps
 itp-storage = { path = "../storage", default-features = false }
 itp-types = { path = "../types", default-features = false }
@@ -20,5 +20,5 @@ std = [
     "itp-storage/std",
     "itp-types/std",
     "sp-std/std",
-    "sp-core/std"
+    "sp-core/std",
 ]

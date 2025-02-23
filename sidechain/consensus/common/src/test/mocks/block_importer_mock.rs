@@ -22,8 +22,7 @@ use itp_sgx_externalities::SgxExternalities;
 use itp_test::mock::onchain_mock::OnchainMock;
 use itp_types::H256;
 use its_primitives::traits::{
-	Block, Block as SidechainBlockTrait, ShardIdentifierFor,
-	SignedBlock as SignedSidechainBlockTrait,
+	Block as SidechainBlockTrait, ShardIdentifierFor, SignedBlock as SignedSidechainBlockTrait,
 };
 use sp_core::Pair;
 use sp_runtime::traits::Block as ParentchainBlockTrait;
@@ -119,7 +118,7 @@ where
 
 	fn update_latest_sidechain_header(
 		&self,
-		head: &<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
+		_head: &<<SignedSidechainBlock as SignedSidechainBlockTrait>::Block as SidechainBlockTrait>::HeaderType,
 	) -> core::result::Result<(), Error> {
 		todo!()
 	}

@@ -14,17 +14,13 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, Error};
+use crate::mock::*;
 use enclave_bridge_primitives::{ShardConfig, UpgradableShardConfig};
-use frame_support::{assert_err, assert_noop, assert_ok};
-use frame_system::AccountInfo;
-use pallet_balances::AccountData;
-use sp_core::H256;
-use sp_keyring::AccountKeyring;
+use frame_support::assert_ok;
+
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, Header as HeaderT},
-	DispatchError::BadOrigin,
 };
 
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;

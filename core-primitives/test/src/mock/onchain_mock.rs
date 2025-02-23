@@ -203,11 +203,9 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 			.get_multiple_opaque_storages_verified(vec![storage_hash], header, parentchain_id)?
 			.into_iter()
 			.next()
-			.map(|sv| sv.value)
-			.flatten()
+			.and_then(|sv| sv.value)
 			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))?;
-		Decode::decode(&mut opaque_value_verified.as_slice())
-			.map_err(|e| itp_ocall_api::Error::Codec(e.into()))
+		Decode::decode(&mut opaque_value_verified.as_slice()).map_err(itp_ocall_api::Error::Codec)
 	}
 
 	fn get_multiple_opaque_storages_verified<Header: HeaderTrait<Hash = H256>>(
@@ -218,7 +216,7 @@ impl EnclaveOnChainOCallApi for OnchainMock {
 	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>, itp_ocall_api::Error> {
 		let mut entries = Vec::with_capacity(storage_hashes.len());
 		for hash in storage_hashes.into_iter() {
-			let value = self.get_at_header(header, &hash).map(|v| v.clone());
+			let value = self.get_at_header(header, &hash).cloned();
 			entries.push(StorageEntryVerified::new(hash, value))
 		}
 		Ok(entries)

@@ -29,8 +29,8 @@ use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable}
 use ita_assets_map::AssetId;
 use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
-	Assets, ExistentialDeposit, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
-	ParentchainInstanceTargetB, ShardManagement, System,
+	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ShardManagement, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_pallet_storage::{
@@ -59,7 +59,7 @@ use itp_types::{
 };
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
-use sp_runtime::{traits::StaticLookup, MultiAddress, SaturatedConversion};
+use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
 
 impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
@@ -205,7 +205,6 @@ where
 						// Replace with `inspect_err` once it's stable.
 						.map_err(|_| {
 							error!("Failed to mirror shard config");
-							()
 						})
 						.ok();
 				} else {
@@ -296,7 +295,6 @@ where
 										account_id_to_string(&account),
 										e
 									);
-									()
 								})
 								.ok();
 						}
@@ -316,7 +314,6 @@ where
 									"Failed to force-unshield native for {:?}: {:?}",
 									account, e
 								);
-								()
 							})
 							.ok();
 					}
@@ -361,7 +358,7 @@ where
 		let maybe_raw_state = state.get(&full_key);
 		trace!(
 			"get_parentchain_mirror_state: raw_state: {:?}",
-			maybe_raw_state.map(|raw| hex_encode(&raw))
+			maybe_raw_state.map(|raw| hex_encode(raw))
 		);
 		if let Some(raw_state) = maybe_raw_state {
 			if let Ok(state) = V::decode(&mut raw_state.as_slice()) {

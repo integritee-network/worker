@@ -19,10 +19,7 @@ use codec::{Decode, Encode};
 use frame_support::dispatch::UnfilteredDispatchable;
 use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime};
 use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
-use itp_stf_interface::{
-	parentchain_mirror_prefix, prefix_storage_keys_for_parentchain_mirror, BlockMetadata,
-	ShardCreationInfo,
-};
+use itp_stf_interface::{parentchain_mirror_prefix, BlockMetadata, ShardCreationInfo};
 use itp_stf_primitives::{
 	error::{StfError, StfResult},
 	types::{AccountId, ShardIdentifier},

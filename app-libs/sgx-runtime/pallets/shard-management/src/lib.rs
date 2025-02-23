@@ -1,13 +1,16 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use enclave_bridge_primitives::UpgradableShardConfig;
 pub use pallet::*;
 
+pub type UpgradableShardConfigAndChangedBlock<AccountId, BlockNumber> =
+	(UpgradableShardConfig<AccountId, BlockNumber>, BlockNumber);
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::weights::WeightInfo;
+	use crate::{weights::WeightInfo, UpgradableShardConfigAndChangedBlock};
 	use enclave_bridge_primitives::UpgradableShardConfig;
-	use frame_support::{pallet_prelude::*, sp_runtime::traits::Header};
-	use frame_system::{pallet_prelude::*, AccountInfo};
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
 	use sp_runtime::traits::{AtLeast32Bit, Scale};
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
@@ -53,7 +56,7 @@ pub mod pallet {
 	#[pallet::getter(fn upgradable_shard_config)]
 	pub(super) type UpgradableShardConfigRegistry<T: Config> = StorageValue<
 		_,
-		(UpgradableShardConfig<T::AccountId, T::BlockNumber>, T::BlockNumber),
+		UpgradableShardConfigAndChangedBlock<T::AccountId, T::BlockNumber>,
 		OptionQuery,
 	>;
 
