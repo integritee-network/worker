@@ -30,7 +30,7 @@ use ita_assets_map::AssetId;
 use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
 	Assets, ExistentialDeposit, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
-	ParentchainInstanceTargetB,
+	ParentchainInstanceTargetB, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_pallet_storage::{
@@ -214,37 +214,35 @@ where
 				accounts_to_ignore.extend(validateers);
 			}
 
-			// TODO: this is only for native. do it for all assets too
 			// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks
 			// find all accounts with nonzero balance: assets first, then native
 			let mut accounts: Vec<(AccountId, Nonce)> =
 				frame_system::Account::<ita_sgx_runtime::Runtime>::iter()
-					.filter_map(|(account_id, account_info)| {
-						(account_info.data.free > ExistentialDeposit::get())
-							.then_some((account_id, account_info.nonce))
-					})
+					.map(|(account_id, account_info)| (account_id, account_info.nonce))
 					.collect();
-			info!("found {} accounts to recover", accounts.len());
 			accounts.retain(|(x, _)| !accounts_to_ignore.contains(x));
-			info!("will unshield {} accounts (ignoring some technical accounts)", accounts.len());
+			info!(
+				"will unshield all for {} accounts (ignoring {} technical accounts)",
+				accounts.len(),
+				accounts_to_ignore.len()
+			);
 			// we won't put this call through the TOP pool. No signature check will happen.
 			// We just want to use the handy ExecuteCall trait
 			let fake_signature =
 				Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
 			let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
 			for (account, nonce) in accounts {
-				let mut nonce = nonce;
-				info!("force unshield for {:?}", account);
+				info!("force unshield all for {:?}", account_id_to_string(&account));
 				for asset_id in AssetId::all_shieldable(genesis_hash) {
-					info!("force unshield asset {:?} balance", asset_id);
 					if Assets::balance(asset_id, &account) > 0 {
+						info!("  force unshield asset {:?} balance", asset_id);
 						let tcs = TrustedCallSigned {
 							call: TrustedCall::force_unshield_all(
 								account.clone(),
 								account.clone(),
 								Some(asset_id),
 							),
-							nonce,
+							nonce, //nonce will no longer increase as we bypass signature check
 							delegate: None,
 							signature: fake_signature.clone(),
 						};
@@ -252,29 +250,36 @@ where
 						tcs.execute(calls, shard, node_metadata_repo.clone())
 							.map_err(|e| {
 								error!(
-									"Failed to force-unshield {:?} for {:?}: {:?}",
-									asset_id, account, e
+									"Failed to force-unshield {:?} for {}: {:?}",
+									asset_id,
+									account_id_to_string(&account),
+									e
 								);
 								()
 							})
 							.ok();
-						nonce += 1;
 					}
 				}
-				info!("force unshield native balance");
-				let tcs = TrustedCallSigned {
-					call: TrustedCall::force_unshield_all(account.clone(), account.clone(), None),
-					nonce,
-					delegate: None,
-					signature: fake_signature.clone(),
-				};
-				// Replace with `inspect_err` once it's stable.
-				tcs.execute(calls, shard, node_metadata_repo.clone())
-					.map_err(|e| {
-						error!("Failed to force-unshield native for {:?}: {:?}", account, e);
-						()
-					})
-					.ok();
+				if System::account(&account).data.free > 0 {
+					info!("  force unshield native balance");
+					let tcs = TrustedCallSigned {
+						call: TrustedCall::force_unshield_all(
+							account.clone(),
+							account.clone(),
+							None,
+						),
+						nonce, //nonce will no longer increase as we bypass signature check
+						delegate: None,
+						signature: fake_signature.clone(),
+					};
+					// Replace with `inspect_err` once it's stable.
+					tcs.execute(calls, shard, node_metadata_repo.clone())
+						.map_err(|e| {
+							error!("Failed to force-unshield native for {:?}: {:?}", account, e);
+							()
+						})
+						.ok();
+				}
 			}
 			Ok(())
 			/*	} else {

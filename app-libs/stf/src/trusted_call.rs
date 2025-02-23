@@ -1067,7 +1067,6 @@ fn shield_assets(account: &AccountId, amount: u128, asset_id: AssetId) -> Result
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sudo_account.clone()))
 	.map_err(|e| StfError::Dispatch(format!("Shield assets error: {:?}", e.error)))?;
-
 	// endow shieding (amount - fee) to beneficiary
 	ita_sgx_runtime::AssetsCall::<Runtime>::mint {
 		id: asset_id,
@@ -1075,7 +1074,7 @@ fn shield_assets(account: &AccountId, amount: u128, asset_id: AssetId) -> Result
 		amount: amount - fee,
 	}
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sudo_account))
-	.map_err(|e| StfError::Dispatch(format!("Shield assets error: {:?}", e.error)))?;
+	.map_err(|e| StfError::Dispatch(format!("Shield assets (mint) error: {:?}", e.error)))?;
 
 	Ok(())
 }
