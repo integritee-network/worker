@@ -29,7 +29,7 @@ use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
-	parentchain::{ParentchainCall, ParentchainId},
+	parentchain::{BlockNumber, ParentchainCall, ParentchainId},
 	AccountId, Index, Moment, ShardIdentifier,
 };
 
@@ -73,13 +73,19 @@ where
 		unimplemented!()
 	}
 
-	fn on_initialize(_state: &mut State, _now: Moment) -> Result<(), Self::Error> {
+	fn on_initialize(
+		_state: &mut State,
+		_: &ShardIdentifier,
+		_number: BlockNumber,
+		_now: Moment,
+	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
 
 	fn maintenance_mode_tasks(
 		_state: &mut State,
 		_shard: &itp_stf_primitives::types::ShardIdentifier,
+		_integritee_block_number: BlockNumber,
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {

@@ -283,9 +283,11 @@ where
 				.map_or(false, |shard_config| shard_config.maintenance_mode);
 
 		// i.e. setting timestamp of new block
-		Stf::on_initialize(&mut state, now_as_millis()).unwrap_or_else(|e| {
-			error!("on_initialize failed: {:?}", e);
-		});
+		Stf::on_initialize(&mut state, shard, *header.number(), now_as_millis()).unwrap_or_else(
+			|e| {
+				error!("on_initialize failed: {:?}", e);
+			},
+		);
 
 		if maintenance_mode {
 			info!("Maintenance mode is active.");
@@ -293,6 +295,7 @@ where
 			Stf::maintenance_mode_tasks(
 				&mut state,
 				&shard,
+				*header.number(),
 				&mut extrinsic_call_backs,
 				self.node_metadata_repo.clone(),
 			)

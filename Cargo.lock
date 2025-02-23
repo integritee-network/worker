@@ -2861,6 +2861,7 @@ dependencies = [
  "pallet-notes",
  "pallet-parentchain",
  "pallet-session-proxy",
+ "pallet-shard-management",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -5323,6 +5324,26 @@ dependencies = [
  "log 0.4.22",
  "pallet-balances",
  "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-shard-management"
+version = "0.11.0"
+dependencies = [
+ "enclave-bridge-primitives",
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "log 0.4.22",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
  "serde 1.0.193",

@@ -31,7 +31,7 @@ use itp_stf_primitives::{
 	types::{KeyPair, Nonce, TrustedOperation},
 };
 use itp_types::{
-	parentchain::{ParentchainCall, ParentchainId},
+	parentchain::{BlockNumber, ParentchainCall, ParentchainId},
 	AccountId, Balance, Index, Moment, ShardIdentifier, Signature,
 };
 use log::*;
@@ -80,7 +80,12 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		state.execute_with(|| call.execute(calls, shard, node_metadata_repo))
 	}
 
-	fn on_initialize(_state: &mut SgxExternalities, now: Moment) -> Result<(), Self::Error> {
+	fn on_initialize(
+		_state: &mut SgxExternalities,
+		_shard: &ShardIdentifier,
+		_number: BlockNumber,
+		now: Moment,
+	) -> Result<(), Self::Error> {
 		trace!("on_initialize called at epoch {}", now);
 		Ok(())
 	}
@@ -88,6 +93,7 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 	fn maintenance_mode_tasks(
 		_state: &mut SgxExternalities,
 		_shard: &itp_stf_primitives::types::ShardIdentifier,
+		_integritee_block_number: BlockNumber,
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {

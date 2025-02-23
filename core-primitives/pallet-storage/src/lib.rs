@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::Encode;
-use itp_storage::{storage_map_key, StorageHasher};
+use itp_storage::{storage_map_key, storage_value_key, StorageHasher};
 use itp_types::{AccountId, ShardIdentifier};
 use sp_std::prelude::Vec;
 
@@ -24,6 +24,7 @@ impl StoragePrefix for EnclaveBridgeStorage {
 pub trait EnclaveBridgeStorageKeys {
 	fn shard_status<T: Encode>(shard: T) -> Vec<u8>;
 	fn upgradable_shard_config<T: Encode>(shard: T) -> Vec<u8>;
+	fn pallet_version() -> Vec<u8>;
 }
 
 impl<S: StoragePrefix> EnclaveBridgeStorageKeys for S {
@@ -38,6 +39,10 @@ impl<S: StoragePrefix> EnclaveBridgeStorageKeys for S {
 			&StorageHasher::Blake2_128Concat,
 		)
 	}
+
+	fn pallet_version() -> Vec<u8> {
+		storage_value_key(Self::prefix(), "PalletVersion")
+	}
 }
 
 pub struct TeeRexStorage;
@@ -50,6 +55,8 @@ impl StoragePrefix for TeeRexStorage {
 
 pub trait TeerexStorageKeys {
 	fn sovereign_enclaves(account: AccountId) -> Vec<u8>;
+
+	fn pallet_version() -> Vec<u8>;
 }
 
 impl<S: StoragePrefix> TeerexStorageKeys for S {
@@ -60,6 +67,10 @@ impl<S: StoragePrefix> TeerexStorageKeys for S {
 			&account,
 			&StorageHasher::Blake2_128Concat,
 		)
+	}
+
+	fn pallet_version() -> Vec<u8> {
+		storage_value_key(Self::prefix(), "PalletVersion")
 	}
 }
 
@@ -73,6 +84,8 @@ impl StoragePrefix for SidechainPalletStorage {
 
 pub trait SidechainPalletStorageKeys {
 	fn latest_sidechain_block_confirmation(shard: ShardIdentifier) -> Vec<u8>;
+
+	fn pallet_version() -> Vec<u8>;
 }
 
 impl<S: StoragePrefix> SidechainPalletStorageKeys for S {
@@ -83,5 +96,9 @@ impl<S: StoragePrefix> SidechainPalletStorageKeys for S {
 			&shard,
 			&StorageHasher::Blake2_128Concat,
 		)
+	}
+
+	fn pallet_version() -> Vec<u8> {
+		storage_value_key(Self::prefix(), "PalletVersion")
 	}
 }
