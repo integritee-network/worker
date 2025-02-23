@@ -139,6 +139,8 @@ impl AssetId {
 		Self::all_shieldable(genesis_hash).contains(self)
 	}
 
+	/// returns all AssetId variants which are shieldable for a given shielding target genesis hash.
+	/// L2 fee payment will be attempted in order provided here.
 	pub fn all_shieldable(genesis_hash: Hash) -> Vec<Self> {
 		let genesis_hash_hex = hex::encode(genesis_hash);
 		match genesis_hash_hex.as_ref() {

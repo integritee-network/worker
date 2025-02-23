@@ -226,8 +226,10 @@ where
 				accounts.len(),
 				accounts_to_ignore.len()
 			);
-			// we won't put this call through the TOP pool. No signature check will happen.
-			// We just want to use the handy ExecuteCall trait
+			// we won't put this call through the TOP pool.
+			// No signature check will happen and we will impersonate the sender account to charge
+			// fees properly and leave notes on respective accounts.
+			// We will the handy ExecuteCall trait
 			let fake_signature =
 				Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
 			let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
@@ -237,7 +239,7 @@ where
 					if Assets::balance(asset_id, &account) > 0 {
 						info!("  force unshield asset {:?} balance", asset_id);
 						let tcs = TrustedCallSigned {
-							call: TrustedCall::force_unshield_all(
+							call: TrustedCall::unshield_all(
 								account.clone(),
 								account.clone(),
 								Some(asset_id),
@@ -263,11 +265,7 @@ where
 				if System::account(&account).data.free > 0 {
 					info!("  force unshield native balance");
 					let tcs = TrustedCallSigned {
-						call: TrustedCall::force_unshield_all(
-							account.clone(),
-							account.clone(),
-							None,
-						),
+						call: TrustedCall::unshield_all(account.clone(), account.clone(), None),
 						nonce, //nonce will no longer increase as we bypass signature check
 						delegate: None,
 						signature: fake_signature.clone(),
