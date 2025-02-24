@@ -35,7 +35,7 @@ pub enum StfError {
 	MissingFunds,
 	#[display(fmt = "Invalid Nonce {:?} != {:?}", _0, _1)]
 	InvalidNonce(Nonce, Nonce),
-	/// call was filtered. i.e. because shard is in maintenance mode
+	/// call was filtered. e.g. because shard is in maintenance mode
 	Filtered,
 	StorageHashMismatch,
 	InvalidStorageDiff,
