@@ -232,7 +232,7 @@ pub fn get_mortality(
 			return Some(GenericMortality {
 				era: Era::mortal(blocks_to_live.into(), number.into()),
 				mortality_checkpoint: Some(hash),
-			});
+			})
 		}
 	}
 	None

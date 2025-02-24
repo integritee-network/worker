@@ -176,8 +176,8 @@ where
 									NATIVE_ASSETS =>
 										asset_id.into_asset_hub_index(genesis_hash).map(|id| {
 											<AssetsPalletStorage as AssetsPalletStorageKeys>::account(
-												&id, &vault,
-											)
+                                                &id, &vault,
+                                            )
 										}),
 									FOREIGN_ASSETS =>
 										asset_id.into_location(genesis_hash).map(|loc| {
@@ -286,12 +286,13 @@ where
 						.map(|(a, _)| a.clone())
 						.collect::<Vec<AccountId>>(),
 				);
-				if let Some(validateers) = ParentchainMirror::get_shard_status(shard).map(|shard_status| {
-					shard_status
-						.iter()
-						.map(|signer_status| signer_status.signer.clone())
-						.collect::<Vec<AccountId>>()
-				}) {
+				if let Some(validateers) =
+					ParentchainMirror::get_shard_status(shard).map(|shard_status| {
+						shard_status
+							.iter()
+							.map(|signer_status| signer_status.signer.clone())
+							.collect::<Vec<AccountId>>()
+					}) {
 					accounts_to_ignore.extend(validateers);
 				}
 
