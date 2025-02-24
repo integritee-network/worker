@@ -18,17 +18,13 @@ use crate::{TrustedCall, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
 use frame_support::dispatch::UnfilteredDispatchable;
 use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime};
-use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
-use itp_stf_interface::{parentchain_mirror_prefix, BlockMetadata, ShardCreationInfo};
+use itp_stf_interface::{BlockMetadata, ShardCreationInfo};
 use itp_stf_primitives::{
 	error::{StfError, StfResult},
-	types::{AccountId, ShardIdentifier},
+	types::AccountId,
 };
 use itp_storage::{storage_double_map_key, storage_map_key, storage_value_key, StorageHasher};
-use itp_types::{
-	parentchain::{BlockNumber, GenericMortality, Hash, ParentchainId},
-	ShardSignerStatus,
-};
+use itp_types::parentchain::{BlockNumber, GenericMortality, Hash, ParentchainId};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_runtime::generic::Era;
@@ -86,25 +82,6 @@ pub fn get_storage_by_key_hash<V: Decode>(key: Vec<u8>) -> Option<V> {
 	}
 }
 
-pub fn get_mirrored_parentchain_storage_by_key_hash<V: Decode>(
-	key: Vec<u8>,
-	parentchain_id: &ParentchainId,
-) -> Option<V> {
-	let mut prefixed_key = parentchain_mirror_prefix(parentchain_id).as_bytes().to_vec();
-	prefixed_key.extend(key);
-	if let Some(value_encoded) = sp_io::storage::get(&prefixed_key) {
-		if let Ok(value) = Decode::decode(&mut value_encoded.as_slice()) {
-			Some(value)
-		} else {
-			error!("could not decode state for key {:x?}", prefixed_key);
-			None
-		}
-	} else {
-		info!("key not found in state {:x?}", prefixed_key);
-		None
-	}
-}
-
 /// Get the AccountInfo key where the account is stored.
 pub fn account_key_hash<AccountId: Encode>(account: &AccountId) -> Vec<u8> {
 	storage_map_key("System", "Account", account, &StorageHasher::Blake2_128Concat)
@@ -112,13 +89,6 @@ pub fn account_key_hash<AccountId: Encode>(account: &AccountId) -> Vec<u8> {
 
 pub fn enclave_signer_account<AccountId: Decode>() -> AccountId {
 	get_storage_value("Sudo", ENCLAVE_ACCOUNT_KEY).expect("No enclave account")
-}
-
-pub fn get_shard_status(shard: &ShardIdentifier) -> Option<Vec<ShardSignerStatus>> {
-	get_mirrored_parentchain_storage_by_key_hash(
-		EnclaveBridgeStorage::shard_status(shard),
-		&ParentchainId::Integritee,
-	)
 }
 
 /// Ensures an account is a registered enclave account.
@@ -262,7 +232,7 @@ pub fn get_mortality(
 			return Some(GenericMortality {
 				era: Era::mortal(blocks_to_live.into(), number.into()),
 				mortality_checkpoint: Some(hash),
-			})
+			});
 		}
 	}
 	None

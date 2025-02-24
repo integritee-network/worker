@@ -194,8 +194,9 @@ where
 		let shards = self.state_handler.list_shards()?;
 		if let Some(shard_id) = shards.get(0) {
 			debug!("Update STF storage upon block import!");
-
-			let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id, &shard_id);
+			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
+			let storage_hashes =
+				Stf::storage_hashes_to_update_on_block(&mut state, parentchain_id, &shard_id);
 			trace!(
 				"parentchain storage_hash to mirror: 0x{} at header 0x{}",
 				hex::encode(storage_hashes[0].clone()),
@@ -216,7 +217,6 @@ where
 			};
 
 			// Update parentchain block data and mirrored state
-			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
 			match parentchain_id {
 				ParentchainId::Integritee =>
 					Stf::update_parentchain_integritee_block(&mut state, header.clone()),

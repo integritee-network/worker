@@ -19,14 +19,15 @@
 use crate::test_genesis::{test_genesis_endowees, test_genesis_setup};
 use crate::{
 	helpers::{
-		enclave_signer_account, get_mirrored_parentchain_storage_by_key_hash, get_shard_status,
-		get_shard_vaults, shard_creation_info, shard_vault, shielding_target_genesis_hash,
+		enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault,
+		shielding_target_genesis_hash,
 	},
+	parentchain_mirror::ParentchainMirror,
 	Stf, TrustedCall, TrustedCallSigned, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
-use ita_assets_map::AssetId;
+use ita_assets_map::{AssetId, AssetTranslation, FOREIGN_ASSETS, NATIVE_ASSETS};
 use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
 	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
@@ -34,8 +35,9 @@ use ita_sgx_runtime::{
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_pallet_storage::{
-	EnclaveBridgeStorage, EnclaveBridgeStorageKeys, SidechainPalletStorage,
-	SidechainPalletStorageKeys,
+	AssetsPalletStorage, AssetsPalletStorageKeys, EnclaveBridgeStorage, EnclaveBridgeStorageKeys,
+	ForeignAssetsPalletStorage, ForeignAssetsPalletStorageKeys, SidechainPalletStorage,
+	SidechainPalletStorageKeys, SystemPalletStorage, SystemPalletStorageKeys,
 };
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_sgx_runtime_primitives::types::Moment;
@@ -127,20 +129,73 @@ where
 	}
 
 	fn storage_hashes_to_update_on_block(
+		state: &mut State,
 		parentchain_id: &ParentchainId,
 		shard: &ShardIdentifier,
 	) -> Vec<Vec<u8>> {
-		match parentchain_id {
-			ParentchainId::Integritee => vec![
-				<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
-				EnclaveBridgeStorage::shard_status(*shard),
-				EnclaveBridgeStorage::upgradable_shard_config(*shard),
-				<SidechainPalletStorage as EnclaveBridgeStorageKeys>::pallet_version(),
-				SidechainPalletStorage::latest_sidechain_block_confirmation(*shard),
-			], // shards_key_hash() moved to stf_executor and is currently unused
-			ParentchainId::TargetA => vec![],
-			ParentchainId::TargetB => vec![],
-		}
+		state.execute_with(|| {
+			match parentchain_id {
+				ParentchainId::Integritee => {
+					let mut keys = vec![
+						<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
+						EnclaveBridgeStorage::shard_status(*shard),
+						EnclaveBridgeStorage::upgradable_shard_config(*shard),
+						<SidechainPalletStorage as EnclaveBridgeStorageKeys>::pallet_version(),
+						SidechainPalletStorage::latest_sidechain_block_confirmation(*shard),
+					];
+					// mirror native AccountInfo for vault if shielding target
+					if let Some((vault, shielding_target)) = shard_vault() {
+						if shielding_target == ParentchainId::Integritee {
+							keys.push(<SystemPalletStorage as SystemPalletStorageKeys>::account(
+								&vault,
+							));
+						}
+					}
+					keys
+				},
+				ParentchainId::TargetA => {
+					let mut keys = vec![];
+					// mirror native AccountInfo for vault if shielding target
+					if let Some((vault, shielding_target)) = shard_vault() {
+						if shielding_target == ParentchainId::TargetA {
+							keys.push(<SystemPalletStorage as SystemPalletStorageKeys>::account(
+								&vault,
+							));
+						}
+					}
+					keys
+				},
+				ParentchainId::TargetB => {
+					let mut keys = vec![];
+					if let Some((vault, shielding_target)) = shard_vault() {
+						if shielding_target == ParentchainId::TargetB {
+							// mirror asset balances for vault if shielding target
+							let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
+							keys.extend(AssetId::all_shieldable(genesis_hash).iter().filter_map(
+								|asset_id| match asset_id.reserve_instance().unwrap_or("") {
+									NATIVE_ASSETS =>
+										asset_id.into_asset_hub_index(genesis_hash).map(|id| {
+											<AssetsPalletStorage as AssetsPalletStorageKeys>::account(
+												&id, &vault,
+											)
+										}),
+									FOREIGN_ASSETS =>
+										asset_id.into_location(genesis_hash).map(|loc| {
+											<ForeignAssetsPalletStorage as ForeignAssetsPalletStorageKeys>::account(&loc, &vault)
+										}),
+									_ => None,
+								},
+							));
+							// mirror native AccountInfo for vault if shielding target
+							keys.push(<SystemPalletStorage as SystemPalletStorageKeys>::account(
+								&vault,
+							));
+						};
+					}
+					keys
+				},
+			}
+		})
 	}
 }
 
@@ -180,38 +235,26 @@ where
 		integritee_block_number: BlockNumber,
 		now: Moment,
 	) -> Result<(), Self::Error> {
-		trace!("on_initialize called at epoch {}", now);
+		debug!(
+			"on_initialize called at epoch {} based on integritee block {}",
+			now, integritee_block_number
+		);
 		state.execute_with(|| {
 			// as pallet_timestamp doesn't export set_timestamp in no_std, we need to re-build the same behaviour
 			sp_io::storage::set(&storage_value_key("Timestamp", "Now"), &now.encode());
 			sp_io::storage::set(&storage_value_key("Timestamp", "DidUpdate"), &true.encode());
 			<Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(now.into());
-			// ensure we're assuming the correct storage encoding based on pallet version
-			if get_mirrored_parentchain_storage_by_key_hash::<u16>(
-				<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
-				&ParentchainId::Integritee,
-			)
-			.map_or(false, |v| v <= 1)
-			{
-				if let Some(config) = get_mirrored_parentchain_storage_by_key_hash(
-					EnclaveBridgeStorage::upgradable_shard_config(shard),
-					&ParentchainId::Integritee,
-				) {
-					ita_sgx_runtime::ShardManagementCall::<ita_sgx_runtime::Runtime>::set_shard_config {
-						config,
-						parentchain_block_number: integritee_block_number,
-					}
-						.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-						// Replace with `inspect_err` once it's stable.
-						.map_err(|_| {
-							error!("Failed to mirror shard config");
-						})
-						.ok();
-				} else {
-					warn!("mirrored state not available: shard_config");
-				}
-			} else {
-				warn!("Parentchain Integritee pallet version mismatch. Can't sync mirrored state safely");
+			ParentchainMirror::push_upgradable_shard_config(shard, integritee_block_number);
+			let vault_transferrable_balance =
+				ParentchainMirror::get_shard_vault_transferrable_balance(None).unwrap_or_default();
+			debug!(
+				"on_initialize: shard vault native transferrable balance: {}",
+				vault_transferrable_balance
+			);
+			for id in AssetId::all_shieldable(shielding_target_genesis_hash().unwrap_or_default()) {
+				let balance = ParentchainMirror::get_shard_vault_transferrable_balance(Some(id))
+					.unwrap_or_default();
+				debug!("on_initialize: shard vault {:?} transferrable balance: {}", id, balance);
 			}
 		});
 		Ok(())
@@ -243,7 +286,7 @@ where
 						.map(|(a, _)| a.clone())
 						.collect::<Vec<AccountId>>(),
 				);
-				if let Some(validateers) = get_shard_status(shard).map(|shard_status| {
+				if let Some(validateers) = ParentchainMirror::get_shard_status(shard).map(|shard_status| {
 					shard_status
 						.iter()
 						.map(|signer_status| signer_status.signer.clone())

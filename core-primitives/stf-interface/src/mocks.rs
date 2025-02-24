@@ -51,7 +51,11 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 		unimplemented!()
 	}
 
-	fn storage_hashes_to_update_on_block(_: &ParentchainId, _: &ShardIdentifier) -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block(
+		_state: &mut State,
+		_: &ParentchainId,
+		_: &ShardIdentifier,
+	) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }

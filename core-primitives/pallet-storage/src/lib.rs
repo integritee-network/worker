@@ -2,8 +2,8 @@
 
 use codec::Encode;
 use hex_literal::hex;
-use itp_storage::{storage_map_key, StorageHasher};
-use itp_types::{AccountId, ShardIdentifier};
+use itp_storage::{storage_double_map_key, storage_map_key, StorageHasher};
+use itp_types::{parentchain::ParentchainAssetIdNative, xcm::Location, AccountId, ShardIdentifier};
 use sp_std::prelude::Vec;
 
 // this is a hack, just couldn't find the twox128 input to get this key
@@ -104,6 +104,99 @@ impl<S: StoragePrefix> SidechainPalletStorageKeys for S {
 			&shard,
 			&StorageHasher::Blake2_128Concat,
 		)
+	}
+
+	fn pallet_version() -> Vec<u8> {
+		let mut bytes = sp_core::twox_128(Self::prefix().as_bytes()).to_vec();
+		bytes.extend(PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX.to_vec());
+		bytes
+	}
+}
+
+pub struct AssetsPalletStorage;
+
+impl StoragePrefix for AssetsPalletStorage {
+	fn prefix() -> &'static str {
+		"Assets"
+	}
+}
+
+pub trait AssetsPalletStorageKeys {
+	/// The holdings of a specific account for a specific asset.
+	fn account(asset_id: &ParentchainAssetIdNative, account_id: &AccountId) -> Vec<u8>;
+
+	fn pallet_version() -> Vec<u8>;
+}
+
+impl<S: StoragePrefix> AssetsPalletStorageKeys for S {
+	fn account(asset_id: &ParentchainAssetIdNative, account_id: &AccountId) -> Vec<u8> {
+		storage_double_map_key(
+			Self::prefix(),
+			"Account",
+			asset_id,
+			&StorageHasher::Blake2_128Concat,
+			account_id,
+			&StorageHasher::Blake2_128Concat,
+		)
+	}
+
+	fn pallet_version() -> Vec<u8> {
+		let mut bytes = sp_core::twox_128(Self::prefix().as_bytes()).to_vec();
+		bytes.extend(PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX.to_vec());
+		bytes
+	}
+}
+
+pub struct ForeignAssetsPalletStorage;
+
+impl StoragePrefix for ForeignAssetsPalletStorage {
+	fn prefix() -> &'static str {
+		"ForeignAssets"
+	}
+}
+pub trait ForeignAssetsPalletStorageKeys {
+	/// The holdings of a specific account for a specific asset.
+	fn account(asset_id: &Location, account_id: &AccountId) -> Vec<u8>;
+
+	fn pallet_version() -> Vec<u8>;
+}
+
+impl<S: StoragePrefix> ForeignAssetsPalletStorageKeys for S {
+	fn account(asset_id: &Location, account_id: &AccountId) -> Vec<u8> {
+		storage_double_map_key(
+			Self::prefix(),
+			"Account",
+			asset_id,
+			&StorageHasher::Blake2_128Concat,
+			account_id,
+			&StorageHasher::Blake2_128Concat,
+		)
+	}
+
+	fn pallet_version() -> Vec<u8> {
+		let mut bytes = sp_core::twox_128(Self::prefix().as_bytes()).to_vec();
+		bytes.extend(PALLET_VERSION_STORAGE_KEY_POSTFIX_HEX.to_vec());
+		bytes
+	}
+}
+
+pub struct SystemPalletStorage;
+
+impl StoragePrefix for SystemPalletStorage {
+	fn prefix() -> &'static str {
+		"System"
+	}
+}
+pub trait SystemPalletStorageKeys {
+	/// The holdings of a specific account for a specific asset.
+	fn account(account_id: &AccountId) -> Vec<u8>;
+
+	fn pallet_version() -> Vec<u8>;
+}
+
+impl<S: StoragePrefix> SystemPalletStorageKeys for S {
+	fn account(account_id: &AccountId) -> Vec<u8> {
+		storage_map_key(Self::prefix(), "Account", account_id, &StorageHasher::Blake2_128Concat)
 	}
 
 	fn pallet_version() -> Vec<u8> {

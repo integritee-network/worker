@@ -38,6 +38,7 @@ pub mod getter;
 pub mod guess_the_number;
 pub mod hash;
 pub mod helpers;
+pub mod parentchain_mirror;
 pub mod stf_sgx;
 pub mod stf_sgx_primitives;
 #[cfg(all(feature = "test", feature = "sgx"))]

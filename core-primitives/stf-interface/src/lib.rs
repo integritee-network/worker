@@ -63,6 +63,7 @@ pub trait UpdateState<State, StateDiff> {
 	/// Updates a given state for
 	fn apply_state_diff(state: &mut State, state_diff: StateDiff);
 	fn storage_hashes_to_update_on_block(
+		state: &mut State,
 		parentchain_id: &ParentchainId,
 		shard: &ShardIdentifier,
 	) -> Vec<Vec<u8>>;

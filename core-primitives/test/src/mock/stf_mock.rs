@@ -58,6 +58,7 @@ impl UpdateState<SgxExternalities, SgxExternalitiesDiffType> for StfMock {
 	fn apply_state_diff(_state: &mut SgxExternalities, _map_update: SgxExternalitiesDiffType) {}
 
 	fn storage_hashes_to_update_on_block(
+		_state: &mut SgxExternalities,
 		_parentchain_id: &ParentchainId,
 		_shard: &ShardIdentifier,
 	) -> Vec<Vec<u8>> {
