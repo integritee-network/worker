@@ -24,7 +24,8 @@ use crate::{
 		get_note_buckets_info::GetNoteBucketsInfoCommand, get_notes::GetNotesCommand,
 		get_parentchains_info::GetParentchainsInfoCommand,
 		get_session_proxies::GetSessionProxiesCommand, get_shard::GetShardCommand,
-		get_shard_vault::GetShardVaultCommand, get_total_issuance::GetTotalIssuanceCommand,
+		get_shard_info::GetShardInfoCommand, get_shard_vault::GetShardVaultCommand,
+		get_total_issuance::GetTotalIssuanceCommand,
 		get_undistributed_fees::GetUndistributedFeesCommand, nonce::NonceCommand,
 		note_bloat::NoteBloatCommand, transfer::TransferCommand,
 		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
@@ -87,6 +88,9 @@ pub enum TrustedBaseCommand {
 	/// get info for all parentchains' sync status
 	GetParentchainsInfo(GetParentchainsInfoCommand),
 
+	/// get info for shard like config, status and mode
+	GetShardInfo(GetShardInfoCommand),
+
 	/// get info about available note buckets
 	GetNoteBucketsInfo(GetNoteBucketsInfoCommand),
 
@@ -128,6 +132,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetNoteBucketsInfo(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetNotes(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetShardInfo(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),

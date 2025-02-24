@@ -18,7 +18,7 @@
 use codec::{Decode, Encode};
 use ita_sgx_runtime::{
 	Assets, Balances, Notes, ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB,
-	Runtime, SessionProxy, System,
+	Runtime, SessionProxy, ShardManagement, ShardMode, System,
 };
 use itp_randomness::{Randomness, SgxRandomness};
 use itp_stf_interface::ExecuteGetter;
@@ -52,7 +52,10 @@ use itp_stf_primitives::{
 	error::StfError,
 	traits::{GetDecimals, PoolTransactionValidation},
 };
-use itp_types::parentchain::{AccountInfo, BlockNumber, Hash, ParentchainId};
+use itp_types::{
+	parentchain::{AccountInfo, BlockNumber, Hash, ParentchainId},
+	ShardStatus, UpgradableShardConfig,
+};
 use pallet_notes::{BucketIndex, BucketRange};
 use pallet_session_proxy::{SessionProxyCredentials, SessionProxyRole};
 #[cfg(feature = "evm")]
@@ -126,6 +129,7 @@ pub enum PublicGetter {
 	undistributed_fees(Option<AssetId>) = 2,
 	parentchains_info = 10,
 	note_buckets_info = 11,
+	shard_info = 12,
 	asset_total_issuance(AssetId) = 40,
 	guess_the_number(GuessTheNumberPublicGetter) = 50,
 }
@@ -361,6 +365,15 @@ impl ExecuteGetter for PublicGetter {
 				let maybe_last = Notes::buckets(Notes::last_bucket_index().unwrap_or_default());
 				Some(BucketRange { maybe_first, maybe_last }.encode())
 			},
+			PublicGetter::shard_info => {
+				let (config, config_updated_at) = ShardManagement::upgradable_shard_config()
+					.map(|(c, b)| (Some(c), Some(b)))
+					.unwrap_or((None, None));
+				// TODO: once we mirror this properly
+				let status = None;
+				let mode = ShardManagement::shard_mode();
+				Some(ShardInfo { config, config_updated_at, status, mode }.encode())
+			},
 			PublicGetter::asset_total_issuance(asset_id) =>
 				Some(Assets::total_supply(asset_id).encode()),
 			PublicGetter::guess_the_number(getter) => getter.execute(),
@@ -426,6 +439,18 @@ impl ParentchainsInfo {
 	}
 }
 
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct ShardInfo {
+	/// shard config as mirrored from L1
+	pub config: Option<UpgradableShardConfig>,
+	/// Integritee Network block number when the config was last updated
+	pub config_updated_at: Option<BlockNumber>,
+	/// shard status as mirrored from L1
+	pub status: Option<ShardStatus>,
+	/// shard mode
+	pub mode: ShardMode,
+}
+
 /// General public information about the sync status of a parentchain
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub struct ParentchainInfo {
@@ -442,6 +467,7 @@ pub struct ParentchainInfo {
 	/// the timestamp of creation for this shard
 	creation_timestamp: Option<Moment>,
 }
+
 mod tests {
 	use super::*;
 

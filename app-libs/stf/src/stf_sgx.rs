@@ -31,7 +31,7 @@ use ita_assets_map::{AssetId, AssetTranslation, FOREIGN_ASSETS, NATIVE_ASSETS};
 use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
 	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-	ShardManagement, System,
+	ShardManagement, ShardMode, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_pallet_storage::{
@@ -276,7 +276,16 @@ where
 					shielding_target_genesis_hash().unwrap_or_default(),
 				) {
 				warn!("Maintenance mode has expired. Executing shard retirement tasks");
-
+				// set the sticky flag, irrevocable!!!
+				ita_sgx_runtime::ShardManagementCall::<ita_sgx_runtime::Runtime>::set_shard_mode {
+					new_shard_mode: ShardMode::Retired
+				}
+					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+					// Replace with `inspect_err` once it's stable.
+					.map_err(|_| {
+						error!("Failed to set shard mode to retired");
+					})
+					.ok();
 				let mut accounts_to_ignore = Vec::new();
 				accounts_to_ignore.push(enclave_signer_account());
 				#[cfg(feature = "test")]

@@ -86,7 +86,7 @@ pub use pallet_parentchain::Call as ParentchainPalletCall;
 pub use pallet_session_proxy::{
 	Call as SessionProxyCall, SessionProxyCredentials, SessionProxyRole,
 };
-pub use pallet_shard_management::Call as ShardManagementCall;
+pub use pallet_shard_management::{Call as ShardManagementCall, ShardMode};
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_core::crypto::AccountId32;
 #[cfg(any(feature = "std", test))]

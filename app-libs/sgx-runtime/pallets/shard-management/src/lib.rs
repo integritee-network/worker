@@ -1,13 +1,26 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use codec::{Decode, Encode};
 use enclave_bridge_primitives::UpgradableShardConfig;
+use frame_support::{dispatch::DispatchResult, ensure};
 pub use pallet::*;
+use scale_info::TypeInfo;
 
 pub type UpgradableShardConfigAndChangedBlock<AccountId, BlockNumber> =
 	(UpgradableShardConfig<AccountId, BlockNumber>, BlockNumber);
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, Default, TypeInfo)]
+#[repr(u8)]
+pub enum ShardMode {
+	#[default]
+	Normal = 0,
+	MaintenanceOngoing = 1,
+	Retired = 2,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
-	use crate::{weights::WeightInfo, UpgradableShardConfigAndChangedBlock};
+	use crate::{weights::WeightInfo, ShardMode, UpgradableShardConfigAndChangedBlock};
 	use enclave_bridge_primitives::UpgradableShardConfig;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
@@ -35,7 +48,9 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {}
+	pub enum Error<T> {
+		Retired,
+	}
 
 	#[pallet::storage]
 	#[pallet::getter(fn reward_destination)]
@@ -43,9 +58,8 @@ pub mod pallet {
 		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, OptionQuery>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn maintenance_mode_start_block_number)]
-	pub(super) type MaintenanceModeStartBlockNumber<T: Config> =
-		StorageValue<_, T::BlockNumber, OptionQuery>;
+	#[pallet::getter(fn shard_mode)]
+	pub(super) type ShardModeRegistry<T: Config> = StorageValue<_, ShardMode, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn upgradable_shard_config)]
@@ -73,12 +87,31 @@ pub mod pallet {
 					return Ok(())
 				}
 			}
+			if config.active_config.maintenance_mode {
+				let _ = Self::do_set_shard_mode(ShardMode::MaintenanceOngoing);
+			}
 			<UpgradableShardConfigRegistry<T>>::put((config, parentchain_block_number));
+			Ok(())
+		}
+
+		#[pallet::call_index(1)]
+		#[pallet::weight(T::WeightInfo::set_shard_mode())]
+		pub fn set_shard_mode(origin: OriginFor<T>, new_shard_mode: ShardMode) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::do_set_shard_mode(new_shard_mode)?;
 			Ok(())
 		}
 	}
 }
 
+impl<T: Config> Pallet<T> {
+	pub fn do_set_shard_mode(mode: ShardMode) -> DispatchResult {
+		// retired is sticky, can't change back
+		ensure!(Self::shard_mode() != ShardMode::Retired, Error::<T>::Retired);
+		<ShardModeRegistry<T>>::put(mode);
+		Ok(())
+	}
+}
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

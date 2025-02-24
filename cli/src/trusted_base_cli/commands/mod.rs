@@ -7,6 +7,7 @@ pub mod get_notes;
 pub mod get_parentchains_info;
 pub mod get_session_proxies;
 pub mod get_shard;
+pub mod get_shard_info;
 pub mod get_shard_vault;
 pub mod get_total_issuance;
 pub mod get_undistributed_fees;
