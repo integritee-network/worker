@@ -108,11 +108,9 @@ impl EnclaveOnChainOCallApi for OcallApi {
 			.get_multiple_opaque_storages_verified(vec![storage_hash], header, parentchain_id)?
 			.into_iter()
 			.next()
-			.map(|sv| sv.value)
-			.flatten()
+			.and_then(|sv| sv.value)
 			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))?;
-		Decode::decode(&mut opaque_value_verified.as_slice())
-			.map_err(|e| itp_ocall_api::Error::Codec(e.into()))
+		Decode::decode(&mut opaque_value_verified.as_slice()).map_err(itp_ocall_api::Error::Codec)
 	}
 
 	/// this returns opaque/encoded values as we can't assume all values are of same type
@@ -129,11 +127,11 @@ impl EnclaveOnChainOCallApi for OcallApi {
 
 		let storage_entries = self
 			.worker_request::<ParentchainHeader, Vec<u8>>(requests, parentchain_id)
-			.and_then(|responses| {
-				Ok(responses
+			.map(|responses| {
+				responses
 					.into_iter()
 					.map(|response| response.into())
-					.collect::<Vec<StorageEntry<_>>>())
+					.collect::<Vec<StorageEntry<_>>>()
 			})?;
 		let verified_entries = verify_storage_entries(storage_entries, header).map_err(|e| {
 			warn!("Failed to verify storage entry proofs: {:?}", e);
