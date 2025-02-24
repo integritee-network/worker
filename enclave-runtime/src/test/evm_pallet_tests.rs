@@ -78,7 +78,14 @@ pub fn test_evm_call() {
 
 	// when
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
+	TestStf::execute_call(
+		&mut state,
+		&ShardIdentifier::default(),
+		trusted_call,
+		&mut parentchain_calls,
+		repo,
+	)
+	.unwrap();
 
 	// then
 	assert_eq!(
@@ -123,7 +130,14 @@ pub fn test_evm_counter() {
 	// when
 	let execution_address = evm_create_address(sender_evm_acc, 0);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
+	TestStf::execute_call(
+		&mut state,
+		&ShardIdentifier::default(),
+		trusted_call,
+		&mut parentchain_calls,
+		repo,
+	)
+	.unwrap();
 
 	// then
 	assert_eq!(
@@ -249,7 +263,7 @@ fn execute_and_verify_evm_call(
 	)
 	.sign(&pair, nonce, mrenclave, shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(state, inc_call, calls, repo).unwrap();
+	TestStf::execute_call(state, &ShardIdentifier::default(), inc_call, calls, repo).unwrap();
 
 	let counter_value = state
 		.execute_with(|| get_evm_account_storages(&execution_address, &H256::zero()))
@@ -295,7 +309,14 @@ pub fn test_evm_create() {
 	assert_eq!(nonce, 0);
 	let execution_address = evm_create_address(sender_evm_acc, nonce);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
+	TestStf::execute_call(
+		&mut state,
+		&ShardIdentifier::default(),
+		trusted_call,
+		&mut parentchain_calls,
+		repo,
+	)
+	.unwrap();
 
 	assert_eq!(
 		execution_address,
@@ -350,7 +371,14 @@ pub fn test_evm_create2() {
 	let code_hash = create_code_hash(&smart_contract);
 	let execution_address = evm_create2_address(sender_evm_acc, salt, code_hash);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut parentchain_calls, repo).unwrap();
+	TestStf::execute_call(
+		&mut state,
+		&ShardIdentifier::default(),
+		trusted_call,
+		&mut parentchain_calls,
+		repo,
+	)
+	.unwrap();
 
 	// then
 	assert_eq!(
