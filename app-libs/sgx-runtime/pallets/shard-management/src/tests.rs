@@ -18,13 +18,6 @@ use crate::mock::*;
 use enclave_bridge_primitives::{ShardConfig, UpgradableShardConfig};
 use frame_support::assert_ok;
 
-use sp_runtime::{
-	generic,
-	traits::{BlakeTwo256, Header as HeaderT},
-};
-
-pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
-
 #[test]
 fn set_shard_config() {
 	new_test_ext().execute_with(|| {

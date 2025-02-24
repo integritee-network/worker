@@ -35,12 +35,7 @@ pub mod pallet {
 	}
 
 	#[pallet::error]
-	pub enum Error<T> {
-		/// Sahrd vault has been previously initialized and can't be overwritten
-		ShardVaultAlreadyInitialized,
-		/// Parentchain genesis hash has already been initialized and can^t be overwritten
-		GenesisAlreadyInitialized,
-	}
+	pub enum Error<T> {}
 
 	#[pallet::storage]
 	#[pallet::getter(fn reward_destination)]

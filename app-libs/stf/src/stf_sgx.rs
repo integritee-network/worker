@@ -252,7 +252,7 @@ where
 					accounts_to_ignore.extend(validateers);
 				}
 
-				// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks
+				// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks https://github.com/integritee-network/worker/issues/1694
 				// find all accounts with nonzero balance: assets first, then native
 				let mut accounts: Vec<(AccountId, Nonce)> =
 					frame_system::Account::<ita_sgx_runtime::Runtime>::iter()

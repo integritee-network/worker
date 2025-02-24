@@ -65,7 +65,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T, I = ()> {
-		/// Sahrd vault has been previously initialized and can't be overwritten
+		/// Shard vault has been previously initialized and can't be overwritten
 		ShardVaultAlreadyInitialized,
 		/// Parentchain genesis hash has already been initialized and can^t be overwritten
 		GenesisAlreadyInitialized,
