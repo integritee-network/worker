@@ -55,10 +55,7 @@ use itp_stf_primitives::{
 	types::{ShardIdentifier, Signature},
 };
 use itp_storage::storage_value_key;
-use itp_types::{
-	parentchain::{AccountId, BlockNumber, Hash, ParentchainCall, ParentchainId},
-	Nonce,
-};
+use itp_types::parentchain::{AccountId, BlockNumber, Hash, ParentchainCall, ParentchainId};
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
 use sp_runtime::traits::StaticLookup;
@@ -256,6 +253,9 @@ where
 					.unwrap_or_default();
 				debug!("on_initialize: shard vault {:?} transferrable balance: {}", id, balance);
 			}
+			if ShardManagement::shard_mode() == ShardMode::Initializing {
+				set_shard_mode(ShardMode::Normal);
+			}
 		});
 		Ok(())
 	}
@@ -268,24 +268,16 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-			let maintenance_mode_age = ShardManagement::upgradable_shard_config()
+			let maintenance_mode_age = integritee_block_number.saturating_sub(ShardManagement::upgradable_shard_config()
 				.map(|(_config, updated_at)| updated_at)
-				.unwrap_or(integritee_block_number);
+				.unwrap_or(integritee_block_number));
 			if maintenance_mode_age
 				>= MinimalChainSpec::maintenance_mode_duration_before_retirement(
 					shielding_target_genesis_hash().unwrap_or_default(),
 				) {
 				warn!("Maintenance mode has expired. Executing shard retirement tasks");
 				// set the sticky flag, irrevocable!!!
-				ita_sgx_runtime::ShardManagementCall::<ita_sgx_runtime::Runtime>::set_shard_mode {
-					new_shard_mode: ShardMode::Retired
-				}
-					.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
-					// Replace with `inspect_err` once it's stable.
-					.map_err(|_| {
-						error!("Failed to set shard mode to retired");
-					})
-					.ok();
+				set_shard_mode(ShardMode::Retired);
 				let mut accounts_to_ignore = Vec::new();
 				accounts_to_ignore.push(enclave_signer_account());
 				#[cfg(feature = "test")]
@@ -307,35 +299,33 @@ where
 
 				// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks https://github.com/integritee-network/worker/issues/1694
 				// find all accounts with nonzero balance: assets first, then native
-				let mut accounts: Vec<(AccountId, Nonce)> =
-					frame_system::Account::<ita_sgx_runtime::Runtime>::iter()
-						.map(|(account_id, account_info)| (account_id, account_info.nonce))
+				let mut accounts: Vec<AccountId> =
+					frame_system::Account::<ita_sgx_runtime::Runtime>::iter_keys()
 						.collect();
-				accounts.retain(|(x, _)| !accounts_to_ignore.contains(x));
+				accounts.retain(|x| !accounts_to_ignore.contains(x));
 				info!(
 					"will unshield all for {} accounts (ignoring {} technical accounts)",
 					accounts.len(),
 					accounts_to_ignore.len()
 				);
-				// we won't put this call through the TOP pool.
-				// No signature check will happen and we will impersonate the sender account to charge
-				// fees properly and leave notes on respective accounts.
-				// We will the handy ExecuteCall trait
+				// we won't put this call through the TOP pool but we will use the handy ExecuteCall trait to execute directly. Therefore, 
+				// no signature check will happen. Still, we need to supply that field with a fake value.
 				let fake_signature =
 					Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
+				let enclave_nonce = System::account_nonce(enclave_signer_account::<AccountId>());
 				let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
-				for (account, nonce) in accounts {
+				for account in accounts {
 					info!("force unshield all for {:?}", account_id_to_string(&account));
 					for asset_id in AssetId::all_shieldable(genesis_hash) {
 						if Assets::balance(asset_id, &account) > 0 {
 							info!("  force unshield asset {:?} balance", asset_id);
 							let tcs = TrustedCallSigned {
-								call: TrustedCall::unshield_all(
-									account.clone(),
+								call: TrustedCall::force_unshield_all(
+									enclave_signer_account(),
 									account.clone(),
 									Some(asset_id),
 								),
-								nonce, //nonce will no longer increase as we bypass signature check
+								nonce: enclave_nonce, //nonce will no longer increase as we bypass signature check
 								delegate: None,
 								signature: fake_signature.clone(),
 							};
@@ -355,8 +345,8 @@ where
 					if System::account(&account).data.free > 0 {
 						info!("  force unshield native balance");
 						let tcs = TrustedCallSigned {
-							call: TrustedCall::unshield_all(account.clone(), account.clone(), None),
-							nonce, //nonce will no longer increase as we bypass signature check
+							call: TrustedCall::force_unshield_all(enclave_signer_account(), account.clone(), None),
+							nonce: enclave_nonce, //nonce will no longer increase as we bypass signature check
 							delegate: None,
 							signature: fake_signature.clone(),
 						};
@@ -741,4 +731,22 @@ where
 		StfError::Dispatch(format!("Set Balance for enclave signer account error: {:?}", e.error))
 	})
 	.map(|_| ())
+}
+
+fn set_shard_mode(mode: ShardMode) {
+	let current_mode = ShardManagement::shard_mode();
+	// avoid spamming log with errors
+	if mode == ShardMode::Retired && current_mode == ShardMode::Retired {
+		return
+	};
+
+	ita_sgx_runtime::ShardManagementCall::<ita_sgx_runtime::Runtime>::set_shard_mode {
+		new_shard_mode: mode,
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+	// Replace with `inspect_err` once it's stable.
+	.map_err(|_| {
+		error!("Failed to set shard mode to: {:?}", mode);
+	})
+	.ok();
 }

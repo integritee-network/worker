@@ -79,9 +79,12 @@ impl MinimalChainSpec {
 		match genesis_hash_hex.as_ref() {
 			PASEO_RELAY_GENESIS_HASH_HEX
 			| ASSET_HUB_PASEO_GENESIS_HASH_HEX
-			| INTEGRITEE_PASEO_GENESIS_HASH_HEX => 7200, // 24h at 12s block time
+			| INTEGRITEE_PASEO_GENESIS_HASH_HEX => 300, // 1h at 12s block time
+			POLKADOT_RELAY_GENESIS_HASH_HEX | ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => 216_000, // 30d for all production chains
+			KUSAMA_RELAY_GENESIS_HASH_HEX | ASSET_HUB_KUSAMA_GENESIS_HASH_HEX => 216_000, // 30d for all production chains
+			INTEGRITEE_KUSAMA_GENESIS_HASH_HEX => 216_000, // 30d for all production chains
 			LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => 50, // 10 min at 12s block time
-			_ => 216_000, // 30d for all production chains
+			_ => 7200, // if undefined, leave 24h to react
 		}
 	}
 }

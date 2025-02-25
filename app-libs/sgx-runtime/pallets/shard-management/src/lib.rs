@@ -9,13 +9,14 @@ use scale_info::TypeInfo;
 pub type UpgradableShardConfigAndChangedBlock<AccountId, BlockNumber> =
 	(UpgradableShardConfig<AccountId, BlockNumber>, BlockNumber);
 
-#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, Default, TypeInfo)]
+#[derive(Encode, Decode, Debug, Copy, Clone, PartialEq, Eq, Default, TypeInfo)]
 #[repr(u8)]
 pub enum ShardMode {
 	#[default]
-	Normal = 0,
-	MaintenanceOngoing = 1,
-	Retired = 2,
+	Initializing = 0,
+	Normal = 1,
+	MaintenanceOngoing = 2,
+	Retired = 3,
 }
 
 #[frame_support::pallet]

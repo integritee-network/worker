@@ -98,7 +98,7 @@ pub enum TrustedCall {
 	assets_unshield(AccountId, AccountId, AssetId, Balance, ShardIdentifier) = 43,
 	assets_shield(AccountId, AccountId, AssetId, Balance, ParentchainId) = 44,
 	assets_transfer_with_note(AccountId, AccountId, AssetId, Balance, Vec<u8>) = 45,
-	unshield_all(AccountId, AccountId, Option<AssetId>) = 46, // (AccountIncognito, Beneficiary, AssetId or native)
+	force_unshield_all(AccountId, AccountId, Option<AssetId>) = 46, // (Root, Beneficiary, AssetId or native)
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
@@ -179,7 +179,7 @@ impl TrustedCall {
 			#[cfg(feature = "evm")]
 			Self::evm_create2(sender_account, ..) => sender_account,
 			Self::guess_the_number(call) => call.sender_account(),
-			Self::unshield_all(sender_account, ..) => sender_account,
+			Self::force_unshield_all(sender_account, ..) => sender_account,
 		}
 	}
 }
@@ -827,14 +827,15 @@ where
 				Ok(())
 			},
 			TrustedCall::guess_the_number(call) => call.execute(calls, shard, node_metadata_repo),
-			TrustedCall::unshield_all(who, beneficiary, maybe_asset_id) => {
+			TrustedCall::force_unshield_all(enclave_account, who, maybe_asset_id) => {
+				ensure_enclave_signer_account(&enclave_account)?;
 				if let Some(asset_id) = maybe_asset_id {
 					let balance = Assets::balance(asset_id, &who);
 					let unshield_amount =
 						balance.saturating_sub(asset_id.one_unit() / STF_TX_FEE_UNIT_DIVIDER * 3);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_assets_parentchain_call(
-							&beneficiary,
+							&who,
 							unshield_amount,
 							asset_id,
 							node_metadata_repo.clone(),
@@ -842,9 +843,8 @@ where
 						node_metadata_repo,
 					)?;
 					std::println!(
-						"⣿STF⣿ 🛡👐 unshield all from (L2): {}, to (L1): {}, value {} {:?} ",
+						"⣿STF⣿ 🛡👐 force unshield all from (L2): {}, to (L1), value {} {:?} ",
 						account_id_to_string(&who),
-						account_id_to_string(&beneficiary),
 						unshield_amount,
 						asset_id
 					);
@@ -860,7 +860,8 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER * 3,
+						) / STF_TX_FEE_UNIT_DIVIDER
+							* 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(
@@ -927,7 +928,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 			one / STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,
 		TrustedCall::assets_transfer(_, _, _asset_id, ..) => one / STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::unshield_all(..) => one / STF_TX_FEE_UNIT_DIVIDER * 3,
+		TrustedCall::force_unshield_all(..) => 0, // root call, will be charged on affected account
 		TrustedCall::add_session_proxy(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		TrustedCall::send_note(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]
@@ -1190,6 +1191,7 @@ fn may_execute(tcs: &TrustedCallSigned) -> bool {
 				TrustedCall::assets_shield(..) => true,
 				// permissioned calls are ok
 				TrustedCall::timestamp_set(..) => true,
+				TrustedCall::force_unshield_all(..) => true,
 				// everything else is disabled during maintenance mode
 				_ => false,
 			}
