@@ -423,13 +423,14 @@ fn test_create_state_diff() {
 		get_from_state_diff(state_diff, &account_key_hash::<AccountId>(&receiver.into()));
 
 	// state diff should consist of the following updates:
-	// (last_hash, sidechain block_number, sender_funds, receiver_funds, fee_recipient account [no clear, after polkadot_v0.9.26 update], events, timestamp, did_update, note added)
-	assert_eq!(state_diff.len(), 19);
+	// (last_hash, sidechain block_number, sender_funds, receiver_funds, fee_recipient account [no clear, after polkadot_v0.9.26 update], events, timestamp, did_update, note added, ShardMode set)
+	assert_eq!(state_diff.len(), 20);
 	assert_eq!(receiver_acc_info.data.free, TX_AMOUNT);
 	assert_eq!(
 		sender_acc_info.data.free,
 		ita_stf::test_genesis::ENDOWED_ACC_FUNDS
-			- TX_AMOUNT - 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
+			- TX_AMOUNT
+			- 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
 	);
 }
 
