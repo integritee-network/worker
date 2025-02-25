@@ -313,7 +313,8 @@ where
 				// no signature check will happen. Still, we need to supply that field with a fake value.
 				let fake_signature =
 					Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
-				let enclave_nonce = System::account_nonce(enclave_signer_account::<AccountId>()).saturating_add(1);
+				let enclave_nonce =
+					System::account_nonce(enclave_signer_account::<AccountId>()).saturating_add(1);
 				let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
 				for account in accounts {
 					info!("force unshield all for {:?}", account_id_to_string(&account));
