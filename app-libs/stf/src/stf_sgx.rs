@@ -362,7 +362,8 @@ where
 							.map_err(|e| {
 								error!(
 									"Failed to force-unshield native for {:?}: {:?}",
-									account, e
+									account_id_to_string(&account),
+									e
 								);
 							})
 							.ok();

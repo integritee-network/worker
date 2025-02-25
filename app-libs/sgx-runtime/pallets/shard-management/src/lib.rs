@@ -89,6 +89,9 @@ pub mod pallet {
 				}
 			}
 			if config.active_config.maintenance_mode {
+				// we can safely ignore errors here. It can only fail if shard mode already went to "retired"
+				// we want to still be able to change shard config even if retired.
+				// changing maintenance_mode back to false would be meaningless because retirement is irrevocable
 				let _ = Self::do_set_shard_mode(ShardMode::MaintenanceOngoing);
 			}
 			<UpgradableShardConfigRegistry<T>>::put((config, parentchain_block_number));
