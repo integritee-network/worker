@@ -268,9 +268,11 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-			let maintenance_mode_age = integritee_block_number.saturating_sub(ShardManagement::upgradable_shard_config()
-				.map(|(_config, updated_at)| updated_at)
-				.unwrap_or(integritee_block_number));
+			let maintenance_mode_age = integritee_block_number.saturating_sub(
+				ShardManagement::upgradable_shard_config()
+					.map(|(_config, updated_at)| updated_at)
+					.unwrap_or(integritee_block_number),
+			);
 			if maintenance_mode_age
 				>= MinimalChainSpec::maintenance_mode_duration_before_retirement(
 					shielding_target_genesis_hash().unwrap_or_default(),
@@ -300,15 +302,14 @@ where
 				// TODO: ensure this doesn't run longer than remaining block production time. We still must avoid forks https://github.com/integritee-network/worker/issues/1694
 				// find all accounts with nonzero balance: assets first, then native
 				let mut accounts: Vec<AccountId> =
-					frame_system::Account::<ita_sgx_runtime::Runtime>::iter_keys()
-						.collect();
+					frame_system::Account::<ita_sgx_runtime::Runtime>::iter_keys().collect();
 				accounts.retain(|x| !accounts_to_ignore.contains(x));
 				info!(
 					"will unshield all for {} accounts (ignoring {} technical accounts)",
 					accounts.len(),
 					accounts_to_ignore.len()
 				);
-				// we won't put this call through the TOP pool but we will use the handy ExecuteCall trait to execute directly. Therefore, 
+				// we won't put this call through the TOP pool but we will use the handy ExecuteCall trait to execute directly. Therefore,
 				// no signature check will happen. Still, we need to supply that field with a fake value.
 				let fake_signature =
 					Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
@@ -345,7 +346,11 @@ where
 					if System::account(&account).data.free > 0 {
 						info!("  force unshield native balance");
 						let tcs = TrustedCallSigned {
-							call: TrustedCall::force_unshield_all(enclave_signer_account(), account.clone(), None),
+							call: TrustedCall::force_unshield_all(
+								enclave_signer_account(),
+								account.clone(),
+								None,
+							),
 							nonce: enclave_nonce, //nonce will no longer increase as we bypass signature check
 							delegate: None,
 							signature: fake_signature.clone(),
