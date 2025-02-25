@@ -313,8 +313,8 @@ where
 				// no signature check will happen. Still, we need to supply that field with a fake value.
 				let fake_signature =
 					Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
-				let enclave_nonce =
-					System::account_nonce(enclave_signer_account::<AccountId>()).saturating_add(1);
+				let mut enclave_nonce =
+					System::account_nonce(enclave_signer_account::<AccountId>());
 				let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
 				for account in accounts {
 					info!("force unshield all for {:?}", account_id_to_string(&account));
@@ -327,7 +327,7 @@ where
 									account.clone(),
 									Some(asset_id),
 								),
-								nonce: enclave_nonce, //nonce will no longer increase as we bypass signature check
+								nonce: enclave_nonce,
 								delegate: None,
 								signature: fake_signature.clone(),
 							};
@@ -342,6 +342,7 @@ where
 									);
 								})
 								.ok();
+							enclave_nonce += 1;
 						}
 					}
 					if System::account(&account).data.free > 0 {
@@ -365,6 +366,7 @@ where
 								);
 							})
 							.ok();
+						enclave_nonce += 1;
 					}
 				}
 				Ok(())

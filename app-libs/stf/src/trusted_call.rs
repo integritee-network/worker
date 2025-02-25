@@ -300,7 +300,7 @@ where
 	) -> Result<(), Self::Error> {
 		let _role = ensure_authorization(&self)?;
 		// todo! spending limits according to role https://github.com/integritee-network/worker/issues/1656
-		ensure!(may_execute(&self), Self::Error::Filtered);
+
 		let sender = self.call.sender_account().clone();
 		let call_hash = blake2_256(&self.call.encode());
 		let system_nonce = System::account_nonce(&sender);
@@ -313,6 +313,8 @@ where
 		// The call must have entered the transaction pool already,
 		// so it should be considered as valid
 		System::inc_account_nonce(&sender);
+
+		ensure!(may_execute(&self), Self::Error::Filtered);
 
 		match self.call.clone() {
 			TrustedCall::noop(who) => {
