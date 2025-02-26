@@ -5,8 +5,8 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
-hex-literal = "0.4.1"
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+hex-literal = "0.4.1"
 itp-types = { path = "../../core-primitives/types", default-features = false }
 log = { version = "0.4", default-features = false }
 
