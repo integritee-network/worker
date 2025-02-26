@@ -1213,7 +1213,7 @@ where
 	})
 }
 
-/// depending on the current shard status, we may want to filter specific calls
+/// depending on the current shard status and shielding target we may want to filter specific calls
 fn may_execute(tcs: &TrustedCallSigned) -> bool {
 	if let Some((config, _)) = ShardManagement::upgradable_shard_config() {
 		// TODO: we could check for a pending upgrade too, but as the shard will be touched frequently,
@@ -1232,8 +1232,19 @@ fn may_execute(tcs: &TrustedCallSigned) -> bool {
 				_ => false,
 			}
 		}
-	} else {
-		warn!("failed to apply call filter because mirrored shard config not available");
+	}
+	if MinimalChainSpec::is_known_production_chain(
+		shielding_target_genesis_hash().unwrap_or_default(),
+	) {
+		if matches!(
+			tcs.call,
+			TrustedCall::waste_time(..)
+				| TrustedCall::note_bloat(..)
+				| TrustedCall::spam_extrinsics(..)
+		) {
+			warn!("preventing execution of call {:?} on production chain", tcs.call);
+			return false
+		}
 	}
 	true
 }
