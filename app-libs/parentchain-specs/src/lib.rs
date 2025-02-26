@@ -20,7 +20,6 @@
 #![cfg_attr(all(not(target_env = "sgx"), not(feature = "std")), no_std)]
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
-use hex as hexxer;
 use hex_literal::hex;
 use itp_types::parentchain::{Balance, BlockNumber, Hash};
 use log::warn;
@@ -65,8 +64,8 @@ impl MinimalChainSpec {
 			LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => 12,
 			_ => {
 				warn!(
-					"parentchain spec for genesis {} unknown. defaulting to 12 decimals",
-					hexxer::encode(genesis_hash)
+					"parentchain spec for genesis 0x{:#x} unknown. defaulting to 12 decimals",
+					genesis_hash
 				);
 				12
 			},

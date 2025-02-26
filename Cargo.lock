@@ -2839,7 +2839,6 @@ dependencies = [
 name = "ita-parentchain-specs"
 version = "0.1.0"
 dependencies = [
- "hex",
  "hex-literal 0.4.1",
  "itp-types",
  "log 0.4.22",

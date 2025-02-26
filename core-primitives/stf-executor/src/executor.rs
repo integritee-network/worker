@@ -198,9 +198,9 @@ where
 			let storage_hashes =
 				Stf::storage_hashes_to_update_on_block(&mut state, parentchain_id, &shard_id);
 			trace!(
-				"parentchain storage_hash to mirror: 0x{} at header 0x{}",
+				"parentchain storage_hash to mirror: 0x{} at header {}",
 				hex::encode(storage_hashes[0].clone()),
-				hex::encode(header.hash().encode())
+				header.hash()
 			);
 			let prefixed_state_diff_update = if let Ok(storage_values) = self
 				.ocall_api
