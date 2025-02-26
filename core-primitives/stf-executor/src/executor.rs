@@ -289,29 +289,6 @@ where
 			},
 		);
 
-		if maintenance_mode {
-			info!("Maintenance mode is active.");
-			let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
-			Stf::maintenance_mode_tasks(
-				&mut state,
-				&shard,
-				*header.number(),
-				&mut extrinsic_call_backs,
-				self.node_metadata_repo.clone(),
-			)
-			.map_err(|e| error!("maintenance_mode tasks failed: {:?}", e))
-			.ok();
-			info!(
-				"maintenance tasks have triggered {} parentchain calls",
-				extrinsic_call_backs.len()
-			);
-			// we're hacking our unshielding calls into the queue
-			executed_and_failed_calls.push(ExecutedOperation::success(
-				H256::default(),
-				TrustedOperationOrHash::Hash(H256::default()),
-				extrinsic_call_backs,
-			));
-		}
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
 			// Break if allowed time window is over.
@@ -334,6 +311,33 @@ where
 					error!("Failed to attempt call execution: {:?}", e);
 				},
 			};
+		}
+
+		// Execute maintenance tasks if maintenance mode is active
+		// This has to execute after the top-pool calls because enclave signer nonce clashes can occur otherwise (e.g. shielding calls).
+		// the risk of overdue block production is minimal as all user calls are filtered during maintenance mode anyway
+		if maintenance_mode {
+			info!("Maintenance mode is active.");
+			let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
+			Stf::maintenance_mode_tasks(
+				&mut state,
+				&shard,
+				*header.number(),
+				&mut extrinsic_call_backs,
+				self.node_metadata_repo.clone(),
+			)
+			.map_err(|e| error!("maintenance_mode tasks failed: {:?}", e))
+			.ok();
+			info!(
+				"maintenance tasks have triggered {} parentchain calls",
+				extrinsic_call_backs.len()
+			);
+			// we're hacking our unshielding calls into the queue
+			executed_and_failed_calls.push(ExecutedOperation::success(
+				H256::default(),
+				TrustedOperationOrHash::Hash(H256::default()),
+				extrinsic_call_backs,
+			));
 		}
 
 		Stf::on_finalize(&mut state).unwrap_or_else(|e| {

@@ -1225,9 +1225,9 @@ fn may_execute(tcs: &TrustedCallSigned) -> bool {
 				TrustedCall::balance_shield(..) => true,
 				TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => true,
 				TrustedCall::assets_shield(..) => true,
+				// permissioned calls are ok
+				TrustedCall::timestamp_set(..) => true,
 				TrustedCall::force_unshield_all(..) => true,
-				// this would cause nonce clashes during retirement. safer to filter
-				TrustedCall::timestamp_set(..) => false,
 				// everything else is disabled during maintenance mode
 				_ => false,
 			}
@@ -1235,16 +1235,14 @@ fn may_execute(tcs: &TrustedCallSigned) -> bool {
 	}
 	if MinimalChainSpec::is_known_production_chain(
 		shielding_target_genesis_hash().unwrap_or_default(),
+	) && matches!(
+		tcs.call,
+		TrustedCall::waste_time(..)
+			| TrustedCall::note_bloat(..)
+			| TrustedCall::spam_extrinsics(..)
 	) {
-		if matches!(
-			tcs.call,
-			TrustedCall::waste_time(..)
-				| TrustedCall::note_bloat(..)
-				| TrustedCall::spam_extrinsics(..)
-		) {
-			warn!("preventing execution of call {:?} on production chain", tcs.call);
-			return false
-		}
+		warn!("preventing execution of call {:?} on production chain", tcs.call);
+		return false
 	}
 	true
 }

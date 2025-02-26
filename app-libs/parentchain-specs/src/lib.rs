@@ -92,14 +92,14 @@ impl MinimalChainSpec {
 	}
 
 	pub fn is_known_production_chain(genesis_hash: Hash) -> bool {
-		match genesis_hash.into() {
+		matches!(
+			genesis_hash.into(),
 			POLKADOT_RELAY_GENESIS_HASH_HEX
-			| ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
-			| KUSAMA_RELAY_GENESIS_HASH_HEX
-			| ASSET_HUB_KUSAMA_GENESIS_HASH_HEX
-			| INTEGRITEE_KUSAMA_GENESIS_HASH_HEX
-			| INTEGRITEE_POLKADOT_GENESIS_HASH_HEX => true,
-			_ => false,
-		}
+				| ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
+				| KUSAMA_RELAY_GENESIS_HASH_HEX
+				| ASSET_HUB_KUSAMA_GENESIS_HASH_HEX
+				| INTEGRITEE_KUSAMA_GENESIS_HASH_HEX
+				| INTEGRITEE_POLKADOT_GENESIS_HASH_HEX
+		)
 	}
 }

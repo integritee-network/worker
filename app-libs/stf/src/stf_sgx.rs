@@ -381,10 +381,10 @@ fn retire_account<NodeMetadataRepository>(
 			call: TrustedCall::force_unshield_all(enclave_signer_account(), account.clone(), None),
 			nonce: *enclave_nonce, //nonce will no longer increase as we bypass signature check
 			delegate: None,
-			signature: fake_signature.clone(),
+			signature: fake_signature,
 		};
 		// Replace with `inspect_err` once it's stable.
-		tcs.execute(calls, shard, node_metadata_repo.clone())
+		tcs.execute(calls, shard, node_metadata_repo)
 			.map_err(|e| {
 				error!(
 					"Failed to force-unshield native for {:?}: {:?}",
