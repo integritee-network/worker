@@ -2574,7 +2574,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.15.12"
+version = "0.16.0"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2632,7 +2632,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.15.12"
+version = "0.16.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2839,7 +2839,7 @@ dependencies = [
 name = "ita-parentchain-specs"
 version = "0.1.0"
 dependencies = [
- "hex",
+ "hex-literal 0.4.1",
  "itp-types",
  "log 0.4.22",
 ]
@@ -2861,6 +2861,7 @@ dependencies = [
  "pallet-notes",
  "pallet-parentchain",
  "pallet-session-proxy",
+ "pallet-shard-management",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -2886,6 +2887,7 @@ dependencies = [
  "itp-hashing",
  "itp-node-api",
  "itp-node-api-metadata",
+ "itp-pallet-storage",
  "itp-randomness",
  "itp-sgx-externalities",
  "itp-sgx-runtime-primitives",
@@ -2895,6 +2897,7 @@ dependencies = [
  "itp-types",
  "itp-utils",
  "log 0.4.22",
+ "pallet-assets",
  "pallet-balances",
  "pallet-notes",
  "pallet-parentchain",
@@ -3370,6 +3373,7 @@ version = "0.9.0"
 dependencies = [
  "derive_more",
  "itp-api-client-types",
+ "itp-types",
  "parity-scale-codec",
  "sp-core",
 ]
@@ -3411,9 +3415,11 @@ dependencies = [
 name = "itp-pallet-storage"
 version = "0.9.0"
 dependencies = [
+ "hex-literal 0.4.1",
  "itp-storage",
  "itp-types",
  "parity-scale-codec",
+ "sp-core",
  "sp-std",
 ]
 
@@ -3519,6 +3525,7 @@ dependencies = [
  "itp-enclave-metrics",
  "itp-node-api",
  "itp-ocall-api",
+ "itp-pallet-storage",
  "itp-sgx-crypto",
  "itp-sgx-externalities",
  "itp-stf-interface",
@@ -5327,6 +5334,23 @@ dependencies = [
  "sp-keyring",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "pallet-shard-management"
+version = "0.15.0"
+dependencies = [
+ "enclave-bridge-primitives",
+ "frame-support",
+ "frame-system",
+ "log 0.4.22",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
+ "sp-runtime",
 ]
 
 [[package]]

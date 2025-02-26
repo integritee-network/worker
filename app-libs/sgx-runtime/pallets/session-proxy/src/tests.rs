@@ -14,13 +14,9 @@
 	limitations under the License.
 
 */
-use crate::{mock::*, BalanceOf, Config, Error, SessionProxyCredentials, SessionProxyRole};
-use codec::Encode;
-use frame_support::{
-	assert_err, assert_ok,
-	pallet_prelude::{DispatchResultWithPostInfo, Get},
-	traits::{Currency, Hooks},
-};
+use crate::{mock::*, SessionProxyCredentials, SessionProxyRole};
+
+use frame_support::{assert_ok, pallet_prelude::DispatchResultWithPostInfo, traits::Hooks};
 
 use sp_keyring::AccountKeyring;
 use sp_runtime::DispatchError;

@@ -15,10 +15,11 @@
 
 */
 use crate::{error::Result, NodeMetadata};
+use itp_types::ShardIdentifier;
 use sp_core::storage::StorageKey;
 
 /// Pallet' name:
-const ENCLAVE_BRIDGE: &str = "EnclaveBridge";
+pub const ENCLAVE_BRIDGE: &str = "EnclaveBridge";
 
 pub trait EnclaveBridgeCallIndexes {
 	fn invoke_call_indexes(&self) -> Result<[u8; 2]>;
@@ -35,8 +36,8 @@ pub trait EnclaveBridgeCallIndexes {
 }
 
 pub trait EnclaveBridgeStorageKey {
-	fn shard_status_storage_map_key(&self, index: u64) -> Result<StorageKey>;
-	fn shard_config_registry_storage_map_key(&self, index: u64) -> Result<StorageKey>;
+	fn shard_status_storage_map_key(&self, shard: &ShardIdentifier) -> Result<StorageKey>;
+	fn shard_config_registry_storage_map_key(&self, shard: &ShardIdentifier) -> Result<StorageKey>;
 }
 
 impl EnclaveBridgeCallIndexes for NodeMetadata {
@@ -66,10 +67,10 @@ impl EnclaveBridgeCallIndexes for NodeMetadata {
 }
 
 impl EnclaveBridgeStorageKey for NodeMetadata {
-	fn shard_status_storage_map_key(&self, index: u64) -> Result<StorageKey> {
-		self.storage_map_key(ENCLAVE_BRIDGE, "ShardStatus", index)
+	fn shard_status_storage_map_key(&self, shard: &ShardIdentifier) -> Result<StorageKey> {
+		self.storage_map_key(ENCLAVE_BRIDGE, "ShardStatus", shard)
 	}
-	fn shard_config_registry_storage_map_key(&self, index: u64) -> Result<StorageKey> {
-		self.storage_map_key(ENCLAVE_BRIDGE, "ShardConfigRegistry", index)
+	fn shard_config_registry_storage_map_key(&self, shard: &ShardIdentifier) -> Result<StorageKey> {
+		self.storage_map_key(ENCLAVE_BRIDGE, "ShardConfigRegistry", shard)
 	}
 }

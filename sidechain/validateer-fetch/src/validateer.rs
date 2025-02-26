@@ -66,10 +66,8 @@ impl<OnchainStorage: EnclaveOnChainOCallApi> ValidateerFetch for OnchainStorage 
 				),
 				header,
 				&ParentchainId::Integritee,
-			)?
-			.into_tuple()
-			.1
-			.ok_or_else(|| Error::Other("Could not get validateer count from chain"))?;
+			)
+			.map_err(|_| Error::Other("Could not get validateer count from chain"))?;
 		trace!("fetched {} validateers for shard {:?}", shard_status.len(), shard);
 		Ok(shard_status.iter().map(|sss: &ShardSignerStatus| sss.signer.clone()).collect())
 	}

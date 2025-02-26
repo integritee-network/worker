@@ -15,6 +15,7 @@ sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-s
 itp-enclave-metrics = { path = "../enclave-metrics", default-features = false }
 itp-node-api = { path = "../node-api", default-features = false }
 itp-ocall-api = { path = "../ocall-api", default-features = false }
+itp-pallet-storage = { path = "../pallet-storage", default-features = false }
 itp-sgx-crypto = { path = "../sgx/crypto", default-features = false }
 itp-sgx-externalities = { default-features = false, path = "../substrate-sgx/externalities" }
 itp-stf-interface = { path = "../stf-interface", default-features = false }
@@ -56,6 +57,7 @@ std = [
     # local
     "itp-node-api/std",
     "itp-ocall-api/std",
+    "itp-pallet-storage/std",
     "itp-sgx-crypto/std",
     "itp-sgx-externalities/std",
     "itp-stf-interface/std",

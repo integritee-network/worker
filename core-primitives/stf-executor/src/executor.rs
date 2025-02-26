@@ -24,9 +24,12 @@ use codec::{Decode, Encode};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_ocall_api::{EnclaveAttestationOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi};
+use itp_pallet_storage::{EnclaveBridgeStorage, EnclaveBridgeStorageKeys};
 use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_interface::{
-	parentchain_pallet::ParentchainPalletInstancesInterface, StateCallInterface, UpdateState,
+	parentchain_pallet::ParentchainPalletInstancesInterface,
+	prefix_storage_keys_for_parentchain_mirror, StateCallInterface, StateGetterInterface,
+	UpdateState,
 };
 use itp_stf_primitives::{
 	error::StfError,
@@ -39,10 +42,10 @@ use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
 	parentchain::{BlockNumber, Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	Balance, H256,
+	Balance, ShardConfig, UpgradableShardConfig, H256,
 };
 use log::*;
-use sp_runtime::traits::Header as HeaderTrait;
+use sp_runtime::{traits::Header as HeaderTrait, SaturatedConversion};
 use std::{
 	collections::BTreeMap, fmt::Debug, marker::PhantomData, sync::Arc, time::Duration, vec,
 	vec::Vec,
@@ -124,6 +127,7 @@ where
 		let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
 		if let Err(e) = Stf::execute_call(
 			state,
+			shard,
 			trusted_call.clone(),
 			&mut extrinsic_call_backs,
 			self.node_metadata_repo.clone(),
@@ -187,21 +191,32 @@ where
 		header: &ParentchainHeader,
 		parentchain_id: &ParentchainId,
 	) -> Result<()> {
-		debug!("Update STF storage upon block import!");
-		let storage_hashes = Stf::storage_hashes_to_update_on_block(parentchain_id);
-
-		// global requests they are the same for every shard
-		let state_diff_update = self
-			.ocall_api
-			.get_multiple_storages_verified(storage_hashes, header, parentchain_id)
-			.map(into_map)?;
-
-		// Update parentchain block on all states.
-		// TODO: Investigate if this is still necessary. We load and clone the entire state here,
-		// which scales badly for increasing state size.
 		let shards = self.state_handler.list_shards()?;
-		for shard_id in shards {
+		if let Some(shard_id) = shards.get(0) {
+			debug!("Update STF storage upon block import!");
 			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
+			let storage_hashes =
+				Stf::storage_hashes_to_update_on_block(&mut state, parentchain_id, &shard_id);
+			trace!(
+				"parentchain storage_hash to mirror: 0x{} at header {}",
+				hex::encode(storage_hashes[0].clone()),
+				header.hash()
+			);
+			let prefixed_state_diff_update = if let Ok(storage_values) = self
+				.ocall_api
+				.get_multiple_opaque_storages_verified(storage_hashes, header, parentchain_id)
+			{
+				trace!("mirror verified storage_values: {:?}", storage_values);
+				prefix_storage_keys_for_parentchain_mirror(
+					&into_map(storage_values),
+					parentchain_id,
+				)
+			} else {
+				error!("mirror parentchain storage upon block import failed");
+				Default::default()
+			};
+
+			// Update parentchain block data and mirrored state
 			match parentchain_id {
 				ParentchainId::Integritee =>
 					Stf::update_parentchain_integritee_block(&mut state, header.clone()),
@@ -210,73 +225,8 @@ where
 				ParentchainId::TargetB =>
 					Stf::update_parentchain_target_b_block(&mut state, header.clone()),
 			}?;
-			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
-		}
-
-		if parentchain_id != &ParentchainId::Integritee {
-			// nothing else to do
-			return Ok(())
-		}
-
-		// look for new shards and initialize them
-		if let Some(maybe_shards) = state_diff_update.get(&shards_key_hash()) {
-			match maybe_shards {
-				Some(shards) => self.initialize_new_shards(header, &state_diff_update, &shards)?,
-				None => debug!("No shards are on the chain yet"),
-			};
-		};
-		Ok(())
-	}
-}
-
-impl<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
-	StfExecutor<OCallApi, StateHandler, NodeMetadataRepository, Stf, TCS, G>
-where
-	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
-		From<BTreeMap<Vec<u8>, Option<Vec<u8>>>> + IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
-	<Stf as ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>>::Error:
-		Debug,
-	NodeMetadataRepository: AccessNodeMetadata,
-	OCallApi: EnclaveAttestationOCallApi + EnclaveOnChainOCallApi,
-	StateHandler: HandleState<HashType = H256> + QueryShardState,
-	StateHandler::StateT: Encode + SgxExternalitiesTrait,
-	Stf: ParentchainPalletInstancesInterface<StateHandler::StateT, ParentchainHeader>
-		+ UpdateState<
-			StateHandler::StateT,
-			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		>,
-	TCS: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + TrustedCallVerification,
-	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync,
-{
-	fn initialize_new_shards(
-		&self,
-		header: &ParentchainHeader,
-		state_diff_update: &BTreeMap<Vec<u8>, Option<Vec<u8>>>,
-		shards: &Vec<u8>,
-	) -> Result<()> {
-		let shards: Vec<ShardIdentifier> = Decode::decode(&mut shards.as_slice())?;
-
-		for shard_id in shards {
-			let (state_lock, mut state) = self.state_handler.load_for_mutation(&shard_id)?;
-			trace!("Successfully loaded state, updating states ...");
-
-			// per shard (cid) requests
-			let per_shard_hashes = storage_hashes_to_update_per_shard(&shard_id);
-			let per_shard_update = self
-				.ocall_api
-				.get_multiple_storages_verified(
-					per_shard_hashes,
-					header,
-					&ParentchainId::Integritee,
-				)
-				.map(into_map)?;
-
-			Stf::apply_state_diff(&mut state, per_shard_update.into());
-			Stf::apply_state_diff(&mut state, state_diff_update.clone().into());
-			if let Err(e) = Stf::update_parentchain_integritee_block(&mut state, header.clone()) {
-				error!("Could not update parentchain block. {:?}: {:?}", shard_id, e)
-			}
-
+			// opaque mirroring of state from L1 to L2 (prefixed)
+			Stf::apply_state_diff(&mut state, prefixed_state_diff_update.into());
 			self.state_handler.write_after_mutation(state, state_lock, &shard_id)?;
 		}
 		Ok(())
@@ -295,7 +245,8 @@ where
 	Stf: UpdateState<
 			StateHandler::StateT,
 			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
-		> + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>,
+		> + StateCallInterface<TCS, StateHandler::StateT, NodeMetadataRepository>
+		+ StateGetterInterface<G, StateHandler::StateT>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
 		IntoIterator<Item = (Vec<u8>, Option<Vec<u8>>)>,
 	<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType:
@@ -315,7 +266,7 @@ where
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities, TCS, G>>
 	where
-		PH: HeaderTrait<Hash = H256>,
+		PH: HeaderTrait<Hash = H256, Number = BlockNumber>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities,
 	{
 		let started_at = duration_now();
@@ -323,13 +274,20 @@ where
 
 		let (state, state_hash_before_execution) = self.state_handler.load_cloned(shard)?;
 
-		// Execute any pre-processing steps.
+		// Execute any pre-processing steps. i.e resetting Events from previous block
 		let mut state = prepare_state_function(state);
 		let mut executed_and_failed_calls = Vec::<ExecutedOperation<TCS, G>>::new();
 
-		Stf::on_initialize(&mut state, now_as_millis()).unwrap_or_else(|e| {
-			error!("on_initialize failed: {:?}", e);
-		});
+		let maintenance_mode =
+			get_active_shard_config::<StateHandler, Stf, G, PH>(shard, header, &mut state)
+				.map_or(false, |shard_config| shard_config.maintenance_mode);
+
+		// i.e. setting timestamp of new block and acting on mirrored state from last imported parentchain block
+		Stf::on_initialize(&mut state, shard, *header.number(), now_as_millis()).unwrap_or_else(
+			|e| {
+				error!("on_initialize failed: {:?}", e);
+			},
+		);
 
 		// Iterate through all calls until time is over.
 		for trusted_call_signed in trusted_calls.into_iter() {
@@ -353,6 +311,33 @@ where
 					error!("Failed to attempt call execution: {:?}", e);
 				},
 			};
+		}
+
+		// Execute maintenance tasks if maintenance mode is active
+		// This has to execute after the top-pool calls because enclave signer nonce clashes can occur otherwise (e.g. shielding calls).
+		// the risk of overdue block production is minimal as all user calls are filtered during maintenance mode anyway
+		if maintenance_mode {
+			info!("Maintenance mode is active.");
+			let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
+			Stf::maintenance_mode_tasks(
+				&mut state,
+				&shard,
+				*header.number(),
+				&mut extrinsic_call_backs,
+				self.node_metadata_repo.clone(),
+			)
+			.map_err(|e| error!("maintenance_mode tasks failed: {:?}", e))
+			.ok();
+			info!(
+				"maintenance tasks have triggered {} parentchain calls",
+				extrinsic_call_backs.len()
+			);
+			// we're hacking our unshielding calls into the queue
+			executed_and_failed_calls.push(ExecutedOperation::success(
+				H256::default(),
+				TrustedOperationOrHash::Hash(H256::default()),
+				extrinsic_call_backs,
+			));
 		}
 
 		Stf::on_finalize(&mut state).unwrap_or_else(|e| {
@@ -406,10 +391,46 @@ pub fn storage_hashes_to_update_per_shard(_shard: &ShardIdentifier) -> Vec<Vec<u
 	Vec::new()
 }
 
-pub fn shards_key_hash() -> Vec<u8> {
-	// here you have to point to a storage value containing a Vec of
-	// ShardIdentifiers the enclave uses this to autosubscribe to no shards
-	vec![]
+fn get_active_shard_config<StateHandler, Stf, G, PH>(
+	shard: &ShardIdentifier,
+	header: &PH,
+	state: &mut <StateHandler as HandleState>::StateT,
+) -> Option<ShardConfig>
+where
+	Stf: UpdateState<
+			StateHandler::StateT,
+			<StateHandler::StateT as SgxExternalitiesTrait>::SgxExternalitiesDiffType,
+		> + StateGetterInterface<G, StateHandler::StateT>,
+	StateHandler: HandleState<HashType = H256>,
+	StateHandler::StateT: SgxExternalitiesTrait + Encode,
+	G: PartialEq + Encode + Decode + Debug + Clone + Send + Sync + GetDecimals,
+	PH: HeaderTrait<Hash = H256, Number = BlockNumber>,
+{
+	Stf::get_parentchain_mirror_state::<UpgradableShardConfig>(
+		state,
+		EnclaveBridgeStorage::upgradable_shard_config(*shard),
+		&ParentchainId::Integritee,
+	)
+	.map(|upgradable_shard_config| {
+		let actual_shard_config = if let (Some(upgrade_block), Some(pending_upgrade)) =
+			(upgradable_shard_config.upgrade_at, upgradable_shard_config.pending_upgrade)
+		{
+			trace!("pending shard config upgrade at block {}", upgrade_block);
+			let due = i32::saturated_from(
+				i64::from(*header.number()).saturating_sub(upgrade_block.into()),
+			);
+			if due >= 0 {
+				pending_upgrade
+			} else {
+				upgradable_shard_config.active_config
+			}
+		} else {
+			upgradable_shard_config.active_config
+		};
+		trace!("ShardConfig::fingerprint = {}", actual_shard_config.enclave_fingerprint);
+		trace!("ShardConfig::maintenance_mode = {}", actual_shard_config.maintenance_mode);
+		actual_shard_config
+	})
 }
 
 /// assumes a common structure of sgx_runtime and extracts interesting metrics

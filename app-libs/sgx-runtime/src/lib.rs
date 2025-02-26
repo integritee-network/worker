@@ -86,6 +86,7 @@ pub use pallet_parentchain::Call as ParentchainPalletCall;
 pub use pallet_session_proxy::{
 	Call as SessionProxyCall, SessionProxyCredentials, SessionProxyRole,
 };
+pub use pallet_shard_management::{Call as ShardManagementCall, ShardMode};
 pub use pallet_timestamp::Call as TimestampCall;
 use sp_core::crypto::AccountId32;
 #[cfg(any(feature = "std", test))]
@@ -294,6 +295,11 @@ impl pallet_parentchain::Config<crate::ParentchainInstanceTargetB> for Runtime {
 	type Moment = Moment;
 }
 
+impl pallet_shard_management::Config for Runtime {
+	type WeightInfo = ();
+	type Moment = Moment;
+}
+
 ord_parameter_types! {
 	pub const GameMaster: AccountId32 = AccountId32::new([148, 117, 87, 242, 252, 96, 167, 29, 118, 69, 87, 119, 15, 57, 142, 82, 216, 8, 210, 102, 12, 213, 46, 76, 214, 5, 144, 153, 148, 113, 89, 95]);
 }
@@ -367,11 +373,11 @@ impl pallet_assets::Config for Runtime {
 	type Currency = Balances;
 	type CreateOrigin = NoAssetCreators;
 	type ForceOrigin = EnsureRoot<AccountId>;
-	type AssetDeposit = ConstU128<1>;
-	type AssetAccountDeposit = ConstU128<10>;
-	type MetadataDepositBase = ConstU128<1>;
-	type MetadataDepositPerByte = ConstU128<1>;
-	type ApprovalDeposit = ConstU128<1>;
+	type AssetDeposit = ConstU128<0>;
+	type AssetAccountDeposit = ConstU128<0>;
+	type MetadataDepositBase = ConstU128<0>;
+	type MetadataDepositPerByte = ConstU128<0>;
+	type ApprovalDeposit = ConstU128<0>;
 	type StringLimit = ConstU32<50>;
 	type Freezer = ();
 	type WeightInfo = ();
@@ -395,6 +401,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 3,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+		ShardManagement: pallet_shard_management::{Pallet, Storage, Call} = 5,
 
 		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
 		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,
@@ -425,6 +432,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage, Event<T>} = 3,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+		ShardManagement: pallet_shard_management::{Pallet, Storage, Call} = 5,
 
 		ParentchainIntegritee: pallet_parentchain::<Instance1>::{Pallet, Call, Event<T>} = 10,
 		ParentchainTargetA: pallet_parentchain::<Instance2>::{Pallet, Call, Event<T>} = 11,

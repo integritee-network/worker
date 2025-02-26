@@ -161,8 +161,8 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			SidechainPalletStorage::latest_sidechain_block_confirmation(shard),
 			&current_integritee_parentchain_header,
 			&ParentchainId::Integritee,
-		)?
-		.value;
+		)
+		.unwrap_or_default();
 	trace!(
 		"fetched latest finalized sidechain block for shard {:?}: {:?}",
 		shard,

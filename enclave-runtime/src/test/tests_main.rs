@@ -423,8 +423,8 @@ fn test_create_state_diff() {
 		get_from_state_diff(state_diff, &account_key_hash::<AccountId>(&receiver.into()));
 
 	// state diff should consist of the following updates:
-	// (last_hash, sidechain block_number, sender_funds, receiver_funds, fee_recipient account [no clear, after polkadot_v0.9.26 update], events, timestamp, did_update, note added)
-	assert_eq!(state_diff.len(), 19);
+	// (last_hash, sidechain block_number, sender_funds, receiver_funds, fee_recipient account [no clear, after polkadot_v0.9.26 update], events, timestamp, did_update, note added, ShardMode set)
+	assert_eq!(state_diff.len(), 20);
 	assert_eq!(receiver_acc_info.data.free, TX_AMOUNT);
 	assert_eq!(
 		sender_acc_info.data.free,
@@ -622,7 +622,7 @@ pub fn test_retrieve_events() {
 	)
 	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, &shard, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	assert_eq!(TestStf::get_events(&mut state).len(), 4);
 }
@@ -646,7 +646,7 @@ pub fn test_retrieve_event_count() {
 
 	// when
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, &shard, trusted_call, &mut opaque_vec, repo).unwrap();
 
 	let event_count = TestStf::get_event_count(&mut state);
 	assert_eq!(event_count, 4);
@@ -668,7 +668,7 @@ pub fn test_reset_events() {
 	)
 	.sign(&sender.into(), 0, &mrenclave, &shard);
 	let repo = Arc::new(NodeMetadataRepository::<NodeMetadataMock>::default());
-	TestStf::execute_call(&mut state, trusted_call, &mut opaque_vec, repo).unwrap();
+	TestStf::execute_call(&mut state, &shard, trusted_call, &mut opaque_vec, repo).unwrap();
 	let receiver_acc_info = TestStf::get_account_data(&mut state, &receiver.public().into());
 	assert_eq!(receiver_acc_info.free, transfer_value);
 	// Ensure that there really have been events generated.

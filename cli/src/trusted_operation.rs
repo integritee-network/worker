@@ -20,7 +20,7 @@ use crate::{
 	trusted_cli::TrustedCli,
 	Cli,
 };
-use base58::{FromBase58, ToBase58};
+use base58::ToBase58;
 use codec::{Decode, Encode, Input};
 use enclave_bridge_primitives::Request;
 use ita_stf::{Getter, TrustedCallSigned};
@@ -36,6 +36,7 @@ use itp_types::{
 use itp_utils::{FromHexPrefixed, ToHexPrefixed};
 use log::*;
 
+use crate::trusted_command_utils::get_identifiers;
 use itp_types::parentchain::Hash;
 use sp_core::H256;
 use std::{
@@ -104,7 +105,7 @@ fn execute_getter_from_cli_args<T: Decode + Debug>(
 	trusted_args: &TrustedCli,
 	getter: &Getter,
 ) -> TrustedOpResult<T> {
-	let shard = read_shard(trusted_args).unwrap();
+	let (_, shard) = get_identifiers(cli, trusted_args);
 	let direct_api = get_worker_api_direct(cli);
 	get_state(&direct_api, shard, getter)
 }
@@ -164,7 +165,7 @@ fn send_indirect_request<T: Decode + Debug>(
 	let encryption_key = get_shielding_key(cli).unwrap();
 	let call_encrypted = encryption_key.encrypt(&trusted_operation.encode()).unwrap();
 
-	let shard = read_shard(trusted_args).unwrap();
+	let (_, shard) = get_identifiers(cli, trusted_args);
 	debug!(
 		"invoke indirect send_request: trusted operation: {:?},  shard: {}",
 		trusted_operation,
@@ -255,24 +256,6 @@ fn send_indirect_request<T: Decode + Debug>(
 	}
 }
 
-pub fn read_shard(trusted_args: &TrustedCli) -> StdResult<ShardIdentifier, codec::Error> {
-	match &trusted_args.shard {
-		Some(s) => match s.from_base58() {
-			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-			_ => panic!("shard argument must be base58 encoded"),
-		},
-		None => match trusted_args
-			.mrenclave
-			.as_ref()
-			.expect("at least argument '--mrenclave' must be provided for this command")
-			.from_base58()
-		{
-			Ok(s) => ShardIdentifier::decode(&mut &s[..]),
-			_ => panic!("mrenclave argument must be base58 encoded"),
-		},
-	}
-}
-
 /// sends a rpc watch request to the worker api server
 pub(crate) fn send_direct_request(
 	cli: &Cli,
@@ -285,7 +268,7 @@ pub(crate) fn send_direct_request(
 		})
 	}
 	let encryption_key = get_shielding_key(cli).unwrap();
-	let shard = read_shard(trusted_args).unwrap();
+	let (_, shard) = get_identifiers(cli, trusted_args);
 	let jsonrpc_call: String = get_json_request(shard, operation_call, encryption_key);
 	debug!(
 		"send_direct_request: trusted operation: {:?},  shard: {}",

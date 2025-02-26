@@ -16,33 +16,55 @@
 */
 
 #[cfg(feature = "test")]
-use crate::test_genesis::test_genesis_setup;
+use crate::test_genesis::{test_genesis_endowees, test_genesis_setup};
 use crate::{
-	helpers::{enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault},
-	Stf, ENCLAVE_ACCOUNT_KEY,
+	helpers::{
+		enclave_signer_account, get_shard_vaults, shard_creation_info, shard_vault,
+		shielding_target_genesis_hash,
+	},
+	parentchain_mirror::ParentchainMirror,
+	Stf, TrustedCall, TrustedCallSigned, ENCLAVE_ACCOUNT_KEY,
 };
 use codec::{Decode, Encode};
 use frame_support::traits::{OnTimestampSet, OriginTrait, UnfilteredDispatchable};
+use ita_assets_map::{AssetId, AssetTranslation, FOREIGN_ASSETS, NATIVE_ASSETS};
+use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{
-	ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ShardManagement, ShardMode, System,
 };
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
+use itp_pallet_storage::{
+	AssetsPalletStorage, AssetsPalletStorageKeys, EnclaveBridgeStorage, EnclaveBridgeStorageKeys,
+	ForeignAssetsPalletStorage, ForeignAssetsPalletStorageKeys, SidechainPalletStorage,
+	SidechainPalletStorageKeys, SystemPalletStorage, SystemPalletStorageKeys,
+};
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_sgx_runtime_primitives::types::Moment;
 use itp_stf_interface::{
+	parentchain_mirror_prefix,
 	parentchain_pallet::ParentchainPalletInstancesInterface,
 	sudo_pallet::SudoPalletInterface,
 	system_pallet::{SystemPalletAccountInterface, SystemPalletEventInterface},
 	ExecuteCall, ExecuteGetter, InitState, ShardCreationInfo, ShardCreationQuery, ShardVaultQuery,
 	StateCallInterface, StateGetterInterface, UpdateState,
 };
-use itp_stf_primitives::{error::StfError, traits::TrustedCallVerification};
+use itp_stf_primitives::{
+	error::StfError,
+	traits::TrustedCallVerification,
+	types::{ShardIdentifier, Signature},
+};
 use itp_storage::storage_value_key;
-use itp_types::parentchain::{AccountId, Hash, ParentchainCall, ParentchainId};
-use itp_utils::stringify::account_id_to_string;
+use itp_types::parentchain::{AccountId, BlockNumber, Hash, Index, ParentchainCall, ParentchainId};
+use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
 use sp_runtime::traits::StaticLookup;
 use std::{fmt::Debug, format, prelude::v1::*, sync::Arc, vec};
+
+/// Maximum number of accounts to retire per block.
+/// chose conservatively as we don't limit execution time here but don't want to cause forks by all means.
+/// Moreover, this means a heavy burst for the parentchain too, so be gentle
+const MAX_ACCOUNT_RETIREMENTS_PER_BLOCK: usize = 10;
 
 impl<TCS, G, State, Runtime, AccountId> InitState<State, AccountId> for Stf<TCS, G, State, Runtime>
 where
@@ -58,24 +80,7 @@ where
 		let mut state = State::new(Default::default());
 
 		state.execute_with(|| {
-			// Do not set genesis for pallets that are meant to be on-chain
-			// use get_storage_hashes_to_update instead.
-
 			sp_io::storage::set(&storage_value_key("Balances", "TotalIssuance"), &0u128.encode());
-			sp_io::storage::set(&storage_value_key("Balances", "CreationFee"), &1u128.encode());
-			sp_io::storage::set(&storage_value_key("Balances", "TransferFee"), &1u128.encode());
-			sp_io::storage::set(
-				&storage_value_key("Balances", "TransactionBaseFee"),
-				&1u128.encode(),
-			);
-			sp_io::storage::set(
-				&storage_value_key("Balances", "TransactionByteFee"),
-				&1u128.encode(),
-			);
-			sp_io::storage::set(
-				&storage_value_key("Balances", "ExistentialDeposit"),
-				&1u128.encode(),
-			);
 		});
 
 		#[cfg(feature = "test")]
@@ -112,6 +117,11 @@ where
 	) {
 		state.execute_with(|| {
 			map_update.into_iter().for_each(|(k, v)| {
+				trace!(
+					"apply_state_diff (mirror): key = {}, value= {:?}",
+					hex_encode(&k),
+					v.clone().map(|v| hex_encode(&v))
+				);
 				match v {
 					Some(value) => sp_io::storage::set(&k, &value),
 					None => sp_io::storage::clear(&k),
@@ -120,13 +130,74 @@ where
 		});
 	}
 
-	fn storage_hashes_to_update_on_block(parentchain_id: &ParentchainId) -> Vec<Vec<u8>> {
-		// Get all shards that are currently registered.
-		match parentchain_id {
-			ParentchainId::Integritee => vec![], // shards_key_hash() moved to stf_executor and is currently unused
-			ParentchainId::TargetA => vec![],
-			ParentchainId::TargetB => vec![],
-		}
+	fn storage_hashes_to_update_on_block(
+		state: &mut State,
+		parentchain_id: &ParentchainId,
+		shard: &ShardIdentifier,
+	) -> Vec<Vec<u8>> {
+		state.execute_with(|| {
+			match parentchain_id {
+				ParentchainId::Integritee => {
+					let mut keys = vec![
+						<EnclaveBridgeStorage as EnclaveBridgeStorageKeys>::pallet_version(),
+						EnclaveBridgeStorage::shard_status(*shard),
+						EnclaveBridgeStorage::upgradable_shard_config(*shard),
+						<SidechainPalletStorage as EnclaveBridgeStorageKeys>::pallet_version(),
+						SidechainPalletStorage::latest_sidechain_block_confirmation(*shard),
+					];
+					// mirror native AccountInfo for vault if shielding target
+					if let Some((vault, shielding_target)) = shard_vault() {
+						if shielding_target == ParentchainId::Integritee {
+							keys.push(<SystemPalletStorage as SystemPalletStorageKeys>::account(
+								&vault,
+							));
+						}
+					}
+					keys
+				},
+				ParentchainId::TargetA => {
+					let mut keys = vec![];
+					// mirror native AccountInfo for vault if shielding target
+					if let Some((vault, shielding_target)) = shard_vault() {
+						if shielding_target == ParentchainId::TargetA {
+							keys.push(<SystemPalletStorage as SystemPalletStorageKeys>::account(
+								&vault,
+							));
+						}
+					}
+					keys
+				},
+				ParentchainId::TargetB => {
+					let mut keys = vec![];
+					if let Some((vault, shielding_target)) = shard_vault() {
+						if shielding_target == ParentchainId::TargetB {
+							// mirror asset balances for vault if shielding target
+							let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
+							keys.extend(AssetId::all_shieldable(genesis_hash).iter().filter_map(
+								|asset_id| match asset_id.reserve_instance().unwrap_or("") {
+									NATIVE_ASSETS =>
+										asset_id.into_asset_hub_index(genesis_hash).map(|id| {
+											<AssetsPalletStorage as AssetsPalletStorageKeys>::account(
+                                                &id, &vault,
+                                            )
+										}),
+									FOREIGN_ASSETS =>
+										asset_id.into_location(genesis_hash).map(|loc| {
+											<ForeignAssetsPalletStorage as ForeignAssetsPalletStorageKeys>::account(&loc, &vault)
+										}),
+									_ => None,
+								},
+							));
+							// mirror native AccountInfo for vault if shielding target
+							keys.push(<SystemPalletStorage as SystemPalletStorageKeys>::account(
+								&vault,
+							));
+						};
+					}
+					keys
+				},
+			}
+		})
 	}
 }
 
@@ -152,28 +223,185 @@ where
 
 	fn execute_call(
 		state: &mut State,
+		shard: &ShardIdentifier,
 		call: TCS,
 		calls: &mut Vec<ParentchainCall>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, node_metadata_repo))
+		state.execute_with(|| call.execute(calls, shard, node_metadata_repo))
 	}
 
-	fn on_initialize(state: &mut State, now: Moment) -> Result<(), Self::Error> {
-		trace!("on_initialize called at epoch {}", now);
+	fn on_initialize(
+		state: &mut State,
+		shard: &ShardIdentifier,
+		integritee_block_number: BlockNumber,
+		now: Moment,
+	) -> Result<(), Self::Error> {
+		debug!(
+			"on_initialize called at epoch {} based on integritee block {}",
+			now, integritee_block_number
+		);
 		state.execute_with(|| {
 			// as pallet_timestamp doesn't export set_timestamp in no_std, we need to re-build the same behaviour
 			sp_io::storage::set(&storage_value_key("Timestamp", "Now"), &now.encode());
 			sp_io::storage::set(&storage_value_key("Timestamp", "DidUpdate"), &true.encode());
 			<Runtime::OnTimestampSet as OnTimestampSet<_>>::on_timestamp_set(now.into());
+			ParentchainMirror::push_upgradable_shard_config(shard, integritee_block_number);
+			let vault_transferrable_balance =
+				ParentchainMirror::get_shard_vault_transferrable_balance(None).unwrap_or_default();
+			debug!(
+				"on_initialize: shard vault native transferrable balance: {}",
+				vault_transferrable_balance
+			);
+			for id in AssetId::all_shieldable(shielding_target_genesis_hash().unwrap_or_default()) {
+				let balance = ParentchainMirror::get_shard_vault_transferrable_balance(Some(id))
+					.unwrap_or_default();
+				debug!("on_initialize: shard vault {:?} transferrable balance: {}", id, balance);
+			}
+			if ShardManagement::shard_mode() == ShardMode::Initializing {
+				set_shard_mode(ShardMode::Normal);
+			}
 		});
 		Ok(())
 	}
+
+	fn maintenance_mode_tasks(
+		state: &mut State,
+		shard: &ShardIdentifier,
+		integritee_block_number: BlockNumber,
+		calls: &mut Vec<ParentchainCall>,
+		node_metadata_repo: Arc<NodeMetadataRepository>,
+	) -> Result<(), Self::Error> {
+		state.execute_with(|| {
+			let maintenance_mode_age = integritee_block_number.saturating_sub(
+				ShardManagement::upgradable_shard_config()
+					.map(|(_config, updated_at)| updated_at)
+					.unwrap_or(integritee_block_number),
+			);
+			if maintenance_mode_age
+				>= MinimalChainSpec::maintenance_mode_duration_before_retirement(
+					shielding_target_genesis_hash().unwrap_or_default(),
+				) {
+				warn!("Maintenance mode has expired. Executing shard retirement tasks");
+				// set the sticky flag, irrevocable!!!
+				set_shard_mode(ShardMode::Retired);
+				let mut accounts_to_ignore = Vec::new();
+				accounts_to_ignore.push(enclave_signer_account());
+				#[cfg(feature = "test")]
+				accounts_to_ignore.extend(
+					test_genesis_endowees()
+						.iter()
+						.map(|(a, _)| a.clone())
+						.collect::<Vec<AccountId>>(),
+				);
+				if let Some(validateers) =
+					ParentchainMirror::get_shard_status(shard).map(|shard_status| {
+						shard_status
+							.iter()
+							.map(|signer_status| signer_status.signer.clone())
+							.collect::<Vec<AccountId>>()
+					}) {
+					accounts_to_ignore.extend(validateers);
+				}
+
+				let mut enclave_nonce =
+					System::account_nonce(enclave_signer_account::<AccountId>());
+
+				frame_system::Account::<ita_sgx_runtime::Runtime>::iter_keys()
+					.filter(|account| !accounts_to_ignore.contains(account))
+					.take(MAX_ACCOUNT_RETIREMENTS_PER_BLOCK)
+					.for_each(|account| {
+						retire_account(
+							account,
+							&mut enclave_nonce,
+							calls,
+							shard,
+							node_metadata_repo.clone(),
+						);
+					});
+				Ok(())
+			} else {
+				info!(
+					"Maintenance mode is active and irrevocable shard retirement will start in {} parentchain blocks",
+					MinimalChainSpec::maintenance_mode_duration_before_retirement(
+						shielding_target_genesis_hash().unwrap_or_default(),
+					) - maintenance_mode_age
+				);
+				Ok(())
+			}
+		})
+	}
+
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
 		trace!("on_finalize called");
 
 		Ok(())
 	}
+}
+
+fn retire_account<NodeMetadataRepository>(
+	account: AccountId,
+	enclave_nonce: &mut Index,
+	calls: &mut Vec<ParentchainCall>,
+	shard: &ShardIdentifier,
+	node_metadata_repo: Arc<NodeMetadataRepository>,
+) where
+	NodeMetadataRepository: AccessNodeMetadata,
+	NodeMetadataRepository::MetadataType: NodeMetadataTrait,
+{
+	// we won't put these calls through the TOP pool but we will use the handy ExecuteCall trait to execute directly. Therefore,
+	// no signature check will happen. Still, we need to supply that field with a fake value.
+	let fake_signature = Signature::Sr25519([0u8; 64].as_slice().try_into().expect("must work"));
+	let genesis_hash = shielding_target_genesis_hash().unwrap_or_default();
+	info!("force unshield all for {:?}", account_id_to_string(&account));
+	for asset_id in AssetId::all_shieldable(genesis_hash) {
+		if Assets::balance(asset_id, &account) > 0 {
+			info!("  force unshield asset {:?} balance", asset_id);
+			let tcs = TrustedCallSigned {
+				call: TrustedCall::force_unshield_all(
+					enclave_signer_account(),
+					account.clone(),
+					Some(asset_id),
+				),
+				nonce: *enclave_nonce,
+				delegate: None,
+				signature: fake_signature.clone(),
+			};
+			// Replace with `inspect_err` once it's stable.
+			tcs.execute(calls, shard, node_metadata_repo.clone())
+				.map_err(|e| {
+					error!(
+						"Failed to force-unshield {:?} for {}: {:?}",
+						asset_id,
+						account_id_to_string(&account),
+						e
+					);
+				})
+				.ok();
+			*enclave_nonce += 1;
+		}
+	}
+	if System::account(&account).providers > 0 {
+		info!("  force unshield native balance");
+		let tcs = TrustedCallSigned {
+			call: TrustedCall::force_unshield_all(enclave_signer_account(), account.clone(), None),
+			nonce: *enclave_nonce, //nonce will no longer increase as we bypass signature check
+			delegate: None,
+			signature: fake_signature,
+		};
+		// Replace with `inspect_err` once it's stable.
+		tcs.execute(calls, shard, node_metadata_repo)
+			.map_err(|e| {
+				error!(
+					"Failed to force-unshield native for {:?}: {:?}",
+					account_id_to_string(&account),
+					e
+				);
+			})
+			.ok();
+		*enclave_nonce += 1;
+	}
+	// the account has been retired and is expected to be killed
 }
 
 impl<TCS, G, State, Runtime> StateGetterInterface<G, State> for Stf<TCS, G, State, Runtime>
@@ -183,6 +411,31 @@ where
 {
 	fn execute_getter(state: &mut State, getter: G) -> Option<Vec<u8>> {
 		state.execute_with(|| getter.execute())
+	}
+
+	fn get_parentchain_mirror_state<V: Decode>(
+		state: &mut State,
+		parentchain_key: Vec<u8>,
+		parentchain_id: &ParentchainId,
+	) -> Option<V> {
+		let mut full_key = parentchain_mirror_prefix(parentchain_id).as_bytes().to_vec();
+		full_key.extend_from_slice(&parentchain_key);
+		trace!("get_parentchain_mirror_state: prefixed key = {}", hex_encode(&full_key));
+		let maybe_raw_state = state.get(&full_key);
+		trace!(
+			"get_parentchain_mirror_state: raw_state: {:?}",
+			maybe_raw_state.map(|raw| hex_encode(raw))
+		);
+		if let Some(raw_state) = maybe_raw_state {
+			if let Ok(state) = V::decode(&mut raw_state.as_slice()) {
+				Some(state)
+			} else {
+				warn!("get_parentchain_mirror_state: decode failed");
+				None
+			}
+		} else {
+			None
+		}
 	}
 }
 
@@ -501,4 +754,22 @@ where
 		StfError::Dispatch(format!("Set Balance for enclave signer account error: {:?}", e.error))
 	})
 	.map(|_| ())
+}
+
+fn set_shard_mode(mode: ShardMode) {
+	let current_mode = ShardManagement::shard_mode();
+	// avoid spamming log with errors
+	if mode == ShardMode::Retired && current_mode == ShardMode::Retired {
+		return
+	};
+
+	ita_sgx_runtime::ShardManagementCall::<ita_sgx_runtime::Runtime>::set_shard_mode {
+		new_shard_mode: mode,
+	}
+	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::root())
+	// Replace with `inspect_err` once it's stable.
+	.map_err(|_| {
+		error!("Failed to set shard mode to: {:?}", mode);
+	})
+	.ok();
 }

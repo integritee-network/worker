@@ -22,8 +22,12 @@ use frame_support::ensure;
 use ita_stf::ParentchainHeader;
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{EnclaveOnChainOCallApi, Result};
-use itp_storage::{verify_storage_entries, Error as StorageError};
-use itp_types::{storage::StorageEntryVerified, WorkerRequest, WorkerResponse, H256};
+use itp_storage::{verify_storage_entries, Error::StorageValueUnavailable};
+use itp_types::{
+	storage::{StorageEntry, StorageEntryVerified},
+	WorkerRequest, WorkerResponse, H256,
+};
+use itp_utils::hex::hex_encode;
 use log::*;
 use sgx_types::*;
 use sp_runtime::{traits::Header, OpaqueExtrinsic};
@@ -84,34 +88,38 @@ impl EnclaveOnChainOCallApi for OcallApi {
 
 		let decoded_response: Vec<WorkerResponse<H, V>> = Decode::decode(&mut resp.as_slice())
 			.map_err(|e| {
-				error!("Failed to decode WorkerResponse: {}", e);
+				error!("Failed to decode WorkerResponse: {}. Raw: {}", e, hex_encode(&resp));
 				sgx_status_t::SGX_ERROR_UNEXPECTED
 			})?;
 
 		Ok(decoded_response)
 	}
 
+	/// get verified L1 storage entiry
 	fn get_storage_verified<H: Header<Hash = H256>, V: Decode>(
 		&self,
 		storage_hash: Vec<u8>,
 		header: &H,
 		parentchain_id: &ParentchainId,
-	) -> Result<StorageEntryVerified<V>> {
+	) -> Result<V> {
 		// the code below seems like an overkill, but it is surprisingly difficult to
 		// get an owned value from a `Vec` without cloning.
-		Ok(self
-			.get_multiple_storages_verified(vec![storage_hash], header, parentchain_id)?
+		let opaque_value_verified = self
+			.get_multiple_opaque_storages_verified(vec![storage_hash], header, parentchain_id)?
 			.into_iter()
 			.next()
-			.ok_or(StorageError::StorageValueUnavailable)?)
+			.and_then(|sv| sv.value)
+			.ok_or_else(|| itp_ocall_api::Error::Storage(StorageValueUnavailable))?;
+		Decode::decode(&mut opaque_value_verified.as_slice()).map_err(itp_ocall_api::Error::Codec)
 	}
 
-	fn get_multiple_storages_verified<H: Header<Hash = H256>, V: Decode>(
+	/// this returns opaque/encoded values as we can't assume all values are of same type
+	fn get_multiple_opaque_storages_verified<H: Header<Hash = H256>>(
 		&self,
 		storage_hashes: Vec<Vec<u8>>,
 		header: &H,
 		parentchain_id: &ParentchainId,
-	) -> Result<Vec<StorageEntryVerified<V>>> {
+	) -> Result<Vec<StorageEntryVerified<Vec<u8>>>> {
 		let requests = storage_hashes
 			.into_iter()
 			.map(|key| WorkerRequest::ChainStorage(key, Some(header.hash())))
@@ -119,8 +127,17 @@ impl EnclaveOnChainOCallApi for OcallApi {
 
 		let storage_entries = self
 			.worker_request::<ParentchainHeader, Vec<u8>>(requests, parentchain_id)
-			.map(|storages| verify_storage_entries(storages, header))??;
+			.map(|responses| {
+				responses
+					.into_iter()
+					.map(|response| response.into())
+					.collect::<Vec<StorageEntry<_>>>()
+			})?;
+		let verified_entries = verify_storage_entries(storage_entries, header).map_err(|e| {
+			warn!("Failed to verify storage entry proofs: {:?}", e);
+			e
+		})?;
 
-		Ok(storage_entries)
+		Ok(verified_entries)
 	}
 }

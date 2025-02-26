@@ -24,10 +24,11 @@ use crate::{
 		get_note_buckets_info::GetNoteBucketsInfoCommand, get_notes::GetNotesCommand,
 		get_parentchains_info::GetParentchainsInfoCommand,
 		get_session_proxies::GetSessionProxiesCommand, get_shard::GetShardCommand,
-		get_shard_vault::GetShardVaultCommand, get_total_issuance::GetTotalIssuanceCommand,
+		get_shard_info::GetShardInfoCommand, get_shard_vault::GetShardVaultCommand,
+		get_total_issuance::GetTotalIssuanceCommand,
 		get_undistributed_fees::GetUndistributedFeesCommand, nonce::NonceCommand,
-		note_bloat::NoteBloatCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
+		note_bloat::NoteBloatCommand, spam_extrinsics::SpamExtrinsicsCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand, version::VersionCommand,
 		waste_time::WasteTimeCommand, watchdog::WatchdogCommand,
 	},
 	trusted_cli::TrustedCli,
@@ -87,6 +88,9 @@ pub enum TrustedBaseCommand {
 	/// get info for all parentchains' sync status
 	GetParentchainsInfo(GetParentchainsInfoCommand),
 
+	/// get info for shard like config, status and mode
+	GetShardInfo(GetShardInfoCommand),
+
 	/// get info about available note buckets
 	GetNoteBucketsInfo(GetNoteBucketsInfoCommand),
 
@@ -104,6 +108,9 @@ pub enum TrustedBaseCommand {
 
 	/// bloat state with dummy notes for benchmarking
 	NoteBloat(NoteBloatCommand),
+
+	/// spam extrinsics to a parentchain
+	SpamExtrinsics(SpamExtrinsicsCommand),
 
 	/// run a watchdog service to probe a validateer regularly and profile timings
 	Watchdog(WatchdogCommand),
@@ -128,6 +135,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetNoteBucketsInfo(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetNotes(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::GetShardInfo(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
@@ -136,6 +144,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::SpamExtrinsics(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Watchdog(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),
 		}

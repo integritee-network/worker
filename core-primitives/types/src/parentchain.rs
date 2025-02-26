@@ -113,6 +113,20 @@ impl std::fmt::Display for ParentchainId {
 	}
 }
 
+#[cfg(feature = "std")]
+impl std::str::FromStr for ParentchainId {
+	type Err = &'static str;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"integritee" => Ok(ParentchainId::Integritee),
+			"target-a" => Ok(ParentchainId::TargetA),
+			"target-b" => Ok(ParentchainId::TargetB),
+			_ => Err("Invalid ParentchainId"),
+		}
+	}
+}
+
 pub trait IdentifyParentchain {
 	fn parentchain_id(&self) -> ParentchainId;
 	fn genesis_hash(&self) -> Option<Hash>;
@@ -271,7 +285,7 @@ pub struct AddedSgxEnclave {
 	pub attestation_method: SgxAttestationMethod,
 }
 
-impl core::fmt::Display for crate::parentchain::AddedSgxEnclave {
+impl core::fmt::Display for AddedSgxEnclave {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = format!(
 			"AddedSgxEnclave :: from: {}, url: {:?}, status: {:?}, method: {:?}",
@@ -284,7 +298,7 @@ impl core::fmt::Display for crate::parentchain::AddedSgxEnclave {
 	}
 }
 
-impl StaticEvent for crate::parentchain::ProcessedParentchainBlock {
+impl StaticEvent for ProcessedParentchainBlock {
 	const PALLET: &'static str = "EnclaveBridge";
 	const EVENT: &'static str = "ProcessedParentchainBlock";
 }
@@ -297,7 +311,7 @@ pub struct ProcessedParentchainBlock {
 	pub block_number: BlockNumber,
 }
 
-impl core::fmt::Display for crate::parentchain::ProcessedParentchainBlock {
+impl core::fmt::Display for ProcessedParentchainBlock {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = format!(
 			"ProcessedParentchainBlock :: nr {} shard: {}, merkle: {:?}, block hash {:?}",
@@ -307,7 +321,7 @@ impl core::fmt::Display for crate::parentchain::ProcessedParentchainBlock {
 	}
 }
 
-impl StaticEvent for crate::parentchain::AddedSgxEnclave {
+impl StaticEvent for AddedSgxEnclave {
 	const PALLET: &'static str = "EnclaveBridge";
 	const EVENT: &'static str = "ProcessedParentchainBlock";
 }
@@ -318,7 +332,7 @@ pub struct OracleUpdated {
 	pub data_source: PalletString,
 }
 
-impl core::fmt::Display for crate::parentchain::OracleUpdated {
+impl core::fmt::Display for OracleUpdated {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = format!(
 			"OracleUpdated :: data name {:?} source: {:?}",
@@ -328,7 +342,7 @@ impl core::fmt::Display for crate::parentchain::OracleUpdated {
 	}
 }
 
-impl StaticEvent for crate::parentchain::OracleUpdated {
+impl StaticEvent for OracleUpdated {
 	const PALLET: &'static str = "Teeracle";
 	const EVENT: &'static str = "OracleUpdated";
 }
@@ -340,7 +354,7 @@ pub struct ExchangeRateUpdated {
 	pub exchange_rate: ExchangeRate,
 }
 
-impl core::fmt::Display for crate::parentchain::ExchangeRateUpdated {
+impl core::fmt::Display for ExchangeRateUpdated {
 	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
 		let message = format!(
 			"OracleUpdated :: source {:?} trading pair: {:?}",
@@ -350,9 +364,24 @@ impl core::fmt::Display for crate::parentchain::ExchangeRateUpdated {
 	}
 }
 
-impl StaticEvent for crate::parentchain::ExchangeRateUpdated {
+impl StaticEvent for ExchangeRateUpdated {
 	const PALLET: &'static str = "Teeracle";
 	const EVENT: &'static str = "ExchangeRateUpdated";
+}
+
+#[derive(Encode, Decode, Debug, Default)]
+pub struct ShardConfigUpdated(ShardIdentifier);
+
+impl core::fmt::Display for ShardConfigUpdated {
+	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+		let message = format!("ShardConfigUpdated :: shard {:?}", self.0,);
+		write!(f, "{}", message)
+	}
+}
+
+impl StaticEvent for ShardConfigUpdated {
+	const PALLET: &'static str = "EnclaveBridge";
+	const EVENT: &'static str = "ShardConfigUpdated";
 }
 
 pub trait HandleParentchainEvents<Executor, TCS, Error>

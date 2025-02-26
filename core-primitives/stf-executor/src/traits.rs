@@ -23,7 +23,10 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{AccountId, ShardIdentifier, TrustedOperation},
 };
-use itp_types::{parentchain::ParentchainId, H256};
+use itp_types::{
+	parentchain::{BlockNumber, ParentchainId},
+	H256,
+};
 use sp_runtime::traits::Header as HeaderTrait;
 use std::time::Duration;
 
@@ -74,7 +77,7 @@ where
 		prepare_state_function: F,
 	) -> Result<BatchExecutionResult<Self::Externalities, TCS, G>>
 	where
-		PH: HeaderTrait<Hash = H256>,
+		PH: HeaderTrait<Hash = H256, Number = BlockNumber>,
 		F: FnOnce(Self::Externalities) -> Self::Externalities;
 }
 

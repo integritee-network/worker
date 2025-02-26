@@ -14,23 +14,18 @@
 	limitations under the License.
 
 */
-use crate::{
-	mock::*, BalanceOf, BucketInfo, Buckets, Config, Error, TimestampedTrustedNote, TrustedNote,
-};
+use crate::{mock::*, BucketInfo, Buckets, TimestampedTrustedNote, TrustedNote};
 use codec::Encode;
 use frame_support::{
-	assert_err, assert_ok,
+	assert_ok,
 	pallet_prelude::{DispatchResultWithPostInfo, Get},
-	traits::{Currency, Hooks},
+	traits::Hooks,
 };
 
 use crate::pallet::{ClosedBucketsSize, FirstBucketIndex, LastBucketIndex};
 use ita_stf::TrustedCall;
 use sp_keyring::AccountKeyring;
-use sp_runtime::{
-	traits::{Header as HeaderT, Scale},
-	DispatchError,
-};
+use sp_runtime::{traits::Header as HeaderT, DispatchError};
 
 const TEN_MIN: u64 = 600_000;
 const ONE_DAY: u64 = 86_400_000;

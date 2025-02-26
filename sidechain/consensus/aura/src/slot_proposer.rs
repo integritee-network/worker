@@ -22,7 +22,7 @@ use itp_sgx_externalities::{SgxExternalitiesTrait, StateHash};
 use itp_stf_executor::traits::StateUpdateProposer;
 
 use itp_top_pool_author::traits::AuthorApi;
-use itp_types::H256;
+use itp_types::{parentchain::BlockNumber, H256};
 use its_block_composer::ComposeBlock;
 use its_consensus_common::{Error as ConsensusError, Proposal, Proposer};
 use its_primitives::traits::{
@@ -32,7 +32,7 @@ use its_primitives::traits::{
 use its_state::{SidechainState, SidechainSystemExt};
 use log::*;
 use sp_runtime::{
-	traits::{Block, NumberFor},
+	traits::{Block, Header, NumberFor},
 	MultiSignature,
 };
 use std::{marker::PhantomData, string::ToString, sync::Arc, time::Duration, vec::Vec};
@@ -59,6 +59,7 @@ impl<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, BlockComposer, StfEx
 	for SlotProposer<ParentchainBlock, SignedSidechainBlock, TopPoolAuthor, StfExecutor, BlockComposer>
 where
 	ParentchainBlock: Block<Hash = H256>,
+	ParentchainBlock::Header: Header<Number = BlockNumber>,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 	SignedSidechainBlock: SignedSidechainBlockTrait<Public = sp_core::ed25519::Public, Signature = MultiSignature>
 		+ 'static,

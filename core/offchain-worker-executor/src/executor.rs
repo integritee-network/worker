@@ -29,11 +29,11 @@ use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperatio
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	parentchain::{GenericMortality, ParentchainCall},
+	parentchain::{BlockNumber, GenericMortality, ParentchainCall},
 	OpaqueCall, ShardIdentifier, H256,
 };
 use log::*;
-use sp_runtime::traits::Block;
+use sp_runtime::traits::{Block, Header};
 use std::{marker::PhantomData, sync::Arc, time::Duration, vec::Vec};
 
 /// Off-chain worker executor implementation.
@@ -86,6 +86,7 @@ impl<
 		G,
 	> where
 	ParentchainBlock: Block<Hash = H256>,
+	ParentchainBlock::Header: Header<Number = BlockNumber>,
 	StfExecutor: StateUpdateProposer<TCS, G>,
 	TopPoolAuthor: AuthorApi<H256, ParentchainBlock::Hash, TCS, G>,
 	StateHandler: QueryShardState + HandleState<StateT = StfExecutor::Externalities>,

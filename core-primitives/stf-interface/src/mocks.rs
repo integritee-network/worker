@@ -29,8 +29,8 @@ use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
-	parentchain::{ParentchainCall, ParentchainId},
-	AccountId, Index, Moment,
+	parentchain::{BlockNumber, ParentchainCall, ParentchainId},
+	AccountId, Index, Moment, ShardIdentifier,
 };
 
 #[derive(Default)]
@@ -51,7 +51,11 @@ impl<State, StateDiff> UpdateState<State, StateDiff> for StateInterfaceMock<Stat
 		unimplemented!()
 	}
 
-	fn storage_hashes_to_update_on_block(_: &ParentchainId) -> Vec<Vec<u8>> {
+	fn storage_hashes_to_update_on_block(
+		_state: &mut State,
+		_: &ParentchainId,
+		_: &ShardIdentifier,
+	) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }
@@ -65,6 +69,7 @@ where
 
 	fn execute_call(
 		_state: &mut State,
+		_shard: &ShardIdentifier,
 		_call: TCS,
 		_calls: &mut Vec<ParentchainCall>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
@@ -72,9 +77,25 @@ where
 		unimplemented!()
 	}
 
-	fn on_initialize(_state: &mut State, _now: Moment) -> Result<(), Self::Error> {
+	fn on_initialize(
+		_state: &mut State,
+		_: &ShardIdentifier,
+		_number: BlockNumber,
+		_now: Moment,
+	) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
+
+	fn maintenance_mode_tasks(
+		_state: &mut State,
+		_shard: &itp_stf_primitives::types::ShardIdentifier,
+		_integritee_block_number: BlockNumber,
+		_calls: &mut Vec<ParentchainCall>,
+		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
+	) -> Result<(), Self::Error> {
+		todo!()
+	}
+
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
 		unimplemented!()
 	}
@@ -85,6 +106,14 @@ impl<Getter, State, StateDiff> StateGetterInterface<Getter, State>
 {
 	fn execute_getter(_state: &mut State, _getter: Getter) -> Option<Vec<u8>> {
 		None
+	}
+
+	fn get_parentchain_mirror_state<V: Decode>(
+		_state: &mut State,
+		_parentchain_key: Vec<u8>,
+		_parentchain_id: &ParentchainId,
+	) -> Option<V> {
+		todo!()
 	}
 }
 
@@ -110,12 +139,9 @@ impl ExecuteCall<NodeMetadataRepository<NodeMetadataMock>> for CallExecutorMock 
 	fn execute(
 		self,
 		_calls: &mut Vec<ParentchainCall>,
+		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
-		unimplemented!()
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }
@@ -124,10 +150,6 @@ pub struct GetterExecutorMock;
 
 impl ExecuteGetter for GetterExecutorMock {
 	fn execute(self) -> Option<Vec<u8>> {
-		unimplemented!()
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
 		unimplemented!()
 	}
 }

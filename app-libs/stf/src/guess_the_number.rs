@@ -29,7 +29,7 @@ use ita_parentchain_specs::MinimalChainSpec;
 use ita_sgx_runtime::{GuessTheNumber, GuessType, Runtime, System};
 use itp_node_api::metadata::provider::AccessNodeMetadata;
 use itp_node_api_metadata::NodeMetadataTrait;
-use itp_sgx_runtime_primitives::types::{Balance, Moment};
+use itp_sgx_runtime_primitives::types::{Balance, Moment, ShardIdentifier};
 use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_stf_primitives::error::StfError;
 use itp_types::{parentchain::ParentchainCall, AccountId};
@@ -86,6 +86,7 @@ where
 	fn execute(
 		self,
 		_calls: &mut Vec<ParentchainCall>,
+		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		match self.clone() {
@@ -133,11 +134,6 @@ where
 		}?;
 		Ok(())
 	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		debug!("No storage updates needed...");
-		Vec::new()
-	}
 }
 
 pub fn get_fee_for(tc: &GuessTheNumberTrustedCall) -> Balance {
@@ -183,10 +179,6 @@ impl ExecuteGetter for GuessTheNumberPublicGetter {
 			},
 		}
 	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
-	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -208,9 +200,5 @@ impl ExecuteGetter for GuessTheNumberTrustedGetter {
 		match self {
 			Self::attempts { origin } => Some(GuessTheNumber::guess_attempts(&origin).encode()),
 		}
-	}
-
-	fn get_storage_hashes_to_update(self) -> Vec<Vec<u8>> {
-		Vec::new()
 	}
 }

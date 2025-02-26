@@ -14,12 +14,11 @@
 	limitations under the License.
 
 */
-pub use crate as dut;
-
-use frame_support::{ord_parameter_types, parameter_types};
+use crate as dut;
+use dut::Config;
+use frame_support::parameter_types;
 use frame_system as system;
-
-use sp_core::{crypto::AccountId32, H256};
+use sp_core::H256;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	generic,
@@ -30,17 +29,11 @@ pub type Signature = sp_runtime::MultiSignature;
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 
-pub type BlockNumber = u64;
+pub type BlockNumber = u32;
 pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type UncheckedExtrinsic =
 	generic::UncheckedExtrinsic<Address, RuntimeCall, Signature, SignedExtra>;
-
-pub type Moment = u64;
-
-pub fn master() -> AccountId {
-	AccountId::from(AccountKeyring::Alice)
-}
 
 pub type SignedExtra = (
 	frame_system::CheckSpecVersion<Test>,
@@ -59,27 +52,13 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Config<T>, Event<T>},
-		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		Notes: dut::{Pallet, Call, Storage},
+		ShardManagement: dut::{Pallet, Call},
 	}
 );
 
-ord_parameter_types! {
-	pub const Alice: AccountId32 = AccountId32::new([212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125]);
-}
-parameter_types! {
-	pub const MomentsPerDay: u64 = 86_400_000; // [ms/d]
-	pub const MaxNoteSize: u32 = 512;
-	pub const MaxBucketSize: u32 = 5120;
-	pub const MaxTotalSize: u32 = 51200;
-}
-
-impl dut::Config for Test {
-	type MomentsPerDay = MomentsPerDay;
-	type Currency = Balances;
-	type MaxNoteSize = MaxNoteSize;
-	type MaxBucketSize = MaxBucketSize;
-	type MaxTotalSize = MaxTotalSize;
+impl Config for Test {
+	type WeightInfo = ();
+	type Moment = u64;
 }
 
 parameter_types! {
@@ -113,15 +92,6 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-parameter_types! {
-	pub const MinimumPeriod: Moment = 3000;
-}
-impl pallet_timestamp::Config for Test {
-	type Moment = Moment;
-	type OnTimestampSet = ();
-	type MinimumPeriod = MinimumPeriod;
-	type WeightInfo = ();
-}
 pub type Balance = u64;
 
 parameter_types! {

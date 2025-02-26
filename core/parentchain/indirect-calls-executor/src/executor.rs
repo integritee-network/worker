@@ -178,7 +178,14 @@ impl<
 
 		// This would be catastrophic but should never happen
 		if xt_statuses.len() != block.extrinsics().len() {
-			return Err(Error::Other("Extrinsic Status and Extrinsic count not equal".into()))
+			return Err(Error::Other(
+				format!(
+					"Extrinsic Status and Extrinsic count not equal ({}/{})",
+					xt_statuses.len(),
+					block.extrinsics().len()
+				)
+				.into(),
+			))
 		}
 
 		for (xt_opaque, xt_status) in block.extrinsics().iter().zip(xt_statuses.iter()) {

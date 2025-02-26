@@ -26,10 +26,10 @@ use sp_runtime::MultiAddress;
 use std::{format, vec, vec::Vec};
 
 #[cfg(feature = "evm")]
-use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
-
-#[cfg(feature = "evm")]
 use crate::evm_helpers::get_evm_account;
+#[cfg(feature = "evm")]
+use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
+use itp_utils::stringify::account_id_to_string;
 
 type Seed = [u8; 32];
 
@@ -62,17 +62,20 @@ pub fn test_genesis_setup(state: &mut impl SgxExternalitiesTrait) {
 	set_sudo_account(state, &ALICE_ENCODED);
 	trace!("Set new sudo account: {:?}", &ALICE_ENCODED);
 
-	let mut endowees: Vec<(AccountId32, Balance)> = vec![
-		(endowed_account().public().into(), ENDOWED_ACC_FUNDS),
-		(second_endowed_account().public().into(), SECOND_ENDOWED_ACC_FUNDS),
-		(ALICE_ENCODED.into(), ALICE_FUNDS),
-	];
+	let mut endowees = test_genesis_endowees();
 
 	append_funded_alice_evm_account(&mut endowees);
 
 	endow(state, endowees);
 }
 
+pub fn test_genesis_endowees() -> Vec<(AccountId32, Balance)> {
+	vec![
+		(endowed_account().public().into(), ENDOWED_ACC_FUNDS),
+		(second_endowed_account().public().into(), SECOND_ENDOWED_ACC_FUNDS),
+		(ALICE_ENCODED.into(), ALICE_FUNDS),
+	]
+}
 #[cfg(feature = "evm")]
 fn append_funded_alice_evm_account(endowees: &mut Vec<(AccountId32, Balance)>) {
 	let alice_evm = get_evm_account(&ALICE_ENCODED.into());
@@ -106,9 +109,12 @@ pub fn endow(
 			.map_err(|e| StfError::Dispatch(format!("Balance Set Balance error: {:?}", e.error)))
 			.unwrap();
 
-			let print_public: [u8; 32] = account.clone().into();
-			let account_info = System::account(&&print_public.into());
-			debug!("{:?} balance is {}", print_public, account_info.data.free);
+			let account_info = System::account(&account);
+			info!(
+				"endowed {}. balance is {}",
+				account_id_to_string(&account),
+				account_info.data.free
+			);
 		}
 	});
 }

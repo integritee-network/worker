@@ -34,6 +34,7 @@ use itp_types::{
 	parentchain::{AccountId, Header as ParentchainHeader, ParentchainId},
 	BlockHash, DigestItem, Nonce, WorkerRequest, WorkerResponse,
 };
+use itp_utils::hex::hex_encode;
 use log::*;
 use sp_core::blake2_256;
 use sp_runtime::{Digest, OpaqueExtrinsic};
@@ -145,13 +146,33 @@ where
 		let resp: Vec<WorkerResponse<ParentchainHeader, Vec<u8>>> = requests
 			.into_iter()
 			.map(|req| match req {
-				WorkerRequest::ChainStorage(key, hash) => WorkerResponse::ChainStorage(
-					key.clone(),
-					api.get_opaque_storage_by_key(StorageKey(key.clone()), hash).unwrap(),
-					api.get_storage_proof_by_keys(vec![StorageKey(key)], hash).unwrap().map(
-						|read_proof| read_proof.proof.into_iter().map(|bytes| bytes.0).collect(),
-					),
-				),
+				WorkerRequest::ChainStorage(key, maybe_hash) => {
+					let maybe_opaque_storage = api
+						.get_opaque_storage_by_key(StorageKey(key.clone()), maybe_hash)
+						.ok()
+						.flatten();
+					let maybe_proof = api
+						.get_storage_proof_by_keys(vec![StorageKey(key.clone())], maybe_hash)
+						.ok()
+						.flatten()
+						.map(|read_proof| {
+							read_proof
+								.proof
+								.into_iter()
+								.map(|bytes| bytes.0)
+								.collect::<Vec<Vec<u8>>>()
+						});
+					trace!("(mirror) ocall fetched key: {}", hex_encode(&key));
+					trace!(
+						"(mirror) ocall fetched storage: {:?}",
+						maybe_opaque_storage.clone().map(|v| hex_encode(&v))
+					);
+					trace!(
+						"(mirror) ocall fetched proof: {:?}",
+						maybe_proof.clone().map(|v| hex_encode(&v.encode()))
+					);
+					WorkerResponse::ChainStorage(key, maybe_opaque_storage, maybe_proof)
+				},
 				WorkerRequest::LatestParentchainHeaderUnverified => {
 					WorkerResponse::LatestParentchainHeaderUnverified(
 						// todo: fix this dirty type hack
@@ -190,14 +211,15 @@ where
 			})
 			.unwrap_or_default();
 
-		for call in extrinsics.into_iter() {
+		for (index, call) in extrinsics.into_iter().enumerate() {
 			if await_each_inclusion {
 				if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
 					&call.encode().into(),
 					XtStatus::InBlock,
 				) {
 					error!(
-						"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+						"Could not send extrinsic {} to {:?}: {:?}, error: {:?}",
+						index,
 						parentchain_id,
 						serde_json::to_string(&call),
 						e
@@ -205,7 +227,8 @@ where
 				}
 			} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
 				error!(
-					"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+					"Could not send extrinsic {} to {:?}: {:?}, error: {:?}",
+					index,
 					parentchain_id,
 					serde_json::to_string(&call),
 					e
