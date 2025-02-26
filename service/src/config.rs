@@ -340,7 +340,7 @@ impl From<&ArgMatches<'_>> for RunConfig {
 		let shielding_target = m.value_of("shielding-target").map(|i| {
 			ParentchainId::from_str(i).unwrap_or_else(|_| {
 				panic!(
-				"failed to parse shielding-target: {} must be one of integritee|target_a|target_b",
+				"failed to parse shielding-target: {} must be one of integritee|target-a|target-b",
 				i
 			)
 			})
