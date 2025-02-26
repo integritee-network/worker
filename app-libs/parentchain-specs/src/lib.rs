@@ -86,7 +86,7 @@ impl MinimalChainSpec {
 			POLKADOT_RELAY_GENESIS_HASH_HEX | ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => 216_000, // 30d for all production chains
 			KUSAMA_RELAY_GENESIS_HASH_HEX | ASSET_HUB_KUSAMA_GENESIS_HASH_HEX => 216_000, // 30d for all production chains
 			INTEGRITEE_KUSAMA_GENESIS_HASH_HEX | INTEGRITEE_POLKADOT_GENESIS_HASH_HEX => 216_000, // 30d for all production chains
-			LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => 50, // 10 min at 12s block time
+			LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => 20, // 10 min at 12s block time
 			_ => 7200, // if undefined, leave 24h to react
 		}
 	}
