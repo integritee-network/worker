@@ -891,7 +891,27 @@ where
 					}
 				} else {
 					let info = System::account(&who);
-					let balance = info.data.free.saturating_add(info.data.reserved);
+					if info.consumers > 0 {
+						// we can't unshield if there are still consumers. Try to remove them first
+						// remove session proxies and free deposit
+						pallet_session_proxy::SessionProxies::<Runtime>::iter_key_prefix(&who)
+							.for_each(|delegate| {
+								ita_sgx_runtime::SessionProxyCall::<Runtime>::remove_proxy {
+									delegate,
+								}
+								.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(
+									who.clone(),
+								))
+								.map_err(|e| {
+									Self::Error::Dispatch(format!(
+										"removing session proxy failed: {:?}",
+										e.error
+									))
+								})
+								.ok(); // ignore error and continue
+							})
+					}
+					let balance = info.data.free;
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),

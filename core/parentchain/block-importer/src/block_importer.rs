@@ -185,7 +185,12 @@ impl<
 				},
 				Ok(None) =>
 					trace!("[{:?}] omitting confirmation call to non-integritee parentchain", id),
-				Err(e) => error!("[{:?}] Error executing relevant extrinsics: {:?}", id, e),
+				Err(e) => error!(
+					"[{:?}] Error executing relevant extrinsics in block {}: {:?}",
+					id,
+					block.header().number(),
+					e
+				),
 			};
 
 			info!(

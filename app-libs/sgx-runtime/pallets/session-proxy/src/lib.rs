@@ -9,7 +9,6 @@ use frame_support::{
 pub use pallet::*;
 use scale_info::TypeInfo;
 use sp_std::{vec, vec::Vec};
-
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
@@ -67,7 +66,7 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn session_proxies)]
-	pub(super) type SessionProxies<T: Config> = StorageDoubleMap<
+	pub type SessionProxies<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
 		T::AccountId,

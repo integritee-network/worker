@@ -381,7 +381,7 @@ fn retire_account<NodeMetadataRepository>(
 			*enclave_nonce += 1;
 		}
 	}
-	if System::account(&account).data.free > 0 {
+	if System::account(&account).providers > 0 {
 		info!("  force unshield native balance");
 		let tcs = TrustedCallSigned {
 			call: TrustedCall::force_unshield_all(enclave_signer_account(), account.clone(), None),
