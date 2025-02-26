@@ -273,57 +273,63 @@ where
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
-            let maintenance_mode_age = integritee_block_number.saturating_sub(
-                ShardManagement::upgradable_shard_config()
-                    .map(|(_config, updated_at)| updated_at)
-                    .unwrap_or(integritee_block_number),
-            );
-            if maintenance_mode_age
-                >= MinimalChainSpec::maintenance_mode_duration_before_retirement(
-                shielding_target_genesis_hash().unwrap_or_default(),
-            ) {
-                warn!("Maintenance mode has expired. Executing shard retirement tasks");
-                // set the sticky flag, irrevocable!!!
-                set_shard_mode(ShardMode::Retired);
-                let mut accounts_to_ignore = Vec::new();
-                accounts_to_ignore.push(enclave_signer_account());
-                #[cfg(feature = "test")]
-                accounts_to_ignore.extend(
-                    test_genesis_endowees()
-                        .iter()
-                        .map(|(a, _)| a.clone())
-                        .collect::<Vec<AccountId>>(),
-                );
-                if let Some(validateers) =
-                    ParentchainMirror::get_shard_status(shard).map(|shard_status| {
-                        shard_status
-                            .iter()
-                            .map(|signer_status| signer_status.signer.clone())
-                            .collect::<Vec<AccountId>>()
-                    }) {
-                    accounts_to_ignore.extend(validateers);
-                }
+			let maintenance_mode_age = integritee_block_number.saturating_sub(
+				ShardManagement::upgradable_shard_config()
+					.map(|(_config, updated_at)| updated_at)
+					.unwrap_or(integritee_block_number),
+			);
+			if maintenance_mode_age
+				>= MinimalChainSpec::maintenance_mode_duration_before_retirement(
+					shielding_target_genesis_hash().unwrap_or_default(),
+				) {
+				warn!("Maintenance mode has expired. Executing shard retirement tasks");
+				// set the sticky flag, irrevocable!!!
+				set_shard_mode(ShardMode::Retired);
+				let mut accounts_to_ignore = Vec::new();
+				accounts_to_ignore.push(enclave_signer_account());
+				#[cfg(feature = "test")]
+				accounts_to_ignore.extend(
+					test_genesis_endowees()
+						.iter()
+						.map(|(a, _)| a.clone())
+						.collect::<Vec<AccountId>>(),
+				);
+				if let Some(validateers) =
+					ParentchainMirror::get_shard_status(shard).map(|shard_status| {
+						shard_status
+							.iter()
+							.map(|signer_status| signer_status.signer.clone())
+							.collect::<Vec<AccountId>>()
+					}) {
+					accounts_to_ignore.extend(validateers);
+				}
 
-                let mut enclave_nonce =
-                    System::account_nonce(enclave_signer_account::<AccountId>());
+				let mut enclave_nonce =
+					System::account_nonce(enclave_signer_account::<AccountId>());
 
-                frame_system::Account::<ita_sgx_runtime::Runtime>::iter_keys()
-                    .filter(|account| !accounts_to_ignore.contains(account))
-                    .take(MAX_ACCOUNT_RETIREMENTS_PER_BLOCK)
-                    .for_each(|account| {
-                        retire_account(account, &mut enclave_nonce, calls, shard, node_metadata_repo.clone());
-                    });
-                Ok(())
-            } else {
-                info!(
+				frame_system::Account::<ita_sgx_runtime::Runtime>::iter_keys()
+					.filter(|account| !accounts_to_ignore.contains(account))
+					.take(MAX_ACCOUNT_RETIREMENTS_PER_BLOCK)
+					.for_each(|account| {
+						retire_account(
+							account,
+							&mut enclave_nonce,
+							calls,
+							shard,
+							node_metadata_repo.clone(),
+						);
+					});
+				Ok(())
+			} else {
+				info!(
 					"Maintenance mode is active and irrevocable shard retirement will start in {} parentchain blocks",
 					MinimalChainSpec::maintenance_mode_duration_before_retirement(
 						shielding_target_genesis_hash().unwrap_or_default(),
 					) - maintenance_mode_age
 				);
-                Ok(())
-            }
-        })
+				Ok(())
+			}
+		})
 	}
 
 	fn on_finalize(_state: &mut State) -> Result<(), Self::Error> {
@@ -599,13 +605,13 @@ where
 			Self::get_shard_vault_ensure_single_parentchain(state)?
 		{
 			if existing_id != parentchain_id {
-				return Err(Self::Error::ShardVaultOnMultipleParentchainsNotAllowed);
+				return Err(Self::Error::ShardVaultOnMultipleParentchainsNotAllowed)
 			}
 			if existing_vault != vault {
-				return Err(Self::Error::ChangingShardVaultAccountNotAllowed);
+				return Err(Self::Error::ChangingShardVaultAccountNotAllowed)
 			}
 			warn!("attempting to init shard vault which has already been initialized");
-			return Ok(());
+			return Ok(())
 		}
 		state.execute_with(|| match parentchain_id {
 			ParentchainId::Integritee => pallet_parentchain::Call::<
@@ -754,7 +760,7 @@ fn set_shard_mode(mode: ShardMode) {
 	let current_mode = ShardManagement::shard_mode();
 	// avoid spamming log with errors
 	if mode == ShardMode::Retired && current_mode == ShardMode::Retired {
-		return;
+		return
 	};
 
 	ita_sgx_runtime::ShardManagementCall::<ita_sgx_runtime::Runtime>::set_shard_mode {
