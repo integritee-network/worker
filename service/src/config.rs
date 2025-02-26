@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 use std::{
 	fs,
 	path::{Path, PathBuf},
+	str::FromStr,
 	time::Duration,
 };
 
@@ -336,14 +337,13 @@ impl From<&ArgMatches<'_>> for RunConfig {
 				.to_string()
 		});
 
-		let shielding_target = m.value_of("shielding-target").map(|i| match i {
-			"integritee" => ParentchainId::Integritee,
-			"target_a" => ParentchainId::TargetA,
-			"target_b" => ParentchainId::TargetB,
-			_ => panic!(
+		let shielding_target = m.value_of("shielding-target").map(|i| {
+			ParentchainId::from_str(i).unwrap_or_else(|_| {
+				panic!(
 				"failed to parse shielding-target: {} must be one of integritee|target_a|target_b",
 				i
-			),
+			)
+			})
 		});
 		Self {
 			skip_ra,

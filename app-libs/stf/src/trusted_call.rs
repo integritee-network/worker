@@ -50,6 +50,7 @@ use ita_sgx_runtime::{
 pub use ita_sgx_runtime::{Balance, Index};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
+	frame_system::SystemCallIndexes,
 	pallet_assets::{ForeignAssetsCallIndexes, NativeAssetsCallIndexes},
 	pallet_balances::BalancesCallIndexes,
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes,
@@ -92,6 +93,7 @@ pub enum TrustedCall {
 		7, // (AccountIncognito, BeneficiaryPublicAccount, Amount, Shard)
 	note_bloat(AccountId, u32) = 10,
 	waste_time(AccountId, u32) = 11,
+	spam_extrinsics(AccountId, u32, ParentchainId) = 12,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
 	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
 	assets_transfer(AccountId, AccountId, AssetId, Balance) = 42,
@@ -163,6 +165,7 @@ impl TrustedCall {
 				sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
 			Self::send_note(sender_account, ..) => sender_account,
+			Self::spam_extrinsics(sender_account, ..) => sender_account,
 			Self::add_session_proxy(sender_account, ..) => sender_account,
 			Self::note_bloat(sender_account, ..) => sender_account,
 			Self::waste_time(sender_account, ..) => sender_account,
@@ -585,6 +588,36 @@ where
 				std::println!("⣿STF⣿ finished wasting time");
 				Ok(())
 			},
+			TrustedCall::spam_extrinsics(sender, number_of_extrinsics, parentchain_id) => {
+				ensure_maintainer_account(&sender)?;
+				std::println!(
+					"⣿STF⣿ spam {} extrinsics to {:?}",
+					number_of_extrinsics,
+					parentchain_id
+				);
+				let mortality =
+					get_mortality(parentchain_id, 32).unwrap_or_else(GenericMortality::immortal);
+				for i in 0..number_of_extrinsics {
+					debug!("preparing spam extrnisic {}", i);
+					let call = OpaqueCall::from_tuple(&(
+						node_metadata_repo
+							.get_from_metadata(|m| m.remark_call_indexes())
+							.map_err(|_| StfError::InvalidMetadata)?
+							.map_err(|_| StfError::InvalidMetadata)?,
+						b"This is some dummy remark to spam extrinsics which should cause each extrinsic to be of size 512 kB ASDFGH1234567890123456789012345678901234567890".to_vec(),
+					));
+					let pcall = match parentchain_id {
+						ParentchainId::Integritee =>
+							ParentchainCall::Integritee { call, mortality: mortality.clone() },
+						ParentchainId::TargetA =>
+							ParentchainCall::TargetA { call, mortality: mortality.clone() },
+						ParentchainId::TargetB =>
+							ParentchainCall::TargetB { call, mortality: mortality.clone() },
+					};
+					calls.push(pcall);
+				}
+				Ok(())
+			},
 			TrustedCall::send_note(from, to, _note) => {
 				let _origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 send_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
@@ -862,7 +895,8 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER * 3,
+						) / STF_TX_FEE_UNIT_DIVIDER
+							* 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(
@@ -918,6 +952,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::guess_the_number(call) => guess_the_number::get_fee_for(call), // asset fees not supported here
 		TrustedCall::note_bloat(..) => 0,
 		TrustedCall::waste_time(..) => 0,
+		TrustedCall::spam_extrinsics(..) => 0,
 		TrustedCall::timestamp_set(..) => 0,
 		TrustedCall::balance_shield(..) => 0, //will be charged on recipient, elsewhere
 		TrustedCall::balance_shield_through_enclave_bridge_pallet(..) => 0, //will be charged on recipient, elsewhere

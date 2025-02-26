@@ -27,8 +27,8 @@ use crate::{
 		get_shard_info::GetShardInfoCommand, get_shard_vault::GetShardVaultCommand,
 		get_total_issuance::GetTotalIssuanceCommand,
 		get_undistributed_fees::GetUndistributedFeesCommand, nonce::NonceCommand,
-		note_bloat::NoteBloatCommand, transfer::TransferCommand,
-		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
+		note_bloat::NoteBloatCommand, spam_extrinsics::SpamExtrinsicsCommand,
+		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand, version::VersionCommand,
 		waste_time::WasteTimeCommand, watchdog::WatchdogCommand,
 	},
 	trusted_cli::TrustedCli,
@@ -109,6 +109,9 @@ pub enum TrustedBaseCommand {
 	/// bloat state with dummy notes for benchmarking
 	NoteBloat(NoteBloatCommand),
 
+	/// spam extrinsics to a parentchain
+	SpamExtrinsics(SpamExtrinsicsCommand),
+
 	/// run a watchdog service to probe a validateer regularly and profile timings
 	Watchdog(WatchdogCommand),
 
@@ -141,6 +144,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::SpamExtrinsics(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Watchdog(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),
 		}

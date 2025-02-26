@@ -113,6 +113,20 @@ impl std::fmt::Display for ParentchainId {
 	}
 }
 
+#[cfg(feature = "std")]
+impl std::str::FromStr for ParentchainId {
+	type Err = &'static str;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"integritee" => Ok(ParentchainId::Integritee),
+			"target-a" => Ok(ParentchainId::TargetA),
+			"target-b" => Ok(ParentchainId::TargetB),
+			_ => Err("Invalid ParentchainId"),
+		}
+	}
+}
+
 pub trait IdentifyParentchain {
 	fn parentchain_id(&self) -> ParentchainId;
 	fn genesis_hash(&self) -> Option<Hash>;

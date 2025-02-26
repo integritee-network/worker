@@ -142,8 +142,7 @@ impl AssetId {
 	/// returns all AssetId variants which are shieldable for a given shielding target genesis hash.
 	/// L2 fee payment will be attempted in order provided here.
 	pub fn all_shieldable(genesis_hash: Hash) -> Vec<Self> {
-		let genesis_hash_hex = hex::encode(genesis_hash);
-		match genesis_hash_hex.as_ref() {
+		match genesis_hash.into() {
 			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX =>
 				vec![AssetId::USDT, AssetId::USDC, AssetId::USDC_E, AssetId::WETH, AssetId::ETH],
 			ASSET_HUB_PASEO_GENESIS_HASH_HEX =>
@@ -157,11 +156,10 @@ impl AssetId {
 impl AssetTranslation for AssetId {
 	/// into XCM location. Only applies to foreign assets
 	fn into_location(self, genesis_hash: Hash) -> Option<Location> {
-		let genesis_hash_hex = hex::encode(genesis_hash);
 		match self {
 			AssetId::USDC_E =>
 				if matches!(
-					genesis_hash_hex.as_ref(),
+					genesis_hash.into(),
 					ASSET_HUB_POLKADOT_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 				) {
 					Some(Location {
@@ -176,7 +174,7 @@ impl AssetTranslation for AssetId {
 				},
 			AssetId::WETH =>
 				if matches!(
-					genesis_hash_hex.as_ref(),
+					genesis_hash.into(),
 					ASSET_HUB_PASEO_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 				) {
 					Some(Location {
@@ -195,11 +193,10 @@ impl AssetTranslation for AssetId {
 
 	/// converts our asset into an Asset Hub asset index only if shielding asset is supported on shielding target
 	fn into_asset_hub_index(self, genesis_hash: Hash) -> Option<ParentchainAssetIdNative> {
-		let genesis_hash_hex = hex::encode(genesis_hash);
 		match self {
 			AssetId::USDT =>
 				if matches!(
-					genesis_hash_hex.as_ref(),
+					genesis_hash.into(),
 					ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_PASEO_GENESIS_HASH_HEX
 				) {
 					Some(USDT_ASSET_HUB_ID)
@@ -208,7 +205,7 @@ impl AssetTranslation for AssetId {
 				},
 			AssetId::USDC =>
 				if matches!(
-					genesis_hash_hex.as_ref(),
+					genesis_hash.into(),
 					ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_PASEO_GENESIS_HASH_HEX
 				) {
 					Some(USDC_ASSET_HUB_ID)
@@ -224,14 +221,13 @@ impl AssetTranslation for AssetId {
 	where
 		Self: Sized,
 	{
-		let genesis_hash_hex = hex::encode(genesis_hash);
 		if location.parents == 2 {
 			if let X2(junctions) = &location.interior {
 				match junctions.as_slice() {
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
 						if *contract == USDC_E_MAINNET_CONTRACT_ADDRESS
 							&& matches!(
-								genesis_hash_hex.as_ref(),
+								genesis_hash.into(),
 								ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
@@ -239,7 +235,7 @@ impl AssetTranslation for AssetId {
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_SEPOLIA_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
 						if *contract == WETH_SEPOLIA_CONTRACT_ADDRESS
 							&& matches!(
-								genesis_hash_hex.as_ref(),
+								genesis_hash.into(),
 								ASSET_HUB_PASEO_GENESIS_HASH_HEX
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
@@ -256,9 +252,8 @@ impl AssetTranslation for AssetId {
 
 	/// converts the index of a native Asset Hub asset to our local type only if supported for shielding target
 	fn from_asset_hub_index(id: ParentchainAssetIdNative, genesis_hash: Hash) -> Option<Self> {
-		let genesis_hash_hex = hex::encode(genesis_hash);
 		if matches!(
-			genesis_hash_hex.as_ref(),
+			genesis_hash.into(),
 			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX | ASSET_HUB_PASEO_GENESIS_HASH_HEX
 		) {
 			match id {

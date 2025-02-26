@@ -211,14 +211,15 @@ where
 			})
 			.unwrap_or_default();
 
-		for call in extrinsics.into_iter() {
+		for (index, call) in extrinsics.into_iter().enumerate() {
 			if await_each_inclusion {
 				if let Err(e) = api.submit_and_watch_opaque_extrinsic_until(
 					&call.encode().into(),
 					XtStatus::InBlock,
 				) {
 					error!(
-						"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+						"Could not send extrinsic {} to {:?}: {:?}, error: {:?}",
+						index,
 						parentchain_id,
 						serde_json::to_string(&call),
 						e
@@ -226,7 +227,8 @@ where
 				}
 			} else if let Err(e) = api.submit_opaque_extrinsic(&call.encode().into()) {
 				error!(
-					"Could not send extrinsic to {:?}: {:?}, error: {:?}",
+					"Could not send extrinsic {} to {:?}: {:?}, error: {:?}",
+					index,
 					parentchain_id,
 					serde_json::to_string(&call),
 					e
