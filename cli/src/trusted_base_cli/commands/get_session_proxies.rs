@@ -18,8 +18,9 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
-use ita_stf::{AccountInfoAndSessionProxies, Getter, TrustedCallSigned, TrustedGetter};
+use ita_stf::{AccountEssentials, Getter, TrustedCallSigned, TrustedGetter};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use log::info;
 
 use sp_core::Pair;
 
@@ -33,15 +34,14 @@ impl GetSessionProxiesCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let who = get_pair_from_str(cli, trusted_args, self.account.as_str());
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-			TrustedGetter::account_info_and_session_proxies(who.public().into())
+			TrustedGetter::account_essentials(who.public().into())
 				.sign(&KeyPair::Sr25519(Box::new(who))),
 		));
-		let data =
-			perform_trusted_operation::<AccountInfoAndSessionProxies>(cli, trusted_args, &top)
-				.unwrap();
+		let data = perform_trusted_operation::<AccountEssentials>(cli, trusted_args, &top).unwrap();
+		info!("Account essentials: {:?}", data);
 		for proxy in &data.session_proxies {
 			println!("{:?}", proxy);
 		}
-		Ok(CliResultOk::AccountInfoAndSessionProxies { value: data })
+		Ok(CliResultOk::AccountEssentials { value: data })
 	}
 }
