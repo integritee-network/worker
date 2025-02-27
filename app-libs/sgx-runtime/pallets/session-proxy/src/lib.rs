@@ -131,9 +131,9 @@ pub mod pallet {
 
 impl<T: Config> Pallet<T> {
 	pub fn get_all_proxy_credentials_for(
-		owner: T::AccountId,
+		owner: &T::AccountId,
 	) -> Vec<SessionProxyCredentials<BalanceOf<T>>> {
-		SessionProxies::<T>::iter_prefix(&owner)
+		SessionProxies::<T>::iter_prefix(owner)
 			.map(|(_key, (value, _deposit))| value)
 			.collect()
 	}

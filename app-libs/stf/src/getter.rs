@@ -140,7 +140,8 @@ pub enum PublicGetter {
 #[allow(clippy::unnecessary_cast)]
 pub enum TrustedGetter {
 	account_info(AccountId) = 0,
-	account_info_and_session_proxies(AccountId) = 1,
+	account_info_and_session_proxies(AccountId) = 1, // deprecated. use account_essentials instead
+	account_essentials(AccountId) = 2,
 	notes_for(AccountId, BucketIndex) = 10,
 	asset_balance(AccountId, AssetId) = 40,
 	guess_the_number(GuessTheNumberTrustedGetter) = 50,
@@ -157,6 +158,7 @@ impl TrustedGetter {
 		match self {
 			TrustedGetter::account_info(sender_account) => sender_account,
 			TrustedGetter::account_info_and_session_proxies(sender_account, ..) => sender_account,
+			TrustedGetter::account_essentials(sender_account) => sender_account,
 			TrustedGetter::notes_for(sender_account, ..) => sender_account,
 			TrustedGetter::asset_balance(sender_account, ..) => sender_account,
 			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
@@ -231,10 +233,25 @@ impl ExecuteGetter for TrustedGetterSigned {
 				let account_info = System::account(&who);
 				debug!("TrustedGetter account_data");
 				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), account_info);
-				let session_proxies = SessionProxy::get_all_proxy_credentials_for(who);
+				let session_proxies = SessionProxy::get_all_proxy_credentials_for(&who);
 
 				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
 				Some(AccountInfoAndSessionProxies { account_info, session_proxies }.encode())
+			},
+			TrustedGetter::account_essentials(who) => {
+				let account_info = System::account(&who);
+				debug!("TrustedGetter account_data");
+				debug!("AccountInfo for {} is {:?}", account_id_to_string(&who), account_info);
+				let session_proxies = SessionProxy::get_all_proxy_credentials_for(&who);
+				let asset_balances =
+					AssetId::all_shieldable(shielding_target_genesis_hash().unwrap_or_default())
+						.iter()
+						.map(|&asset_id| (asset_id, Assets::balance(asset_id, &who)))
+						.filter(|&(_, balance)| balance > 0)
+						.map(|(asset_id, balance)| AssetBalance { asset_id, balance })
+						.collect();
+				std::println!("⣿STF⣿ 🔍 TrustedGetter query: account info for ⣿⣿⣿ is ⣿⣿⣿",);
+				Some(AccountEssentials { account_info, session_proxies, asset_balances }.encode())
 			},
 			TrustedGetter::notes_for(who, bucket_index) => {
 				debug!("TrustedGetter notes_for");
@@ -406,10 +423,26 @@ fn ensure_authorization(tgs: &TrustedGetterSigned) -> Result<SessionProxyRole<Ba
 }
 
 /// General public information about the sync status of all parentchains
+/// DEPRECATED. use AccountEssentials instead
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub struct AccountInfoAndSessionProxies {
 	pub account_info: AccountInfo,
 	pub session_proxies: Vec<SessionProxyCredentials<Balance>>,
+}
+
+/// General public information about the sync status of all parentchains
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct AccountEssentials {
+	pub account_info: AccountInfo,
+	pub session_proxies: Vec<SessionProxyCredentials<Balance>>,
+	pub asset_balances: Vec<AssetBalance>,
+}
+
+/// handy balance type to avoid tuples
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
+pub struct AssetBalance {
+	pub asset_id: AssetId,
+	pub balance: Balance,
 }
 
 /// General public information about the sync status of all parentchains
