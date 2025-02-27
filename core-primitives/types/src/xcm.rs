@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Polkadot.  If not, see <http://www.gnu.org/licenses/>.
 
-// this is a backport of XCMv5 types
+// this is a backport of XCMv4 types
 
 use codec::{Decode, Encode};
 use sp_std::sync::Arc;
@@ -126,6 +126,12 @@ pub enum NetworkId {
 	Polkadot,
 	/// The Kusama canary-net Relay-chain.
 	Kusama,
+	/// The Westend testnet Relay-chain.
+	Westend,
+	/// The Rococo testnet Relay-chain.
+	Rococo,
+	/// The Wococo testnet Relay-chain.
+	Wococo,
 	/// An Ethereum network specified by its chain ID.
 	Ethereum {
 		/// The EIP-155 chain ID.
