@@ -14,12 +14,13 @@
 	limitations under the License.
 
 */
-
 use crate::{
 	command_utils::{get_accountid_from_str, get_chain_api, *},
 	Cli, CliResult, CliResultOk,
 };
+use codec::Encode;
 use ita_parentchain_interface::integritee::Balance;
+use itp_utils::hex::hex_encode;
 use log::*;
 use sp_core::{crypto::Ss58Codec, Pair};
 use substrate_api_client::{
@@ -45,14 +46,33 @@ impl TransferCommand {
 		info!("from ss58 is {}", from_account.public().to_ss58check());
 		info!("to ss58 is {}", to_account.to_ss58check());
 		let mut api = get_chain_api(cli);
-		api.set_signer(from_account.into());
-		let xt = api.balance_transfer_allow_death(to_account.clone().into(), self.amount);
-		let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap();
-		println!(
-			"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
-			tx_report.extrinsic_hash, tx_report.status
-		);
-		let result = api.get_account_data(&to_account).unwrap().unwrap();
+		let result = if api.metadata().pallet_by_name("AssetTxPayment").is_some() {
+			// if the chain uses AssetTip, we need to use a different API type
+			debug!("using AssetTip API");
+			let mut api = get_target_b_chain_api(cli);
+			api.set_signer(from_account.into());
+			let xt = api.balance_transfer_allow_death(to_account.clone().into(), self.amount);
+			debug!("encoded call: {}", hex_encode(xt.function.encode().as_slice()));
+			debug!("encoded extrinsic will be sent: {}", hex_encode(xt.encode().as_slice()));
+			let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap();
+			println!(
+				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+				tx_report.extrinsic_hash, tx_report.status
+			);
+			api.get_account_data(&to_account).unwrap().unwrap()
+		} else {
+			debug!("using PlainTip API");
+			api.set_signer(from_account.into());
+			let xt = api.balance_transfer_allow_death(to_account.clone().into(), self.amount);
+			debug!("encoded call: {}", hex_encode(xt.function.encode().as_slice()));
+			debug!("encoded extrinsic will be sent: {}", hex_encode(xt.encode().as_slice()));
+			let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap();
+			println!(
+				"[+] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
+				tx_report.extrinsic_hash, tx_report.status
+			);
+			api.get_account_data(&to_account).unwrap().unwrap()
+		};
 		let balance = result.free;
 		println!("balance for {} is now {}", to_account, balance);
 
