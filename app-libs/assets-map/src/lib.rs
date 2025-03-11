@@ -59,10 +59,12 @@ use serde::{Deserialize, Serialize};
 pub enum AssetId {
 	/// USDT Tether, minted natively
 	USDT = 10,
+	/// USDT Tether, minted on Ethereum
+	USDT_E = 11,
 	/// USDC Circle, minted natively
 	USDC = 20,
 	/// USDC Circle, minted on Ethereum
-	USDC_E = 21u32,
+	USDC_E = 21,
 	/// Ethereum ETH,
 	ETH = 30,
 	/// wrapped ETH
@@ -70,6 +72,7 @@ pub enum AssetId {
 }
 
 const USDC_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+const USDT_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("dac17f958d2ee523a2206206994597c13d831ec7");
 const WETH_SEPOLIA_CONTRACT_ADDRESS: [u8; 20] = hex!("fff9976782d46cc05630d1f6ebab18b2324d6b14");
 
 /// The AssetId type we use on L2 to map all possible locations/instances
@@ -80,6 +83,7 @@ impl std::fmt::Display for AssetId {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			AssetId::USDT => write!(f, "USDT"),
+			AssetId::USDT_E => write!(f, "USDT.e"),
 			AssetId::USDC => write!(f, "USDC"),
 			AssetId::USDC_E => write!(f, "USDC.e"),
 			AssetId::ETH => write!(f, "ETH"),
@@ -95,6 +99,7 @@ impl TryFrom<&str> for AssetId {
 	fn try_from(symbol: &str) -> Result<Self, Self::Error> {
 		match symbol {
 			"USDT" => Ok(AssetId::USDT),
+			"USDT.e" => Ok(AssetId::USDT_E),
 			"USDC" => Ok(AssetId::USDC),
 			"USDC.e" => Ok(AssetId::USDC_E),
 			"ETH" => Ok(AssetId::ETH),
@@ -118,6 +123,7 @@ impl AssetId {
 	pub fn reserve_instance(&self) -> Option<&str> {
 		match self {
 			AssetId::USDT => Some(NATIVE_ASSETS),
+			AssetId::USDT_E => Some(FOREIGN_ASSETS),
 			AssetId::USDC => Some(NATIVE_ASSETS),
 			AssetId::USDC_E => Some(FOREIGN_ASSETS),
 			AssetId::ETH => Some(FOREIGN_ASSETS),
@@ -128,6 +134,7 @@ impl AssetId {
 	pub fn one_unit(&self) -> Balance {
 		match self {
 			AssetId::USDT => 1_000_000,
+			AssetId::USDT_E => 1_000_000, // 6 decimals
 			AssetId::USDC => 1_000_000,
 			AssetId::USDC_E => 1_000_000,               // 6 decimals
 			AssetId::ETH => 1_000_000_000_000_000_000,  // 18 decimals
@@ -143,11 +150,23 @@ impl AssetId {
 	/// L2 fee payment will be attempted in order provided here.
 	pub fn all_shieldable(genesis_hash: Hash) -> Vec<Self> {
 		match genesis_hash.into() {
-			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX =>
-				vec![AssetId::USDT, AssetId::USDC, AssetId::USDC_E, AssetId::WETH, AssetId::ETH],
-			ASSET_HUB_PASEO_GENESIS_HASH_HEX =>
-				vec![AssetId::USDT, AssetId::USDC, AssetId::USDC_E, AssetId::WETH, AssetId::ETH],
-			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => vec![AssetId::USDC_E],
+			ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX => vec![
+				AssetId::USDT,
+				AssetId::USDT_E,
+				AssetId::USDC,
+				AssetId::USDC_E,
+				AssetId::WETH,
+				AssetId::ETH,
+			],
+			ASSET_HUB_PASEO_GENESIS_HASH_HEX => vec![
+				AssetId::USDT,
+				AssetId::USDT_E,
+				AssetId::USDC,
+				AssetId::USDC_E,
+				AssetId::WETH,
+				AssetId::ETH,
+			],
+			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => vec![AssetId::USDT_E, AssetId::USDC_E],
 			_ => vec![],
 		}
 	}
@@ -167,6 +186,21 @@ impl AssetTranslation for AssetId {
 						interior: X2(Arc::new([
 							GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }),
 							AccountKey20 { key: USDC_E_MAINNET_CONTRACT_ADDRESS, network: None },
+						])),
+					})
+				} else {
+					None
+				},
+			AssetId::USDT_E =>
+				if matches!(
+					genesis_hash.into(),
+					ASSET_HUB_POLKADOT_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+				) {
+					Some(Location {
+						parents: 2,
+						interior: X2(Arc::new([
+							GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }),
+							AccountKey20 { key: USDT_E_MAINNET_CONTRACT_ADDRESS, network: None },
 						])),
 					})
 				} else {
@@ -232,6 +266,14 @@ impl AssetTranslation for AssetId {
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
 						Some(AssetId::USDC_E),
+					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
+						if *contract == USDT_E_MAINNET_CONTRACT_ADDRESS
+							&& matches!(
+								genesis_hash.into(),
+								ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
+									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+							) =>
+						Some(AssetId::USDT_E),
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_SEPOLIA_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
 						if *contract == WETH_SEPOLIA_CONTRACT_ADDRESS
 							&& matches!(
@@ -239,7 +281,7 @@ impl AssetTranslation for AssetId {
 								ASSET_HUB_PASEO_GENESIS_HASH_HEX
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
-						Some(AssetId::USDC_E),
+						Some(AssetId::WETH),
 					_ => None,
 				}
 			} else {
