@@ -162,7 +162,12 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 			&current_integritee_parentchain_header,
 			&ParentchainId::Integritee,
 		)
-		.unwrap_or_default();
+		.map_err(|e| {
+			// at shard init, it is normal to see this as no block has been finalized yet
+			debug!("failed to get latest sidechain block confirmation: {:?}", e);
+			e
+		})
+		.ok();
 	trace!(
 		"fetched latest finalized sidechain block for shard {:?}: {:?}",
 		shard,
