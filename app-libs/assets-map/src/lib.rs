@@ -32,7 +32,7 @@ use itp_types::{
 	parentchain::{Hash, ParentchainAssetIdNative},
 	xcm::{
 		Junction::{AccountKey20, GlobalConsensus},
-		Junctions::X2,
+		Junctions::{X1, X2},
 		Location,
 		NetworkId::Ethereum,
 	},
@@ -57,23 +57,33 @@ use serde::{Deserialize, Serialize};
 #[repr(u32)]
 #[allow(non_camel_case_types)]
 pub enum AssetId {
+	// Tether tokens
 	/// USDT Tether, minted natively
 	USDT = 10,
 	/// USDT Tether, minted on Ethereum
 	USDT_E = 11,
+
+	// Circle tokens
 	/// USDC Circle, minted natively
 	USDC = 20,
 	/// USDC Circle, minted on Ethereum
 	USDC_E = 21,
+
+	// protocol-issued tokens, wrapped or not
 	/// Ethereum ETH,
 	ETH = 30,
-	/// wrapped ETH
+	/// wrapped ETH ERC20
 	WETH = 31,
+	/// Bitcoin. just reserving the index. no bridge exists yet
+	BTC = 36,
+	/// ethereum-wrapped Bitcoin
+	WBTC_E = 37,
 }
 
 const USDC_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
 const USDT_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("dac17f958d2ee523a2206206994597c13d831ec7");
 const WETH_SEPOLIA_CONTRACT_ADDRESS: [u8; 20] = hex!("fff9976782d46cc05630d1f6ebab18b2324d6b14");
+const WBTC_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("2260fac5e5542a773aa44fbcfedf7c193bc2c599");
 
 /// The AssetId type we use on L2 to map all possible locations/instances
 /// This type must contain unique definitions for any token we may want to shield on any shielding target
@@ -88,6 +98,8 @@ impl std::fmt::Display for AssetId {
 			AssetId::USDC_E => write!(f, "USDC.e"),
 			AssetId::ETH => write!(f, "ETH"),
 			AssetId::WETH => write!(f, "WETH"),
+			AssetId::BTC => write!(f, "BTC"),
+			AssetId::WBTC_E => write!(f, "WBTC.e"),
 		}
 	}
 }
@@ -104,6 +116,7 @@ impl TryFrom<&str> for AssetId {
 			"USDC.e" => Ok(AssetId::USDC_E),
 			"ETH" => Ok(AssetId::ETH),
 			"WETH" => Ok(AssetId::WETH),
+			"WBTC.e" => Ok(AssetId::WBTC_E),
 			_ => Err(()),
 		}
 	}
@@ -128,6 +141,8 @@ impl AssetId {
 			AssetId::USDC_E => Some(FOREIGN_ASSETS),
 			AssetId::ETH => Some(FOREIGN_ASSETS),
 			AssetId::WETH => Some(FOREIGN_ASSETS),
+			AssetId::BTC => None,
+			AssetId::WBTC_E => Some(FOREIGN_ASSETS),
 		}
 	}
 
@@ -139,6 +154,8 @@ impl AssetId {
 			AssetId::USDC_E => 1_000_000,               // 6 decimals
 			AssetId::ETH => 1_000_000_000_000_000_000,  // 18 decimals
 			AssetId::WETH => 1_000_000_000_000_000_000, // 18 decimals
+			AssetId::BTC => 100_000_000,                // 8 decimals
+			AssetId::WBTC_E => 100_000_000,             // 8 decimals
 		}
 	}
 
@@ -157,16 +174,11 @@ impl AssetId {
 				AssetId::USDC_E,
 				AssetId::WETH,
 				AssetId::ETH,
+				AssetId::WBTC_E,
 			],
-			ASSET_HUB_PASEO_GENESIS_HASH_HEX => vec![
-				AssetId::USDT,
-				AssetId::USDT_E,
-				AssetId::USDC,
-				AssetId::USDC_E,
-				AssetId::WETH,
-				AssetId::ETH,
-			],
-			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => vec![AssetId::USDT_E, AssetId::USDC_E],
+			ASSET_HUB_PASEO_GENESIS_HASH_HEX => vec![AssetId::USDT, AssetId::USDC, AssetId::WETH],
+			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX =>
+				vec![AssetId::USDT_E, AssetId::USDC_E, AssetId::ETH, AssetId::WBTC_E],
 			_ => vec![],
 		}
 	}
@@ -206,6 +218,21 @@ impl AssetTranslation for AssetId {
 				} else {
 					None
 				},
+			AssetId::WBTC_E =>
+				if matches!(
+					genesis_hash.into(),
+					ASSET_HUB_POLKADOT_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+				) {
+					Some(Location {
+						parents: 2,
+						interior: X2(Arc::new([
+							GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }),
+							AccountKey20 { key: WBTC_E_MAINNET_CONTRACT_ADDRESS, network: None },
+						])),
+					})
+				} else {
+					None
+				},
 			AssetId::WETH =>
 				if matches!(
 					genesis_hash.into(),
@@ -217,6 +244,20 @@ impl AssetTranslation for AssetId {
 							GlobalConsensus(Ethereum { chain_id: ETHEREUM_SEPOLIA_CHAIN_ID }),
 							AccountKey20 { key: WETH_SEPOLIA_CONTRACT_ADDRESS, network: None },
 						])),
+					})
+				} else {
+					None
+				},
+			AssetId::ETH =>
+				if matches!(
+					genesis_hash.into(),
+					ASSET_HUB_POLKADOT_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+				) {
+					Some(Location {
+						parents: 2,
+						interior: X1(Arc::new([GlobalConsensus(Ethereum {
+							chain_id: ETHEREUM_MAINNET_CHAIN_ID,
+						})])),
 					})
 				} else {
 					None
@@ -274,6 +315,14 @@ impl AssetTranslation for AssetId {
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
 						Some(AssetId::USDT_E),
+					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
+						if *contract == WBTC_E_MAINNET_CONTRACT_ADDRESS
+							&& matches!(
+								genesis_hash.into(),
+								ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
+									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+							) =>
+						Some(AssetId::WBTC_E),
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_SEPOLIA_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
 						if *contract == WETH_SEPOLIA_CONTRACT_ADDRESS
 							&& matches!(
@@ -282,6 +331,9 @@ impl AssetTranslation for AssetId {
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
 						Some(AssetId::WETH),
+					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID })]
+						if matches!(genesis_hash.into(), ASSET_HUB_POLKADOT_GENESIS_HASH_HEX) =>
+						Some(AssetId::ETH),
 					_ => None,
 				}
 			} else {
