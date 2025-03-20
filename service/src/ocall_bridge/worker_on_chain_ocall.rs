@@ -149,10 +149,26 @@ where
 				WorkerRequest::ChainStorage(key, maybe_hash) => {
 					let maybe_opaque_storage = api
 						.get_opaque_storage_by_key(StorageKey(key.clone()), maybe_hash)
+						.map_err(|e| {
+							warn!(
+								"failed to fetch storage for key: {:?}, error: {:?}",
+								hex_encode(&key),
+								e
+							);
+							e
+						})
 						.ok()
 						.flatten();
 					let maybe_proof = api
 						.get_storage_proof_by_keys(vec![StorageKey(key.clone())], maybe_hash)
+						.map_err(|e| {
+							warn!(
+								"failed to fetch storage proof for key: {:?}, error: {:?}",
+								hex_encode(&key),
+								e
+							);
+							e
+						})
 						.ok()
 						.flatten()
 						.map(|read_proof| {
