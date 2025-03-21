@@ -332,7 +332,11 @@ impl AssetTranslation for AssetId {
 							) =>
 						Some(AssetId::WETH),
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID })]
-						if matches!(genesis_hash.into(), ASSET_HUB_POLKADOT_GENESIS_HASH_HEX) =>
+						if matches!(
+							genesis_hash.into(),
+							ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
+								| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+						) =>
 						Some(AssetId::ETH),
 					_ => None,
 				}
