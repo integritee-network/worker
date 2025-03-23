@@ -297,8 +297,18 @@ impl AssetTranslation for AssetId {
 		Self: Sized,
 	{
 		if location.parents == 2 {
-			if let X2(junctions) = &location.interior {
-				match junctions.as_slice() {
+			match &location.interior {
+				X1(junctions) => match junctions.as_slice() {
+					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID })]
+						if matches!(
+							genesis_hash.into(),
+							ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
+								| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+						) =>
+						Some(AssetId::ETH),
+					_ => None,
+				},
+				X2(junctions) => match junctions.as_slice() {
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
 						if *contract == USDC_E_MAINNET_CONTRACT_ADDRESS
 							&& matches!(
@@ -331,17 +341,9 @@ impl AssetTranslation for AssetId {
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
 						Some(AssetId::WETH),
-					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID })]
-						if matches!(
-							genesis_hash.into(),
-							ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
-								| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
-						) =>
-						Some(AssetId::ETH),
 					_ => None,
-				}
-			} else {
-				None
+				},
+				_ => None,
 			}
 		} else {
 			None
