@@ -37,8 +37,8 @@ fn propose_sidechain_blocks(
 	signed_blocks_size: u32,
 	sidechain_api: Arc<dyn SidechainBridge>,
 ) -> sgx_status_t {
-	let signed_blocks_vec: Vec<u8> =
-		unsafe { Vec::from(slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize)) };
+	let signed_blocks_vec =
+		unsafe { slice::from_raw_parts(signed_blocks_ptr, signed_blocks_size as usize) };
 
 	match sidechain_api.propose_sidechain_blocks(signed_blocks_vec) {
 		Ok(_) => sgx_status_t::SGX_SUCCESS,
