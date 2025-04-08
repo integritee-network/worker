@@ -1005,7 +1005,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 	match fee_asset {
 		None => Fee::Native(fee_amount),
 		Some(asset_id) => match asset_id {
-			AssetId::USDC | AssetId::USDT | AssetId::USDC_E | AssetId::USDT_E =>
+			AssetId::USDC | AssetId::USDT | AssetId::USDC_E | AssetId::EURC_E | AssetId::USDT_E =>
 				Fee::Asset(fee_amount, asset_id),
 			// TODO: use TEEracle info from L1 for exchange rates. the hardcoded exchange rates are
 			// just to get started in the right order of magnitude

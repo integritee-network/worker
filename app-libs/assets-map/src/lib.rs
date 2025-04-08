@@ -68,6 +68,8 @@ pub enum AssetId {
 	USDC = 20,
 	/// USDC Circle, minted on Ethereum
 	USDC_E = 21,
+	/// EURC Circle, minted on Ethereum
+	EURC_E = 23,
 
 	// protocol-issued tokens, wrapped or not
 	/// Ethereum ETH,
@@ -81,6 +83,7 @@ pub enum AssetId {
 }
 
 const USDC_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+const EURC_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("1abaea1f7c830bd89acc67ec4af516284b1bc33c");
 const USDT_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("dac17f958d2ee523a2206206994597c13d831ec7");
 const WETH_SEPOLIA_CONTRACT_ADDRESS: [u8; 20] = hex!("fff9976782d46cc05630d1f6ebab18b2324d6b14");
 const WBTC_E_MAINNET_CONTRACT_ADDRESS: [u8; 20] = hex!("2260fac5e5542a773aa44fbcfedf7c193bc2c599");
@@ -96,6 +99,7 @@ impl std::fmt::Display for AssetId {
 			AssetId::USDT_E => write!(f, "USDT.e"),
 			AssetId::USDC => write!(f, "USDC"),
 			AssetId::USDC_E => write!(f, "USDC.e"),
+			AssetId::EURC_E => write!(f, "EURC.e"),
 			AssetId::ETH => write!(f, "ETH"),
 			AssetId::WETH => write!(f, "WETH"),
 			AssetId::BTC => write!(f, "BTC"),
@@ -114,6 +118,7 @@ impl TryFrom<&str> for AssetId {
 			"USDT.e" => Ok(AssetId::USDT_E),
 			"USDC" => Ok(AssetId::USDC),
 			"USDC.e" => Ok(AssetId::USDC_E),
+			"EURC.e" => Ok(AssetId::EURC_E),
 			"ETH" => Ok(AssetId::ETH),
 			"WETH" => Ok(AssetId::WETH),
 			"WBTC.e" => Ok(AssetId::WBTC_E),
@@ -139,6 +144,7 @@ impl AssetId {
 			AssetId::USDT_E => Some(FOREIGN_ASSETS),
 			AssetId::USDC => Some(NATIVE_ASSETS),
 			AssetId::USDC_E => Some(FOREIGN_ASSETS),
+			AssetId::EURC_E => Some(FOREIGN_ASSETS),
 			AssetId::ETH => Some(FOREIGN_ASSETS),
 			AssetId::WETH => Some(FOREIGN_ASSETS),
 			AssetId::BTC => None,
@@ -152,6 +158,7 @@ impl AssetId {
 			AssetId::USDT_E => 1_000_000, // 6 decimals
 			AssetId::USDC => 1_000_000,
 			AssetId::USDC_E => 1_000_000,               // 6 decimals
+			AssetId::EURC_E => 1_000_000,               // 6 decimals
 			AssetId::ETH => 1_000_000_000_000_000_000,  // 18 decimals
 			AssetId::WETH => 1_000_000_000_000_000_000, // 18 decimals
 			AssetId::BTC => 100_000_000,                // 8 decimals
@@ -172,13 +179,19 @@ impl AssetId {
 				AssetId::USDT_E,
 				AssetId::USDC,
 				AssetId::USDC_E,
+				AssetId::EURC_E,
 				AssetId::WETH,
 				AssetId::ETH,
 				AssetId::WBTC_E,
 			],
 			ASSET_HUB_PASEO_GENESIS_HASH_HEX => vec![AssetId::USDT, AssetId::USDC, AssetId::WETH],
-			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX =>
-				vec![AssetId::USDT_E, AssetId::USDC_E, AssetId::ETH, AssetId::WBTC_E],
+			ASSET_HUB_POLKADOT_GENESIS_HASH_HEX => vec![
+				AssetId::USDT_E,
+				AssetId::USDC_E,
+				AssetId::EURC_E,
+				AssetId::ETH,
+				AssetId::WBTC_E,
+			],
 			_ => vec![],
 		}
 	}
@@ -198,6 +211,21 @@ impl AssetTranslation for AssetId {
 						interior: X2(Arc::new([
 							GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }),
 							AccountKey20 { key: USDC_E_MAINNET_CONTRACT_ADDRESS, network: None },
+						])),
+					})
+				} else {
+					None
+				},
+			AssetId::EURC_E =>
+				if matches!(
+					genesis_hash.into(),
+					ASSET_HUB_POLKADOT_GENESIS_HASH_HEX | ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+				) {
+					Some(Location {
+						parents: 2,
+						interior: X2(Arc::new([
+							GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }),
+							AccountKey20 { key: EURC_E_MAINNET_CONTRACT_ADDRESS, network: None },
 						])),
 					})
 				} else {
@@ -317,6 +345,14 @@ impl AssetTranslation for AssetId {
 									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
 							) =>
 						Some(AssetId::USDC_E),
+					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
+						if *contract == EURC_E_MAINNET_CONTRACT_ADDRESS
+							&& matches!(
+								genesis_hash.into(),
+								ASSET_HUB_POLKADOT_GENESIS_HASH_HEX
+									| ASSET_HUB_LOCAL_TEST_GENESIS_HASH_HEX
+							) =>
+						Some(AssetId::EURC_E),
 					[GlobalConsensus(Ethereum { chain_id: ETHEREUM_MAINNET_CHAIN_ID }), AccountKey20 { key: contract, network: None }]
 						if *contract == USDT_E_MAINNET_CONTRACT_ADDRESS
 							&& matches!(
