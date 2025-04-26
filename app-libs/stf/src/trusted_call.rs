@@ -915,7 +915,8 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER * 3,
+						) / STF_TX_FEE_UNIT_DIVIDER
+							* 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(
@@ -1011,6 +1012,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 			// just to get started in the right order of magnitude
 			AssetId::ETH | AssetId::WETH => Fee::Asset(fee_amount / 2_000, asset_id),
 			AssetId::BTC | AssetId::WBTC_E => Fee::Asset(fee_amount / 70_000, asset_id),
+			AssetId::PEPE_E => Fee::Asset(fee_amount / 17, asset_id),
 		},
 	}
 }
