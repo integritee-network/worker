@@ -1011,7 +1011,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 			// just to get started in the right order of magnitude
 			AssetId::ETH | AssetId::WETH => Fee::Asset(fee_amount / 2_000, asset_id),
 			AssetId::BTC | AssetId::WBTC_E => Fee::Asset(fee_amount / 70_000, asset_id),
-			AssetId::PEPE_E => Fee::Asset(fee_amount / 17, asset_id),
+			AssetId::PEPE_E => Fee::Asset(fee_amount * 111_000, asset_id),
 		},
 	}
 }
