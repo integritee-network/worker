@@ -31,7 +31,7 @@ impl SidechainBridgeMock {
 }
 
 impl SidechainBridge for SidechainBridgeMock {
-	fn propose_sidechain_blocks(&self, _signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
+	fn propose_sidechain_blocks(&self, _signed_blocks_encoded: &[u8]) -> OCallBridgeResult<()> {
 		Ok(())
 	}
 
