@@ -1,5 +1,6 @@
 pub mod add_session_proxy;
 pub mod balance;
+pub mod chatbot;
 pub mod get_fingerprint;
 pub mod get_header;
 pub mod get_note_buckets_info;

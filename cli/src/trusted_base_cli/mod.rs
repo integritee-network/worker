@@ -20,9 +20,9 @@ use crate::trusted_base_cli::commands::set_balance::SetBalanceCommand;
 use crate::{
 	trusted_base_cli::commands::{
 		add_session_proxy::AddSessionProxyCommand, balance::BalanceCommand,
-		get_fingerprint::GetFingerprintCommand, get_header::GetSidechainHeaderCommand,
-		get_note_buckets_info::GetNoteBucketsInfoCommand, get_notes::GetNotesCommand,
-		get_parentchains_info::GetParentchainsInfoCommand,
+		chatbot::ChatbotCommand, get_fingerprint::GetFingerprintCommand,
+		get_header::GetSidechainHeaderCommand, get_note_buckets_info::GetNoteBucketsInfoCommand,
+		get_notes::GetNotesCommand, get_parentchains_info::GetParentchainsInfoCommand,
 		get_session_proxies::GetSessionProxiesCommand, get_shard::GetShardCommand,
 		get_shard_info::GetShardInfoCommand, get_shard_vault::GetShardVaultCommand,
 		get_total_issuance::GetTotalIssuanceCommand,
@@ -115,6 +115,9 @@ pub enum TrustedBaseCommand {
 	/// run a watchdog service to probe a validateer regularly and profile timings
 	Watchdog(WatchdogCommand),
 
+	/// run a chatbot service
+	Chatbot(ChatbotCommand),
+
 	/// get a version string for the enclave
 	Version(VersionCommand),
 }
@@ -146,6 +149,7 @@ impl TrustedBaseCommand {
 			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::SpamExtrinsics(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Watchdog(cmd) => cmd.run(cli, trusted_cli),
+			TrustedBaseCommand::Chatbot(cmd) => cmd.run(cli, trusted_cli),
 			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
