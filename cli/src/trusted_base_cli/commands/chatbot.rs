@@ -22,6 +22,7 @@ use crate::{
 	Cli, CliResult, CliResultOk,
 };
 use codec::Decode;
+use dotenv::dotenv;
 use ita_stf::{
 	Getter, ParentchainsInfo, PublicGetter, TrustedCall, TrustedCallSigned, TrustedGetter,
 	STF_TX_FEE_UNIT_DIVIDER,
@@ -34,7 +35,9 @@ use itp_types::Moment;
 use log::warn;
 use pallet_notes::{BucketRange, TimestampedTrustedNote, TrustedNote};
 use prometheus::{register_counter, Encoder, TextEncoder};
-use std::time::Duration;
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use std::{env, time::Duration};
 use tokio::time::sleep;
 use warp::Filter;
 
@@ -55,6 +58,8 @@ pub struct ChatbotCommand {
 
 impl ChatbotCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+		dotenv().ok();
+		let api_key = env::var("OPENAI_API_KEY").unwrap();
 		let (bot_account, signer, mrenclave, shard) =
 			get_basic_signing_info_from_args!(self.account, self.session_proxy, cli, trusted_args);
 
@@ -141,27 +146,55 @@ impl ChatbotCommand {
 							{
 								if note_to == bot_account {
 									messages_received_counter.get();
+									let prompt = String::from_utf8(note_msg.clone())
+										.unwrap_or_else(|_| "Invalid UTF-8".to_string());
 									println!(
 										"[{}] from {:?} to bot: {}",
-										note.timestamp,
-										note_from,
-										String::from_utf8(note_msg.clone())
-											.unwrap_or_else(|_| "Invalid UTF-8".to_string())
+										note.timestamp, note_from, prompt
 									);
 									if decimal_balance_free < 2f64 / STF_TX_FEE_UNIT_DIVIDER as f64
 									{
 										warn!("Account has insufficient funds to reply");
 										continue;
 									};
+									let request_body = ChatRequest {
+										model: "gpt-4",
+										messages: vec![
+											Message {
+												role: "system",
+												content: "Keep responses under 140 characters.",
+											},
+											Message { role: "user", content: prompt.as_str() },
+										],
+										max_tokens: 70, // Roughly ≈ 140 characters
+									};
+									let client = Client::new();
+									let response = client
+										.post("https://api.openai.com/v1/chat/completions")
+										.bearer_auth(api_key.clone())
+										.json(&request_body)
+										.send()
+										.await
+										.unwrap();
+
+									let json: ChatResponse = response.json().await.unwrap();
+									let prompt_reply = {
+										let content = json.choices[0].message.content.trim();
+										let cropped = &content.as_bytes()
+											[..std::cmp::min(200, content.len())];
+										String::from_utf8_lossy(cropped).to_string()
+									};
+									/*
+									let prompt_reply = format!(
+										"Echo: {}",
+										String::from_utf8(note_msg.clone())
+											.unwrap_or_else(|_| "Invalid UTF-8".to_string())
+									);*/
+
 									let top = TrustedCall::send_note(
 										bot_account.clone(),
 										note_from.clone(),
-										format!(
-											"ECHO: {}",
-											String::from_utf8(note_msg.clone())
-												.unwrap_or_else(|_| "Invalid UTF-8".to_string())
-										)
-										.into(),
+										prompt_reply.clone().into(),
 									)
 									.sign(
 										&KeyPair::Sr25519(Box::new(signer.clone())),
@@ -171,7 +204,7 @@ impl ChatbotCommand {
 									)
 									.into_trusted_operation(trusted_args.direct);
 									if send_direct_request(cli, trusted_args, &top).is_ok() {
-										println!("Sent an echo");
+										println!("Sent a reply: {}", prompt_reply);
 									} else {
 										println!("Failed to send echo");
 									}
@@ -198,4 +231,33 @@ impl ChatbotCommand {
 		});
 		Ok(CliResultOk::None)
 	}
+}
+
+// ChatGPT API types
+#[derive(Serialize)]
+struct ChatRequest<'a> {
+	model: &'a str,
+	messages: Vec<Message<'a>>,
+	max_tokens: u16,
+}
+
+#[derive(Serialize)]
+struct Message<'a> {
+	role: &'a str,
+	content: &'a str,
+}
+
+#[derive(Deserialize)]
+struct ChatResponse {
+	choices: Vec<Choice>,
+}
+
+#[derive(Deserialize)]
+struct Choice {
+	message: MessageContent,
+}
+
+#[derive(Deserialize)]
+struct MessageContent {
+	content: String,
 }
