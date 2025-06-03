@@ -35,6 +35,9 @@ mod benchmark;
 mod command_utils;
 #[cfg(feature = "evm")]
 mod evm;
+mod notes_handler;
+
+mod llm_handler;
 #[cfg(feature = "teeracle")]
 mod oracle;
 mod trusted_assets;

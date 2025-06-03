@@ -16,6 +16,8 @@
 */
 use crate::{
 	get_basic_signing_info_from_args,
+	llm_handler::LLMHandler,
+	notes_handler::NotesHandler,
 	trusted_cli::TrustedCli,
 	trusted_command_utils::get_trusted_account_info,
 	trusted_operation::{perform_trusted_operation, send_direct_request},
@@ -24,19 +26,15 @@ use crate::{
 use codec::Decode;
 use dotenv::dotenv;
 use ita_stf::{
-	Getter, ParentchainsInfo, PublicGetter, TrustedCall, TrustedCallSigned, TrustedGetter,
-	STF_TX_FEE_UNIT_DIVIDER,
+	Getter, ParentchainsInfo, PublicGetter, TrustedCall, TrustedCallSigned, STF_TX_FEE_UNIT_DIVIDER,
 };
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::Moment;
-use log::warn;
-use pallet_notes::{BucketRange, TimestampedTrustedNote, TrustedNote};
+use log::{info, warn};
+use pallet_notes::TrustedNote;
 use prometheus::{register_counter, Encoder, TextEncoder};
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use std::{env, time::Duration};
 use tokio::time::sleep;
 use warp::Filter;
@@ -81,6 +79,17 @@ impl ChatbotCommand {
 		// Create a Tokio runtime
 		let rt = tokio::runtime::Runtime::new().unwrap();
 
+		// Initialize the notes handler
+		let mut notes_handler =
+			NotesHandler::new(cli, trusted_args, bot_account.clone(), signer.clone());
+		notes_handler.fetch_history();
+		info!(
+			"fetched existing conversation history with {} counterparties",
+			notes_handler.conversation_counterparties.iter().count()
+		);
+
+		let llm_handler = LLMHandler::new(api_key);
+
 		rt.block_on(async {
 			// Start the Prometheus server
 			let metrics_route = warp::path("metrics").map(move || {
@@ -97,12 +106,6 @@ impl ChatbotCommand {
 				warp::serve(metrics_route)
 					.run(([0, 0, 0, 0], self.prometheus_port.unwrap_or(9090))),
 			);
-			let mut last_note_timestamp = Moment::from(
-				std::time::SystemTime::now()
-					.duration_since(std::time::UNIX_EPOCH)
-					.unwrap()
-					.as_millis() as u64,
-			);
 			loop {
 				let account_info =
 					get_trusted_account_info(cli, trusted_args, &bot_account, &signer)
@@ -111,117 +114,60 @@ impl ChatbotCommand {
 					account_info.data.free as f64 / 10u128.pow(decimals as u32) as f64;
 				let nonce = account_info.nonce;
 
-				let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
-					PublicGetter::note_buckets_info,
-				));
-				let bucket_range: BucketRange<Moment> =
-					perform_trusted_operation(cli, trusted_args, &top).unwrap();
+				notes_handler.update();
 
-				if bucket_range.maybe_last.is_none() {
-					println!("No note buckets found. Exiting.");
-					break;
-				}
-				let bucket_index = bucket_range.maybe_last.unwrap().index;
-
-				let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-					TrustedGetter::notes_for(bot_account.clone(), bucket_index)
-						.sign(&KeyPair::Sr25519(Box::new(signer.clone()))),
-				));
-				if let Some(notes) =
-					perform_trusted_operation::<Vec<TimestampedTrustedNote<Moment>>>(
-						cli,
-						trusted_args,
-						&top,
-					)
-					.ok()
-				{
-					for note in notes {
-						if note.timestamp <= last_note_timestamp {
-							continue;
-						}
-						last_note_timestamp = note.timestamp;
-						if let TrustedNote::SuccessfulTrustedCall(tc_encoded) = note.note {
-							if let Ok(TrustedCall::send_note(note_from, note_to, note_msg)) =
-								TrustedCall::decode(&mut tc_encoded.as_slice())
-							{
-								if note_to == bot_account {
-									messages_received_counter.get();
-									let prompt = String::from_utf8(note_msg.clone())
-										.unwrap_or_else(|_| "Invalid UTF-8".to_string());
-									println!(
-										"[{}] from {:?} to bot: {}",
-										note.timestamp, note_from, prompt
-									);
-									if decimal_balance_free < 2f64 / STF_TX_FEE_UNIT_DIVIDER as f64
+				for counterparty in notes_handler.conversation_counterparties.iter() {
+					if decimal_balance_free < 2f64 / STF_TX_FEE_UNIT_DIVIDER as f64 {
+						warn!("Account has insufficient funds to reply");
+						continue
+					};
+					let conversation = notes_handler.conversation_with(&counterparty, None);
+					let unanswered_notes =
+						notes_handler.unanswered_conversation_with(&counterparty, None);
+					if !unanswered_notes.is_empty() {
+						messages_received_counter.inc_by(f64::from(unanswered_notes.len() as u32));
+						println!(
+							"Unanswered notes with {}: {}",
+							counterparty,
+							unanswered_notes.len()
+						);
+						// concatenate all unswerered notes
+						let prompt = unanswered_notes
+							.iter()
+							.map(|note| {
+								if let TrustedNote::SuccessfulTrustedCall(ref tc) = note.note {
+									if let Ok(TrustedCall::send_note(_, _, msg)) =
+										TrustedCall::decode(&mut tc.as_slice())
 									{
-										warn!("Account has insufficient funds to reply");
-										continue;
-									};
-									let request_body = ChatRequest {
-										model: "gpt-4",
-										messages: vec![
-											Message {
-												role: "system",
-												content: "Keep responses under 140 characters.",
-											},
-											Message { role: "user", content: prompt.as_str() },
-										],
-										max_tokens: 70, // Roughly ≈ 140 characters
-									};
-									let client = Client::new();
-									let response = client
-										.post("https://api.openai.com/v1/chat/completions")
-										.bearer_auth(api_key.clone())
-										.json(&request_body)
-										.send()
-										.await
-										.unwrap();
-
-									let json: ChatResponse = response.json().await.unwrap();
-									let prompt_reply = {
-										let content = json.choices[0].message.content.trim();
-										let cropped = &content.as_bytes()
-											[..std::cmp::min(200, content.len())];
-										String::from_utf8_lossy(cropped).to_string()
-									};
-									/*
-									let prompt_reply = format!(
-										"Echo: {}",
-										String::from_utf8(note_msg.clone())
+										String::from_utf8(msg.clone())
 											.unwrap_or_else(|_| "Invalid UTF-8".to_string())
-									);*/
-
-									let top = TrustedCall::send_note(
-										bot_account.clone(),
-										note_from.clone(),
-										prompt_reply.clone().into(),
-									)
-									.sign(
-										&KeyPair::Sr25519(Box::new(signer.clone())),
-										nonce,
-										&mrenclave,
-										&shard,
-									)
-									.into_trusted_operation(trusted_args.direct);
-									if send_direct_request(cli, trusted_args, &top).is_ok() {
-										println!("Sent a reply: {}", prompt_reply);
 									} else {
-										println!("Failed to send echo");
+										"".into()
 									}
 								} else {
-									println!(
-										"[{}] bot to {:?}: {}",
-										note.timestamp,
-										note_from,
-										String::from_utf8(note_msg)
-											.unwrap_or_else(|_| "Invalid UTF-8".to_string())
-									);
+									"".into()
 								}
-							} else {
-								warn!("Failed to decode send_note call in note");
-							}
+							})
+							.collect::<Vec<_>>()
+							.join("\n");
+						let prompt_reply =
+							llm_handler.process_ai_prompt(prompt, &bot_account, conversation).await;
+						let top = TrustedCall::send_note(
+							bot_account.clone(),
+							counterparty.clone(),
+							prompt_reply.clone().into(),
+						)
+						.sign(
+							&KeyPair::Sr25519(Box::new(signer.clone())),
+							nonce,
+							&mrenclave,
+							&shard,
+						)
+						.into_trusted_operation(trusted_args.direct);
+						if send_direct_request(cli, trusted_args, &top).is_ok() {
+							println!("Sent a reply: {}", prompt_reply);
 						} else {
-							warn!("Ignoring non-call in note");
+							println!("Failed to send echo");
 						}
 					}
 				}
@@ -231,33 +177,4 @@ impl ChatbotCommand {
 		});
 		Ok(CliResultOk::None)
 	}
-}
-
-// ChatGPT API types
-#[derive(Serialize)]
-struct ChatRequest<'a> {
-	model: &'a str,
-	messages: Vec<Message<'a>>,
-	max_tokens: u16,
-}
-
-#[derive(Serialize)]
-struct Message<'a> {
-	role: &'a str,
-	content: &'a str,
-}
-
-#[derive(Deserialize)]
-struct ChatResponse {
-	choices: Vec<Choice>,
-}
-
-#[derive(Deserialize)]
-struct Choice {
-	message: MessageContent,
-}
-
-#[derive(Deserialize)]
-struct MessageContent {
-	content: String,
 }
