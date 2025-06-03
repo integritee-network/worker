@@ -18,7 +18,7 @@
 use codec::Decode;
 use ita_stf::TrustedCall;
 use itp_types::{AccountId, Moment};
-use log::{trace, warn};
+use log::{debug, trace, warn};
 use pallet_notes::{TimestampedTrustedNote, TrustedNote};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -108,7 +108,7 @@ impl LLMHandler {
 			.send()
 			.await
 			.unwrap();
-
+		debug!("Got response from LLM: {:?}", response);
 		let json: ChatResponse = response.json().await.unwrap();
 		let prompt_reply = {
 			let content = json.choices[0].message.content.trim();
