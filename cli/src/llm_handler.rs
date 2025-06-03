@@ -64,15 +64,12 @@ impl LLMHandler {
 	pub async fn process_ai_prompt(
 		&self,
 		prompt: String,
+		system_briefing: String,
 		bot_account: &AccountId,
 		history: Vec<TimestampedTrustedNote<Moment>>,
 	) -> String {
-		let mut messages: Vec<Message> = vec![
-            Message {
-                role: "system",
-                content: "Keep responses under 140 characters. You never make up facts. If unsure, respond with 'I don't know'. You are the Incognitee chatbot. incognitee.io is a privacy-enhancing technology which lets users transact tokens privately and interact with AI without linkability to their identity, account or IP address. However, the privacy is limited if interacting with centralized AI inference services",
-            },
-        ];
+		let mut messages: Vec<Message> =
+			vec![Message { role: "system", content: system_briefing.as_str() }];
 		history.iter().for_each(|note| {
 			if let TrustedNote::SuccessfulTrustedCall(ref tc) = note.note {
 				if let Ok(TrustedCall::send_note(from, _to, msg)) =
