@@ -94,7 +94,7 @@ pub(crate) fn get_identifiers(cli: &Cli, trusted_args: &TrustedCli) -> ([u8; 32]
 	let mrenclave = if let Some(ref mrenclave_arg) = trusted_args.mrenclave {
 		mrenclave_from_base58(mrenclave_arg)
 	} else {
-		warn!("no --mrenclave argument provided. Will trustfully fetch enclave fingerprint from worker rpc endpoint");
+		debug!("no --mrenclave argument provided. Will trustfully fetch enclave fingerprint from worker rpc endpoint");
 		get_fingerprint(cli).expect("could not get fingerprint").0
 	};
 	let shard = match &trusted_args.shard {

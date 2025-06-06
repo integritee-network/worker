@@ -63,6 +63,7 @@ impl ChatbotCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		dotenv().ok();
 		let api_key = env::var("OPENAI_API_KEY").unwrap();
+		let ai_model = env::var("OPENAI_MODEL").unwrap();
 		let ai_briefing = env::var("OPENAI_SYSTEM_BRIEFING").unwrap();
 		let (bot_account, signer, mrenclave, shard) =
 			get_basic_signing_info_from_args!(self.account, self.session_proxy, cli, trusted_args);
@@ -177,6 +178,7 @@ impl ChatbotCommand {
 							.process_ai_prompt(
 								prompt,
 								ai_briefing.clone(),
+								ai_model.clone(),
 								&bot_account,
 								conversation,
 							)

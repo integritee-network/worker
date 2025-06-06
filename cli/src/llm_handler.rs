@@ -81,6 +81,7 @@ impl LLMHandler {
 		&self,
 		prompt: String,
 		system_briefing: String,
+		model: String,
 		bot_account: &AccountId,
 		history: Vec<TimestampedTrustedNote<Moment>>,
 	) -> String {
@@ -112,7 +113,7 @@ impl LLMHandler {
 		messages.push(Message { role: "user", content: prompt.as_str() });
 		trace!("Sending prompt to LLM: {:?}", messages);
 		let request_body = ChatRequest {
-			model: "gpt-4.1-nano-2025-04-14",
+			model: model.as_str(),
 			messages,
 			max_tokens: 70, // Roughly ≈ 140 characters
 		};
