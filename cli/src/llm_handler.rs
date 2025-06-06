@@ -131,10 +131,10 @@ impl LLMHandler {
 			{
 				Ok(resp) =>
 					if resp.status().is_success() {
-						break resp;
+						break resp
 					} else {
 						warn!("Received non-success status code: {}", resp.status());
-						return String::from("Error: Non-success status code received from LLM API");
+						return String::from("Error: Non-success status code received from LLM API")
 					},
 				Err(e) => {
 					attempts += 1;
@@ -142,7 +142,7 @@ impl LLMHandler {
 					if attempts >= 3 {
 						return String::from(
 							"Error: Failed to send request to LLM API after 3 attempts",
-						);
+						)
 					}
 				},
 			}
@@ -154,7 +154,7 @@ impl LLMHandler {
 			Ok(parsed_json) => parsed_json,
 			Err(e) => {
 				warn!("Failed to parse LLM response JSON: {:?}", e);
-				return String::from("Error: Failed to parse LLM response JSON");
+				return String::from("Error: Failed to parse LLM response JSON")
 			},
 		};
 		if let Some(usage) = json.usage {
