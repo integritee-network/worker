@@ -169,8 +169,11 @@ pub(crate) fn get_account_id_from_str(account: &str) -> AccountId {
 pub(crate) fn get_sidechain_header(cli: &Cli) -> Result<SidechainHeader, CliError> {
 	let direct_api = get_worker_api_direct(cli);
 	let rpc_method = "chain_getHeader".to_owned();
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, vec![]).unwrap();
-	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
+	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, vec![])
+		.map_err(|e| CliError::WorkerRpcApi { msg: e.to_string() })?;
+	let rpc_response_str = direct_api
+		.get(&jsonrpc_call)
+		.map_err(|e| CliError::WorkerRpcApi { msg: e.to_string() })?;
 	// Decode RPC response.
 	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str)
 		.map_err(|err| CliError::WorkerRpcApi { msg: err.to_string() })?;
@@ -182,7 +185,11 @@ pub(crate) fn get_sidechain_header(cli: &Cli) -> Result<SidechainHeader, CliErro
 		})?;
 
 	if rpc_return_value.status == DirectRequestStatus::Error {
-		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
+		error!(
+			"{}",
+			String::decode(&mut rpc_return_value.value.as_slice())
+				.map_err(|e| CliError::WorkerRpcApi { msg: e.to_string() })?
+		);
 		return Err(CliError::WorkerRpcApi { msg: "rpc error".to_string() })
 	}
 
@@ -197,8 +204,11 @@ pub(crate) fn get_sidechain_header(cli: &Cli) -> Result<SidechainHeader, CliErro
 pub(crate) fn get_fingerprint(cli: &Cli) -> Result<H256, CliError> {
 	let direct_api = get_worker_api_direct(cli);
 	let rpc_method = "author_getFingerprint".to_owned();
-	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, vec![]).unwrap();
-	let rpc_response_str = direct_api.get(&jsonrpc_call).unwrap();
+	let jsonrpc_call: String = RpcRequest::compose_jsonrpc_call(rpc_method, vec![])
+		.map_err(|e| CliError::WorkerRpcApi { msg: e.to_string() })?;
+	let rpc_response_str = direct_api
+		.get(&jsonrpc_call)
+		.map_err(|e| CliError::WorkerRpcApi { msg: e.to_string() })?;
 	// Decode RPC response.
 	let rpc_response: RpcResponse = serde_json::from_str(&rpc_response_str)
 		.map_err(|err| CliError::WorkerRpcApi { msg: err.to_string() })?;
@@ -210,7 +220,11 @@ pub(crate) fn get_fingerprint(cli: &Cli) -> Result<H256, CliError> {
 		})?;
 
 	if rpc_return_value.status == DirectRequestStatus::Error {
-		error!("{}", String::decode(&mut rpc_return_value.value.as_slice()).unwrap());
+		error!(
+			"{}",
+			String::decode(&mut rpc_return_value.value.as_slice())
+				.map_err(|e| CliError::WorkerRpcApi { msg: e.to_string() })?
+		);
 		return Err(CliError::WorkerRpcApi { msg: "rpc error".to_string() })
 	}
 
