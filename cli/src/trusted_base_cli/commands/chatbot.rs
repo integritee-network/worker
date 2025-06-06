@@ -23,6 +23,7 @@ use crate::{
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
+use chrono::Timelike;
 use codec::Decode;
 use dotenv::dotenv;
 use ita_stf::{
@@ -32,12 +33,16 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use log::{info, warn};
+use log::{debug, info, warn};
 use pallet_notes::TrustedNote;
-use prometheus::{register_counter, Encoder, TextEncoder};
+use prometheus::{
+	register_counter, register_gauge, register_histogram, Encoder, HistogramOpts, TextEncoder,
+};
 use std::{env, time::Duration};
 use tokio::time::sleep;
 use warp::Filter;
+
+const LATENCY_HISTOGRAM_BUCKETS: [f64; 9] = [0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 60.0, 600.0];
 
 #[derive(Parser)]
 pub struct ChatbotCommand {
@@ -64,9 +69,26 @@ impl ChatbotCommand {
 
 		let interval = self.interval.unwrap_or(1);
 		let messages_received_counter = register_counter!(
-			"messages_receiver_counter",
+			"messages_received_counter",
 			"Number of messages received since startup"
 		)
+		.unwrap();
+		let conversation_counterparties_gauge = register_gauge!(
+			"conversation_counterparties_gauege",
+			"Number of counterparties the bot has a conversation with"
+		)
+		.unwrap();
+		let response_time_histogram = register_histogram!(HistogramOpts::new(
+			"response_time_seconds_histogram",
+			"Histogram of response times in seconds"
+		)
+		.buckets(LATENCY_HISTOGRAM_BUCKETS.into()))
+		.unwrap();
+		let queue_processing_time_histogram = register_histogram!(HistogramOpts::new(
+			"queue_processing_time_seconds_histogram",
+			"Histogram of queue_processing times in seconds"
+		)
+		.buckets(LATENCY_HISTOGRAM_BUCKETS.into()))
 		.unwrap();
 
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::public(
@@ -77,10 +99,8 @@ impl ChatbotCommand {
 		let decimals = parentchains_info.get_shielding_target_decimals().unwrap_or(12);
 		println!("Shielding target decimals: {}", decimals);
 
-		// Create a Tokio runtime
 		let rt = tokio::runtime::Runtime::new().unwrap();
 
-		// Initialize the notes handler
 		let mut notes_handler =
 			NotesHandler::new(cli, trusted_args, bot_account.clone(), signer.clone());
 		notes_handler.fetch_history();
@@ -92,7 +112,6 @@ impl ChatbotCommand {
 		let llm_handler = LLMHandler::new(api_key);
 
 		rt.block_on(async {
-			// Start the Prometheus server
 			let metrics_route = warp::path("metrics").map(move || {
 				let encoder = TextEncoder::new();
 				let metric_families = prometheus::gather();
@@ -108,6 +127,7 @@ impl ChatbotCommand {
 					.run(([0, 0, 0, 0], self.prometheus_port.unwrap_or(9090))),
 			);
 			loop {
+				let processing_start_time = chrono::Utc::now();
 				let account_info =
 					get_trusted_account_info(cli, trusted_args, &bot_account, &signer)
 						.unwrap_or_default();
@@ -116,6 +136,8 @@ impl ChatbotCommand {
 				let nonce = account_info.nonce;
 
 				notes_handler.update();
+				conversation_counterparties_gauge
+					.set(notes_handler.conversation_counterparties.iter().count() as f64);
 
 				for counterparty in notes_handler.conversation_counterparties.iter() {
 					if decimal_balance_free < 2f64 / STF_TX_FEE_UNIT_DIVIDER as f64 {
@@ -132,7 +154,7 @@ impl ChatbotCommand {
 							counterparty,
 							unanswered_notes.len()
 						);
-						// concatenate all unswerered notes
+						// concatenate all unanswerered notes
 						let prompt = unanswered_notes
 							.iter()
 							.map(|note| {
@@ -172,14 +194,30 @@ impl ChatbotCommand {
 						)
 						.into_trusted_operation(trusted_args.direct);
 						if send_direct_request(cli, trusted_args, &top).is_ok() {
-							println!("Sent a reply: {}", prompt_reply);
+							let now = chrono::Utc::now().timestamp_millis() as f64;
+							let response_time_s = (now
+								- unanswered_notes.last().expect("can't be empty here").timestamp
+									as f64) / 1000.0;
+							println!("Sent a reply in {}s: {}", response_time_s, prompt_reply);
+							response_time_histogram.observe(response_time_s);
 						} else {
 							println!("Failed to send echo");
 						}
 					}
 				}
-				println!("Sleeping for {} seconds", interval);
-				sleep(Duration::from_secs(interval)).await;
+				let elapsed_millis = chrono::Utc::now()
+					.signed_duration_since(processing_start_time)
+					.num_milliseconds();
+				queue_processing_time_histogram.observe(elapsed_millis as f64 / 1000.0);
+				let pause_millis = (1000 * interval).saturating_sub(elapsed_millis.max(0) as u64);
+				debug!("Sleeping for {}ms", pause_millis);
+				if processing_start_time.num_seconds_from_midnight() % 60 == 0 {
+					println!(
+						"[Heartbeat] Processed queue in {}ms, sleeping for {}ms",
+						elapsed_millis, pause_millis
+					);
+				}
+				sleep(Duration::from_millis(pause_millis)).await;
 			}
 		});
 		Ok(CliResultOk::None)

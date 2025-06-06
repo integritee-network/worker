@@ -20,6 +20,7 @@ use ita_stf::TrustedCall;
 use itp_types::{AccountId, Moment};
 use log::{debug, trace, warn};
 use pallet_notes::{TimestampedTrustedNote, TrustedNote};
+use prometheus::register_counter;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -40,6 +41,7 @@ struct Message<'a> {
 #[derive(Deserialize)]
 struct ChatResponse {
 	choices: Vec<Choice>,
+	usage: Option<Usage>,
 }
 
 #[derive(Deserialize)]
@@ -52,13 +54,27 @@ struct MessageContent {
 	content: String,
 }
 
+#[derive(Deserialize)]
+struct Usage {
+	prompt_tokens: u32,
+	completion_tokens: u32,
+	total_tokens: u32,
+}
+
 pub struct LLMHandler {
 	api_key: String,
+	metrics_prompt_tokens_counter: prometheus::Counter,
+	metrics_completion_tokens_counter: prometheus::Counter,
 }
 
 impl LLMHandler {
 	pub fn new(api_key: String) -> Self {
-		LLMHandler { api_key }
+		let metrics_prompt_tokens_counter =
+			register_counter!("llm_prompt_tokens_counter", "Number of used prompt tokens").unwrap();
+		let metrics_completion_tokens_counter =
+			register_counter!("llm_completion_tokens_counter", "Number of used completion tokens")
+				.unwrap();
+		LLMHandler { api_key, metrics_prompt_tokens_counter, metrics_completion_tokens_counter }
 	}
 
 	pub async fn process_ai_prompt(
@@ -138,6 +154,15 @@ impl LLMHandler {
 				return String::from("Error: Failed to parse LLM response JSON");
 			},
 		};
+		if let Some(usage) = json.usage {
+			debug!(
+				"Token usage - Prompt tokens: {}, Completion tokens: {}, Total tokens: {}",
+				usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
+			);
+			self.metrics_prompt_tokens_counter.inc_by(usage.prompt_tokens.into());
+			self.metrics_completion_tokens_counter.inc_by(usage.completion_tokens.into());
+		}
+
 		let prompt_reply = {
 			let content = json.choices[0].message.content.trim();
 			let cropped = &content.as_bytes()[..std::cmp::min(200, content.len())];

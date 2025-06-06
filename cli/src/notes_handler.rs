@@ -195,6 +195,7 @@ impl<'a> NotesHandler<'a> {
 		}
 	}
 }
+
 pub(crate) fn get_note_buckets_info(
 	cli: &Cli,
 	trusted_args: &TrustedCli,
