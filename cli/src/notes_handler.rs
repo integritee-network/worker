@@ -52,7 +52,7 @@ impl<'a> NotesHandler<'a> {
 		signer: sr25519_core::Pair,
 	) -> Self {
 		let bucket_range =
-			get_note_buckets_info(&cli, &trusted_args).expect("Failed to get note buckets info");
+			get_note_buckets_info(cli, trusted_args).expect("Failed to get note buckets info");
 		let notes = HashMap::new();
 		let last_fetched_timestamp = 0u64;
 		let last_fetched_bucket_index = 0u32;
@@ -81,14 +81,16 @@ impl<'a> NotesHandler<'a> {
 					.sign(&KeyPair::Sr25519(Box::new(self.signer.clone()))),
 			));
 			let maybe_notes: Option<Vec<TimestampedTrustedNote<Moment>>> =
-				perform_trusted_operation(&self.cli, &self.trusted_args, &top).ok();
-			maybe_notes.map(|notes| notes.iter().for_each(|note| self.store_note(note.clone())));
+				perform_trusted_operation(self.cli, self.trusted_args, &top).ok();
+			if let Some(notes) = maybe_notes {
+				notes.iter().for_each(|note| self.store_note(note.clone()))
+			};
 			self.last_fetched_bucket_index = bucket_index;
 		}
 	}
 
 	pub fn update(&mut self) {
-		self.bucket_range = get_note_buckets_info(&self.cli, &self.trusted_args)
+		self.bucket_range = get_note_buckets_info(self.cli, self.trusted_args)
 			.expect("Failed to get note buckets info");
 		let last_bucket_index =
 			self.bucket_range.maybe_last.map(|bucket| bucket.index).unwrap_or_default();
@@ -100,8 +102,8 @@ impl<'a> NotesHandler<'a> {
 					.sign(&KeyPair::Sr25519(Box::new(self.signer.clone()))),
 			));
 			if let Ok(notes) = perform_trusted_operation::<Vec<TimestampedTrustedNote<Moment>>>(
-				&self.cli,
-				&self.trusted_args,
+				self.cli,
+				self.trusted_args,
 				&top,
 			) {
 				notes
@@ -183,8 +185,7 @@ impl<'a> NotesHandler<'a> {
 					false
 				}
 			})
-			.last()
-			.clone();
+			.last();
 		if let Some(last_note) = my_last_note {
 			conversation
 				.into_iter()

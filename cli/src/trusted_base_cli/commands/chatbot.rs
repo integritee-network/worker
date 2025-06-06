@@ -107,7 +107,7 @@ impl ChatbotCommand {
 		notes_handler.fetch_history();
 		info!(
 			"fetched existing conversation history with {} counterparties",
-			notes_handler.conversation_counterparties.iter().count()
+			notes_handler.conversation_counterparties.len()
 		);
 
 		let llm_handler = LLMHandler::new(api_key);
@@ -138,16 +138,16 @@ impl ChatbotCommand {
 
 				notes_handler.update();
 				conversation_counterparties_gauge
-					.set(notes_handler.conversation_counterparties.iter().count() as f64);
+					.set(notes_handler.conversation_counterparties.len() as f64);
 
 				for counterparty in notes_handler.conversation_counterparties.iter() {
 					if decimal_balance_free < 2f64 / STF_TX_FEE_UNIT_DIVIDER as f64 {
 						warn!("Account has insufficient funds to reply");
 						continue
 					};
-					let conversation = notes_handler.conversation_with(&counterparty, None);
+					let conversation = notes_handler.conversation_with(counterparty, None);
 					let unanswered_notes =
-						notes_handler.unanswered_conversation_with(&counterparty, None);
+						notes_handler.unanswered_conversation_with(counterparty, None);
 					if !unanswered_notes.is_empty() {
 						messages_received_counter.inc_by(f64::from(unanswered_notes.len() as u32));
 						println!(
@@ -163,7 +163,7 @@ impl ChatbotCommand {
 									if let Ok(TrustedCall::send_note(_, _, msg)) =
 										TrustedCall::decode(&mut tc.as_slice())
 									{
-										String::from_utf8(msg.clone())
+										String::from_utf8(msg)
 											.unwrap_or_else(|_| "Invalid UTF-8".to_string())
 									} else {
 										"".into()
