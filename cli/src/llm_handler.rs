@@ -101,15 +101,43 @@ impl LLMHandler {
 			max_tokens: 70, // Roughly ≈ 140 characters
 		};
 		let client = Client::new();
-		let response = client
-			.post("https://api.openai.com/v1/chat/completions")
-			.bearer_auth(self.api_key.clone())
-			.json(&request_body)
-			.send()
-			.await
-			.unwrap();
+		let mut attempts = 0;
+		let response = loop {
+			match client
+				.post("https://api.openai.com/v1/chat/completions")
+				.bearer_auth(self.api_key.clone())
+				.json(&request_body)
+				.send()
+				.await
+			{
+				Ok(resp) =>
+					if resp.status().is_success() {
+						break resp;
+					} else {
+						warn!("Received non-success status code: {}", resp.status());
+						return String::from("Error: Non-success status code received from LLM API");
+					},
+				Err(e) => {
+					attempts += 1;
+					warn!("Failed to send request to LLM API (attempt {}): {:?}", attempts, e);
+					if attempts >= 3 {
+						return String::from(
+							"Error: Failed to send request to LLM API after 3 attempts",
+						);
+					}
+				},
+			}
+		};
+
 		debug!("Got response from LLM: {:?}", response);
-		let json: ChatResponse = response.json().await.unwrap();
+
+		let json: ChatResponse = match response.json().await {
+			Ok(parsed_json) => parsed_json,
+			Err(e) => {
+				warn!("Failed to parse LLM response JSON: {:?}", e);
+				return String::from("Error: Failed to parse LLM response JSON");
+			},
+		};
 		let prompt_reply = {
 			let content = json.choices[0].message.content.trim();
 			let cropped = &content.as_bytes()[..std::cmp::min(200, content.len())];
