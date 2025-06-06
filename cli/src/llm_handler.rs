@@ -107,6 +107,8 @@ impl LLMHandler {
 							content: Box::leak(msg_str.into_boxed_str()),
 						});
 					}
+				} else {
+					warn!("Failed to decode TrustedCall::send_note from note: {:?}", note);
 				}
 			}
 		});
