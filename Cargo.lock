@@ -1101,6 +1101,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
+
+[[package]]
 name = "downcast"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2574,12 +2580,13 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.16.6"
+version = "0.16.7"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
  "chrono 0.4.26",
  "clap 3.2.25",
+ "dotenv",
  "enclave-bridge-primitives",
  "env_logger 0.9.3",
  "hdrhistogram",
@@ -2632,7 +2639,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.16.6"
+version = "0.16.7"
 dependencies = [
  "anyhow",
  "async-trait",
