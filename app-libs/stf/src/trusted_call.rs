@@ -985,7 +985,9 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::assets_transfer(_, _, _asset_id, ..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		TrustedCall::force_unshield_all(..) => 0, // root call, will be charged on affected account
 		TrustedCall::add_session_proxy(..) => one / STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::send_note(..) => one / STF_TX_FEE_UNIT_DIVIDER,
+		TrustedCall::send_note(_, _, note) =>
+			one / STF_TX_FEE_UNIT_DIVIDER
+				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]
 		TrustedCall::evm_call(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]
