@@ -176,7 +176,8 @@ fn send_indirect_request<T: Decode + Debug>(
 	chain_api.set_signer(signer.into());
 
 	let request = Request { shard, cyphertext: call_encrypted };
-	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request);
+	let xt = compose_extrinsic!(&chain_api, ENCLAVE_BRIDGE, "invoke", request)
+		.expect("failed to compose `invoke` call");
 
 	let invocation_block_hash = match chain_api
 		.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)

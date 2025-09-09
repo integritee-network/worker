@@ -51,7 +51,9 @@ impl TransferCommand {
 			debug!("using AssetTip API");
 			let mut api = get_target_b_chain_api(cli);
 			api.set_signer(from_account.into());
-			let xt = api.balance_transfer_allow_death(to_account.clone().into(), self.amount);
+			let xt = api
+				.balance_transfer_allow_death(to_account.clone().into(), self.amount)
+				.unwrap();
 			debug!("encoded call: {}", hex_encode(xt.function.encode().as_slice()));
 			debug!("encoded extrinsic will be sent: {}", hex_encode(xt.encode().as_slice()));
 			let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap();
@@ -63,7 +65,9 @@ impl TransferCommand {
 		} else {
 			debug!("using PlainTip API");
 			api.set_signer(from_account.into());
-			let xt = api.balance_transfer_allow_death(to_account.clone().into(), self.amount);
+			let xt = api
+				.balance_transfer_allow_death(to_account.clone().into(), self.amount)
+				.unwrap();
 			debug!("encoded call: {}", hex_encode(xt.function.encode().as_slice()));
 			debug!("encoded extrinsic will be sent: {}", hex_encode(xt.encode().as_slice()));
 			let tx_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap();
