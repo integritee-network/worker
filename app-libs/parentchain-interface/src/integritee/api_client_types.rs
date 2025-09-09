@@ -29,6 +29,7 @@ pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
 use sp_runtime::generic;
+use sp_runtime::traits::MaybeSerialize;
 
 pub type IntegriteeRuntimeConfig = ParentchainRuntimeConfig<IntegriteeTip>;
 
@@ -40,7 +41,7 @@ pub type IntegriteeAdditionalParams = GenericAdditionalParams<IntegriteeRuntimeC
 pub type IntegriteeSignedExtra = GenericTxExtension<IntegriteeTip, Index>;
 pub type IntegriteeSignature = Signature<IntegriteeSignedExtra>;
 
-pub type IntegriteeUncheckedExtrinsic<Call> =
+pub type IntegriteeUncheckedExtrinsic<Call: MaybeSerialize> =
 	UncheckedExtrinsic<Address, Call, PairSignature, IntegriteeSignedExtra>;
 
 /// Signature type of the [UncheckedExtrinsic].
