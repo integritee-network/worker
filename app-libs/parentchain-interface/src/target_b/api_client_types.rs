@@ -21,8 +21,8 @@
 //! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
 
 use crate::{
-	AssetTip, GenericAdditionalParams, GenericExtrinsicParams, GenericSignedExtra,
-	ParentchainRuntimeConfig, UncheckedExtrinsicV4,
+	AssetTip, GenericAdditionalParams, GenericExtrinsicParams, GenericTxExtension,
+	ParentchainRuntimeConfig, UncheckedExtrinsic,
 };
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
@@ -37,13 +37,13 @@ pub type TargetBTip = AssetTip<Balance>;
 pub type TargetBExtrinsicParams = GenericExtrinsicParams<TargetBRuntimeConfig, TargetBTip>;
 pub type TargetBAdditionalParams = GenericAdditionalParams<TargetBRuntimeConfig, Hash>;
 
-pub type TargetBSignedExtra = GenericSignedExtra<TargetBTip, Index>;
+pub type TargetBSignedExtra = GenericTxExtension<TargetBTip, Index>;
 pub type TargetBSignature = Signature<TargetBSignedExtra>;
 
 pub type TargetBUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Address, Call, PairSignature, TargetBSignedExtra>;
+	UncheckedExtrinsic<Address, Call, PairSignature, TargetBSignedExtra>;
 
-/// Signature type of the [UncheckedExtrinsicV4].
+/// Signature type of the [UncheckedExtrinsic].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 #[cfg(feature = "std")]

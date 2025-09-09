@@ -33,8 +33,8 @@ pub use substrate_api_client::{
 	ac_primitives::{
 		config::{AssetRuntimeConfig, Config, DefaultRuntimeConfig},
 		extrinsics::{
-			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
-			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericImplicit,
+			GenericExtrinsicParams, GenericTxExtension, PlainTip, UncheckedExtrinsic, Preamble as GenericPreamble,
 		},
 		serde_impls::StorageKey,
 		signer::{SignExtrinsic, StaticExtrinsicSigner},
@@ -69,12 +69,14 @@ pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 // pub type ParentchainAdditionalParams = GenericAdditionalParams<AssetRuntimeConfig, Hash>;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
-pub type ParentchainSignedExtra = GenericSignedExtra<ParentchainPlainTip, Index>;
-pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
+	UncheckedExtrinsic<Address, Call, PairSignature, ParentchainTxExtension>;
+pub type ParentchainTxExtension = GenericTxExtension<ParentchainPlainTip, Index>;
+pub type ParentchainSignature = Signature<ParentchainTxExtension>;
 
-/// Signature type of the [UncheckedExtrinsicV4].
+/// Signature type of the [UncheckedExtrinsic].
 pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
+
+pub type Preamble<TxExtension> = GenericPreamble<Address, PairSignature, TxExtension>;
 
 #[cfg(feature = "std")]
 pub use substrate_api_client::{

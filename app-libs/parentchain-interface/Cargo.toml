@@ -27,7 +27,7 @@ hex-literal = "0.4.1"
 log = { version = "0.4", default-features = false }
 regex = { optional = true, version = "1.9.5" }
 
-substrate-api-client = { default-features = false, git = "https://github.com/encointer/substrate-api-client.git", branch = "v0.9.42-tag-v0.14.0-retracted-check-metadata-hash" }
+substrate-api-client = { default-features = false, git = "https://github.com/encointer/substrate-api-client.git", branch = "cl/extrinsic-v5-v0.9.42" }
 
 # substrate dep
 sp-core = { default-features = false, features = ["full_crypto"], git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }

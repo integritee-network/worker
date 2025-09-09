@@ -290,7 +290,8 @@ where
 	api.set_signer(alice.into());
 
 	println!("[{:?}] send extrinsic: bootstrap funding Enclave from Alice's funds", parentchain_id);
-	let xt = api.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
+	let xt = api.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount)
+		.ok_or(Error::Custom("Could not create funding extrinsic".into()))?;
 	let xt_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[{:?}] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",

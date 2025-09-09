@@ -157,12 +157,12 @@ where
 				);
 
 				log::trace!(
-					"[ExtrinsicsFactory] SignedExtra: {:?}",
-					extrinsic_params.signed_extra()
+					"[ExtrinsicsFactory] TransactionExtension: {:?}",
+					extrinsic_params.transaction_extension()
 				);
 				log::trace!(
-					"[ExtrinsicsFactory] AdditionalParams: {:?}",
-					extrinsic_params.additional_signed()
+					"[ExtrinsicsFactory] Implicit: {:?}",
+					extrinsic_params.implicit()
 				);
 
 				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
@@ -255,11 +255,11 @@ pub mod tests {
 	//
 	// 	let opaque_calls =
 	// 		[OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78]), OpaqueCall(vec![15u8, 12])];
-	// 	let xts: Vec<UncheckedExtrinsicV4<OpaqueCall>> = extrinsics_factory
+	// 	let xts: Vec<UncheckedExtrinsic<OpaqueCall>> = extrinsics_factory
 	// 		.create_extrinsics(&opaque_calls)
 	// 		.unwrap()
 	// 		.iter()
-	// 		.map(|mut x| UncheckedExtrinsicV4::<OpaqueCall>::decode(&mut x))
+	// 		.map(|mut x| UncheckedExtrinsic::<OpaqueCall>::decode(&mut x))
 	// 		.collect();
 	//
 	// 	assert_eq!(xts.len(), opaque_calls.len());
