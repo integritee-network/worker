@@ -70,7 +70,8 @@ impl TransferCommand {
 					location,
 					MultiAddress::<AccountId, ()>::Id(to_account),
 					Compact(self.amount)
-				).expect("Could not compose `transfer` call (call not found in metadata)");
+				)
+				.expect("Could not compose `transfer` call (call not found in metadata)");
 				info!("encoded call: {}", hex::encode(xt.function.encode()));
 				api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap()
 			},
@@ -90,7 +91,8 @@ impl TransferCommand {
 					Compact(native_asset_id),
 					MultiAddress::<AccountId, ()>::Id(to_account),
 					Compact(self.amount)
-				).expect("Could not compose `transfer` call (call not found in metadata)");
+				)
+				.expect("Could not compose `transfer` call (call not found in metadata)");
 				info!("encoded call: {}", hex::encode(xt.function.encode()));
 				api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock).unwrap()
 			},

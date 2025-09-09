@@ -11,7 +11,7 @@ use itp_node_api::{
 	metadata::NodeMetadataTrait,
 };
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
-use itp_stf_primitives::{traits::IndirectExecutor};
+use itp_stf_primitives::traits::IndirectExecutor;
 use itp_test::mock::stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock};
 use itp_types::{
 	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},

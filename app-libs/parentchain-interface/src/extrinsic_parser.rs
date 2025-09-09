@@ -18,9 +18,7 @@
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
 use itp_api_client_types::Preamble;
-use itp_node_api::api_client::{
-	Address, CallIndex, PairSignature, UncheckedExtrinsic,
-};
+use itp_node_api::api_client::{Address, CallIndex, PairSignature, UncheckedExtrinsic};
 
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,

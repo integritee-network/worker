@@ -73,7 +73,8 @@ impl ShieldFundsCommand {
 			shard,
 			encrypted_recevier,
 			self.amount
-		).expect("Could not compose `shield_fund` extrinsic (call not found in metadata)");
+		)
+		.expect("Could not compose `shield_fund` extrinsic (call not found in metadata)");
 
 		match chain_api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized) {
 			Ok(xt_report) => {

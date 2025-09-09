@@ -160,10 +160,7 @@ where
 					"[ExtrinsicsFactory] TransactionExtension: {:?}",
 					extrinsic_params.transaction_extension()
 				);
-				log::trace!(
-					"[ExtrinsicsFactory] Implicit: {:?}",
-					extrinsic_params.implicit()
-				);
+				log::trace!("[ExtrinsicsFactory] Implicit: {:?}", extrinsic_params.implicit());
 
 				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
 				nonce_value += 1;

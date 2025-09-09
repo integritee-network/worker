@@ -39,8 +39,8 @@ pub use substrate_api_client::{
 	ac_primitives::{
 		config::Config,
 		extrinsics::{
-			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericImplicit,
-			GenericExtrinsicParams, GenericTxExtension, PlainTip, UncheckedExtrinsic,
+			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams,
+			GenericImplicit, GenericTxExtension, PlainTip, UncheckedExtrinsic,
 		},
 		serde_impls::StorageKey,
 		signer::{SignExtrinsic, StaticExtrinsicSigner},
