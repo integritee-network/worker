@@ -211,7 +211,7 @@ where
 			Some(vec![0u8; MAX_URL_LEN]),
 			SgxAttestationMethod::Dcap { proxied: false }
 		)
-		.ok_or_else(|| ApiClientError::ExtrinsicNotFound)?
+		.ok_or(ApiClientError::ExtrinsicNotFound)?
 		.encode()
 		.into();
 		let tx_fee =
@@ -339,7 +339,7 @@ where
 {
 	let encoded_xt: Bytes = api
 		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
-		.ok_or_else(|| ApiClientError::ExtrinsicNotFound)?
+		.ok_or(ApiClientError::ExtrinsicNotFound)?
 		.encode()
 		.into();
 	let tx_fee = api
