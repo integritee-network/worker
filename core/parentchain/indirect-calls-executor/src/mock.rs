@@ -84,7 +84,7 @@ pub type MockParentchainExtrinsicParser = ExtrinsicParser<ParentchainTxExtension
 ///
 /// Intended for usage, where the actual `call_args` form is unknown.
 pub struct SemiOpaqueExtrinsic<'a, TxExtension> {
-	/// Signature of the Extrinsic.
+	/// Preamble of the Extrinsic.
 	pub preamble: Preamble<TxExtension>,
 	/// Call index of the dispatchable.
 	pub call_index: CallIndex,
