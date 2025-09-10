@@ -62,7 +62,7 @@ pub type ParentchainExtrinsicParams =
 	GenericExtrinsicParams<DefaultRuntimeConfig, ParentchainPlainTip>;
 pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
 pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
-
+use sp_runtime::MultiSignature;
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
@@ -72,10 +72,10 @@ pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsic<Address, Call, PairSignature, ParentchainTxExtension>;
 pub type ParentchainTxExtension = GenericTxExtension<ParentchainPlainTip, Index>;
-pub type ParentchainSignature = Signature<ParentchainTxExtension>;
+pub type ParentchainSignature = Signature;
 
-/// Signature type of the [UncheckedExtrinsic].
-pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
+/// Signature type of the [UncheckedExtrinsicV5].
+pub type Signature = MultiSignature;
 
 pub type Preamble<TxExtension> = GenericPreamble<Address, PairSignature, TxExtension>;
 
