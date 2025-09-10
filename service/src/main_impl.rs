@@ -1142,6 +1142,13 @@ where
 	Tip: Copy + Default + Encode + Debug + Send + Sync + 'static,
 	Client: Request + Subscribe + Clone + Send + Sync + 'static,
 {
+	// use itp_api_client_types::UncheckedExtrinsic;
+	// let xt: UncheckedExtrinsic::<Address, (), ParentchainSignature, ParentchainTxExtension> = Decode::decode(&mut &extrinsic[..])?;
+	// log::info!("Sending integritee xt; {:?}", xt);
+	// log::info!("Sending integritee preamble; {:?}", xt.preamble.encode());
+	// log::info!("Sending integritee xt; {:?}", extrinsic);
+	// log::info!("Sending integritee xt; {}", serde_json::to_string(&sp_core::Bytes(extrinsic.clone())).unwrap());
+
 	let timeout = Duration::from_secs(5 * 60);
 	let (sender, receiver) = mpsc::channel();
 	let local_fee_payer = fee_payer.clone();
