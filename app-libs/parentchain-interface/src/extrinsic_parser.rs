@@ -106,7 +106,8 @@ mod tests {
 
 		let address = Address::Id(AccountId32::new([0; 32]));
 		let extension = ParentchainTxExtension::new(Era::Immortal, 1, Default::default());
-		let signature = ParentchainSignature::Ed25519([0u8; 64].encode().as_slice().try_into().unwrap());
+		let signature =
+			ParentchainSignature::Ed25519([0u8; 64].encode().as_slice().try_into().unwrap());
 
 		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
 			XTV5::new_signed(
@@ -138,7 +139,8 @@ mod tests {
 
 		let address = Address::Id(AccountId32::new([0; 32]));
 		let extension = ParentchainTxExtension::new(Era::Immortal, 1, Default::default());
-		let signature = ParentchainSignature::Ed25519([0u8; 64].encode().as_slice().try_into().unwrap());
+		let signature =
+			ParentchainSignature::Ed25519([0u8; 64].encode().as_slice().try_into().unwrap());
 
 		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
 			XTV5::new_signed(
@@ -153,7 +155,8 @@ mod tests {
 
 		assert_eq!(encoded, opaque.encode());
 
-		let decoded : XTV5<Address, [u8; 5], ParentchainSignature, ParentchainTxExtension> = Decode::decode(&mut opaque.encode().as_slice()).unwrap();
+		let decoded: XTV5<Address, [u8; 5], ParentchainSignature, ParentchainTxExtension> =
+			Decode::decode(&mut opaque.encode().as_slice()).unwrap();
 		assert_eq!(ex_v5, decoded);
 	}
 

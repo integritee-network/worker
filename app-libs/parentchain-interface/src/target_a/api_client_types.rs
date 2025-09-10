@@ -20,7 +20,6 @@
 //! You need to update this if you have a signed extension in your node that
 //! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
 
-use sp_runtime::MultiSignature;
 use crate::{
 	GenericAdditionalParams, GenericExtrinsicParams, GenericTxExtension, ParentchainRuntimeConfig,
 	PlainTip, UncheckedExtrinsic,
@@ -28,6 +27,7 @@ use crate::{
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
+use sp_runtime::MultiSignature;
 
 pub type TargetARuntimeConfig = ParentchainRuntimeConfig<TargetATip>;
 

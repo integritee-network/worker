@@ -61,8 +61,8 @@ pub type ParentchainAssetTip = AssetTip<Balance>;
 pub type ParentchainExtrinsicParams =
 	GenericExtrinsicParams<DefaultRuntimeConfig, ParentchainPlainTip>;
 pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
-pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 use sp_runtime::MultiSignature;
+pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
