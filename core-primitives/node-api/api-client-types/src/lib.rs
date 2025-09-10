@@ -72,6 +72,7 @@ use sp_runtime::MultiSignature;
 pub type ParentchainUncheckedExtrinsic<Call> =
 	UncheckedExtrinsic<Address, Call, PairSignature, ParentchainTxExtension>;
 pub type ParentchainTxExtension = GenericTxExtension<ParentchainPlainTip, Index>;
+pub type AssetTxExtension = GenericTxExtension<ParentchainAssetTip, Index>;
 pub type ParentchainSignature = Signature;
 
 /// Signature type of the [UncheckedExtrinsicV5].
