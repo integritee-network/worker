@@ -132,6 +132,31 @@ mod tests {
 		assert_eq!(parsed.call_index, [1, 2]);
 	}
 
+	#[test]
+	fn opaque_extrinsic_works() {
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		let address = Address::Id(AccountId32::new([0; 32]));
+		let extension = ParentchainTxExtension::new(Era::Immortal, 1, Default::default());
+		let signature = ParentchainSignature::Ed25519([0u8; 64].encode().as_slice().try_into().unwrap());
+
+		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV5::new_signed(
+				[1u8, 2u8, 0, 0, 0],
+				address.clone(),
+				signature.clone(),
+				extension.clone(),
+			);
+
+		let encoded = ex_v5.encode();
+		let opaque = OpaqueExtrinsic::from_bytes(&encoded).unwrap();
+
+		assert_eq!(encoded, opaque.encode());
+
+		let decoded : XTV5<Address, [u8; 5], ParentchainSignature, ParentchainTxExtension> = Decode::decode(&mut opaque.encode().as_slice()).unwrap();
+		assert_eq!(ex_v5, decoded);
+	}
+
 	// #[test]
 	// fn can_parse_register_enclave() {
 	// 	let encoded = "0x81028400d345e01893ae2c5c600675fe7b901e0b32641b3b4405772ed5eb227228ab535700d0168da6e0bd8c5657616e8b4641d47f2cd7bcbe9f76846d6a65e006d995fff1ef2b42f7e3418c9dec75bb7bae07ece61dc0255ad19879cefae88bb8c575180515000000320080fec01d23e7fe3f1db1b7740e3bc01013b330797b2ae97b589604393fc1d005f101487773733a2f2f302e302e302e303a323030300000";
