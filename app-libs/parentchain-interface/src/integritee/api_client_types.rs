@@ -28,7 +28,7 @@ use itp_types::parentchain::Header;
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
-use sp_runtime::generic;
+use sp_runtime::{generic, MultiSignature};
 
 pub type IntegriteeRuntimeConfig = ParentchainRuntimeConfig<IntegriteeTip>;
 
@@ -38,13 +38,10 @@ pub type IntegriteeExtrinsicParams = GenericExtrinsicParams<IntegriteeRuntimeCon
 pub type IntegriteeAdditionalParams = GenericAdditionalParams<IntegriteeRuntimeConfig, Hash>;
 
 pub type IntegriteeSignedExtra = GenericTxExtension<IntegriteeTip, Index>;
-pub type IntegriteeSignature = Signature<IntegriteeSignedExtra>;
+pub type IntegriteeSignature = MultiSignature;
 
 pub type IntegriteeUncheckedExtrinsic<Call> =
 	UncheckedExtrinsic<Address, Call, PairSignature, IntegriteeSignedExtra>;
-
-/// Signature type of the [UncheckedExtrinsic].
-pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 pub type Block = generic::Block<Header, IntegriteeUncheckedExtrinsic<([u8; 2])>>;
 

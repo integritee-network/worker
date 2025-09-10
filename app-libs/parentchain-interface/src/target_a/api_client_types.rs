@@ -20,6 +20,7 @@
 //! You need to update this if you have a signed extension in your node that
 //! is different from the integritee-node, e.g., if you use the `pallet_asset_tx_payment`.
 
+use sp_runtime::MultiSignature;
 use crate::{
 	GenericAdditionalParams, GenericExtrinsicParams, GenericTxExtension, ParentchainRuntimeConfig,
 	PlainTip, UncheckedExtrinsic,
@@ -37,13 +38,10 @@ pub type TargetAExtrinsicParams = GenericExtrinsicParams<TargetARuntimeConfig, T
 pub type TargetAAdditionalParams = GenericAdditionalParams<TargetARuntimeConfig, Hash>;
 
 pub type TargetASignedExtra = GenericTxExtension<TargetATip, Index>;
-pub type TargetASignature = Signature<TargetASignedExtra>;
+pub type TargetASignature = MultiSignature;
 
 pub type TargetAUncheckedExtrinsic<Call> =
 	UncheckedExtrinsic<Address, Call, PairSignature, TargetASignedExtra>;
-
-/// Signature type of the [UncheckedExtrinsic].
-pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 #[cfg(feature = "std")]
 pub use api::*;

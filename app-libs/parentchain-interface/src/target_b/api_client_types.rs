@@ -27,6 +27,7 @@ use crate::{
 pub use itp_types::parentchain::{
 	AccountData, AccountId, AccountInfo, Address, Balance, Hash, Index, Signature as PairSignature,
 };
+use sp_runtime::MultiSignature;
 
 pub type TargetBRuntimeConfig = ParentchainRuntimeConfig<TargetBTip>;
 
@@ -38,13 +39,10 @@ pub type TargetBExtrinsicParams = GenericExtrinsicParams<TargetBRuntimeConfig, T
 pub type TargetBAdditionalParams = GenericAdditionalParams<TargetBRuntimeConfig, Hash>;
 
 pub type TargetBSignedExtra = GenericTxExtension<TargetBTip, Index>;
-pub type TargetBSignature = Signature<TargetBSignedExtra>;
+pub type TargetBSignature = MultiSignature;
 
 pub type TargetBUncheckedExtrinsic<Call> =
 	UncheckedExtrinsic<Address, Call, PairSignature, TargetBSignedExtra>;
-
-/// Signature type of the [UncheckedExtrinsic].
-pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
 
 #[cfg(feature = "std")]
 pub use api::*;
