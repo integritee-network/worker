@@ -176,6 +176,30 @@ mod tests {
 	}
 
 	#[test]
+	fn can_parse_v5_general_transaction() {
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		let (_, extension, _) = get_default_signer_data();
+
+		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV5::new_transaction([1u8, 2u8, 0, 0, 0], extension.clone());
+
+		let encoded = ex_v5.encode();
+
+		let parsed = ExtrinsicParser::<ParentchainTxExtension>::parse(&encoded).unwrap();
+
+		match &parsed.preamble {
+			Preamble::General(extension_version, ext) => {
+				assert_eq!(extension_version, &0);
+				assert_eq!(ext, &extension);
+			},
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+
+		assert_eq!(parsed.call_index, [1, 2]);
+	}
+
+	#[test]
 	fn opaque_extrinsic_works() {
 		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
 
