@@ -200,6 +200,22 @@ mod tests {
 	}
 
 	#[test]
+	fn can_parse_asset_hub_transaction_v4() {
+		use itp_utils::FromHexPrefixed;
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		// We only care about the preamble, so we use the `()` to stop decoding after the preamble.
+		let ex_v5: XTV5<Address, (), ParentchainSignature, ParentchainTxExtension> = XTV5::from_hex("0x4d0284007c77c5f95a72c19e051233b3b1e01df74ec13cb161b109fc5f16ce1c65316f2401f63f850629722493607fb04dfa64d9bd62c454ea325b96d71938d0a52f513c4b35681b9c323b9a09b9f7227e10a5707624afbeb2232759505119da68fa6de08b2400040000000a0300b1df638e78cd896db34d8e62722fd755360d61dac2f3b048e24cd26a5ace35690b008cb6611e01").unwrap();
+
+		match &ex_v5.preamble {
+			// If the preamble is signed, it means that an XT V4 was sent
+			Preamble::Signed(..) => {},
+			Preamble::General(..) => panic!("unexpected preamble belonging to XT V5"),
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+	}
+
+	#[test]
 	fn opaque_extrinsic_works() {
 		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
 
