@@ -221,7 +221,8 @@ mod tests {
 		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
 
 		// We only care about the preamble, so we use the `()` to stop decoding after the preamble.
-		let ex_v5: XTV5<Address, (), ParentchainSignature, ParentchainTxExtension> = XTV5::from_hex("0x280503000bc02a05399901").unwrap();
+		let ex_v5: XTV5<Address, (), ParentchainSignature, ParentchainTxExtension> =
+			XTV5::from_hex("0x280503000bc02a05399901").unwrap();
 
 		match &ex_v5.preamble {
 			Preamble::Bare(version) => assert_eq!(version, &5),
