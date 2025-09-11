@@ -216,6 +216,20 @@ mod tests {
 	}
 
 	#[test]
+	fn can_parse_integritee_bare_transaction_v5() {
+		use itp_utils::FromHexPrefixed;
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		// We only care about the preamble, so we use the `()` to stop decoding after the preamble.
+		let ex_v5: XTV5<Address, (), ParentchainSignature, ParentchainTxExtension> = XTV5::from_hex("0x280503000bc02a05399901").unwrap();
+
+		match &ex_v5.preamble {
+			Preamble::Bare(version) => assert_eq!(version, &5),
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+	}
+
+	#[test]
 	fn opaque_extrinsic_works() {
 		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
 
