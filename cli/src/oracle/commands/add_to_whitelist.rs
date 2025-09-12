@@ -56,10 +56,12 @@ impl AddToWhitelistCmd {
 			ADD_TO_WHITELIST,
 			market_data_source,
 			mrenclave
-		);
+		)
+		.expect("Could not compose `add_to_whitelist` call (call in metadata not found)");
 
 		// compose the extrinsic
-		let xt = compose_extrinsic!(api, "Sudo", "sudo", call);
+		let xt = compose_extrinsic!(api, "Sudo", "sudo", call)
+			.expect("Could not compose `sudo` extrinsic (call in metadata not found)");
 
 		let report = api.submit_and_watch_extrinsic_until(xt, XtStatus::Finalized).unwrap();
 		println!("[+] Add to whitelist got finalized. Hash: {:?}\n", report.extrinsic_hash);

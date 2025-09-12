@@ -15,7 +15,7 @@ dependencies = [
 [[package]]
 name = "ac-compose-macros"
 version = "0.4.2"
-source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-integritee-patch#946f3ae82c5d48023107c1890728582561e94725"
 dependencies = [
  "ac-primitives",
  "log 0.4.22",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "ac-node-api"
 version = "0.5.1"
-source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-integritee-patch#946f3ae82c5d48023107c1890728582561e94725"
 dependencies = [
  "ac-primitives",
  "bitvec",
@@ -50,10 +50,11 @@ dependencies = [
 [[package]]
 name = "ac-primitives"
 version = "0.9.0"
-source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-integritee-patch#946f3ae82c5d48023107c1890728582561e94725"
 dependencies = [
  "frame-system",
  "impl-serde",
+ "impl-trait-for-tuples",
  "pallet-assets",
  "pallet-balances",
  "parity-scale-codec",
@@ -235,7 +236,7 @@ checksum = "cc6dde6e4ed435a4c1ee4e73592f5ba9da2151af10076cc04858746af9352d09"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -1717,7 +1718,7 @@ dependencies = [
  "proc-macro-warning",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -1729,7 +1730,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -1739,7 +1740,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -1908,7 +1909,7 @@ checksum = "89ca545a94061b6365f2c7355b4b32bd20df3ff95f02da9329b34ccc3bd6ee72"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -2520,13 +2521,13 @@ dependencies = [
 
 [[package]]
 name = "impl-trait-for-tuples"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11d7a9f6330b71fea57921c9b61c47ee6e84f72d394754eff6163ae67e7395eb"
+checksum = "a0eb5a3343abf848c0984fe4604b2b105da9539376e24fc0a3b0007411ae4fd9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -2580,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-cli"
-version = "0.16.7"
+version = "0.17.0"
 dependencies = [
  "array-bytes 6.1.0",
  "base58",
@@ -2639,7 +2640,7 @@ dependencies = [
 
 [[package]]
 name = "integritee-service"
-version = "0.16.7"
+version = "0.17.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5157,7 +5158,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -5685,7 +5686,7 @@ checksum = "ec2e072ecce94ec471b13398d5402c188e76ac03cf74dd1a975161b23a3f6d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -5841,14 +5842,14 @@ checksum = "0e99670bafb56b9a106419397343bdbc8b8742c3cc449fec6345f86173f47cd4"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.66"
+version = "1.0.101"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18fb31db3f9bddb2ea821cde30a9f70117e3f119938b5ee630b7403aa6e2ead9"
+checksum = "89ae43fd86e4158d6db51ad8e2b80f313af9cc74f5c0e03ccb87de09998732de"
 dependencies = [
  "unicode-ident",
 ]
@@ -5934,9 +5935,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.33"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae"
+checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
 ]
@@ -6162,7 +6163,7 @@ checksum = "2dfaf0c85b766276c797f3791f5bc6d5bd116b41d53049af2789666b0c0bc9fa"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -6859,7 +6860,7 @@ checksum = "43576ca501357b9b071ac53cdc7da8ef0cbd9493d8df094cd821777ea6e894d3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -7323,7 +7324,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -7482,7 +7483,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "sp-core-hashing",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -7492,7 +7493,7 @@ source = "git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.4
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -7654,7 +7655,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -7783,7 +7784,7 @@ dependencies = [
  "parity-scale-codec",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -7911,7 +7912,7 @@ dependencies = [
 [[package]]
 name = "substrate-api-client"
 version = "0.14.0"
-source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-integritee-patch#946f3ae82c5d48023107c1890728582561e94725"
 dependencies = [
  "ac-compose-macros",
  "ac-node-api",
@@ -7949,7 +7950,7 @@ dependencies = [
 [[package]]
 name = "substrate-client-keystore"
 version = "0.9.1"
-source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-retracted-check-metadata-hash#84655ae1c4cf0ea7f45aee7ce7935dae027f9ae6"
+source = "git+https://github.com/encointer/substrate-api-client.git?branch=v0.9.42-tag-v0.14.0-integritee-patch#946f3ae82c5d48023107c1890728582561e94725"
 dependencies = [
  "array-bytes 4.2.0",
  "async-trait",
@@ -7992,9 +7993,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.32"
+version = "2.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "239814284fd6f1a4ffe4ca893952cdd93c224b6a1571c9a9eadd670295c0c9e2"
+checksum = "ede7c438028d4436d71104916910f5bb611972c5cfd7f89b8300a8186e6fada6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8136,7 +8137,7 @@ checksum = "090198534930841fab3a5d1bb637cde49e339654e606195f8d9c76eeb081dc96"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -8231,7 +8232,7 @@ checksum = "630bdcf245f78637c13ec01ffae6187cca34625e8c63150d424b59e55af2675e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -8351,7 +8352,7 @@ checksum = "5f4f31f56159e98206da9efd823404b79b6ef3143b4a7ab76e67b1751b25a4ab"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]
@@ -8540,7 +8541,7 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
  "rand 0.8.5",
  "static_assertions",
@@ -8829,7 +8830,7 @@ dependencies = [
  "once_cell 1.18.0",
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
  "wasm-bindgen-shared",
 ]
 
@@ -8863,7 +8864,7 @@ checksum = "54681b18a46765f095758388f2d0cf16eb8d4169b639ab575a8f5693af210c7b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -9477,7 +9478,7 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.32",
+ "syn 2.0.106",
 ]
 
 [[package]]

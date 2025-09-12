@@ -17,28 +17,27 @@
 
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use itp_node_api::api_client::{
-	Address, CallIndex, PairSignature, Signature, UncheckedExtrinsicV4,
-};
+use itp_api_client_types::Preamble;
+use itp_node_api::api_client::{Address, CallIndex, PairSignature, UncheckedExtrinsic};
 
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,
 }
 
-/// Partially interpreted extrinsic containing the `signature` and the `call_index` whereas
+/// Partially interpreted extrinsic containing the `preamble` and the `call_index` whereas
 /// the `call_args` remain in encoded form.
 ///
 /// Intended for usage, where the actual `call_args` form is unknown.
-pub struct SemiOpaqueExtrinsic<'a, SignedExtra> {
+pub struct SemiOpaqueExtrinsic<'a, TxExtension> {
 	/// Signature of the Extrinsic.
-	pub signature: Signature<SignedExtra>,
+	pub preamble: Preamble<TxExtension>,
 	/// Call index of the dispatchable.
 	pub call_index: CallIndex,
 	/// Encoded arguments of the dispatchable corresponding to the `call_index`.
 	pub call_args: &'a [u8],
 }
 
-/// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsicV4].
+/// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsic].
 pub trait ParseExtrinsic {
 	/// Signed extra of the extrinsic.
 	type SignedExtra;
@@ -58,7 +57,7 @@ where
 
 		// `()` is a trick to stop decoding after the call index. So the remaining bytes
 		//  of `call` after decoding only contain the parentchain's dispatchable's arguments.
-		let xt = UncheckedExtrinsicV4::<
+		let xt = UncheckedExtrinsic::<
             Address,
             (CallIndex, ()),
             PairSignature,
@@ -66,9 +65,202 @@ where
         >::decode(call_mut)?;
 
 		Ok(SemiOpaqueExtrinsic {
-			signature: xt.signature,
+			preamble: xt.preamble,
 			call_index: xt.function.0,
 			call_args: call_mut,
 		})
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use itp_api_client_types::{ParentchainPlainTip, ParentchainSignature, ParentchainTxExtension};
+	use itp_types::Nonce;
+	use sp_core::crypto::AccountId32;
+	use sp_runtime::{generic::Era, OpaqueExtrinsic};
+	use substrate_api_client::ac_primitives::GenericTxExtension;
+
+	#[test]
+	#[allow(deprecated)]
+	fn can_parse_v4_unsigned_extrinsic() {
+		use substrate_api_client::ac_primitives::extrinsics::deprecated::UncheckedExtrinsicV4 as XTV4;
+
+		let ex_v4: XTV4<Address, _, ParentchainSignature, ()> = XTV4::new_unsigned([1u8, 2u8]);
+
+		let encoded = ex_v4.encode();
+
+		let parsed = ExtrinsicParser::<ParentchainTxExtension>::parse(&encoded).unwrap();
+
+		match parsed.preamble {
+			Preamble::Bare(4) => (),
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+
+		assert_eq!(parsed.call_index, [1, 2]);
+	}
+
+	#[test]
+	#[allow(deprecated)]
+	fn can_parse_v4_signed_extrinsic() {
+		use substrate_api_client::ac_primitives::extrinsics::deprecated::UncheckedExtrinsicV4 as XTV4;
+
+		let (address, extension, signature) = get_default_signer_data();
+
+		let ex_v4: XTV4<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV4::new_signed([1u8, 2u8], address.clone(), signature.clone(), extension.clone());
+
+		let encoded = ex_v4.encode();
+
+		let parsed = ExtrinsicParser::<ParentchainTxExtension>::parse(&encoded).unwrap();
+
+		match &parsed.preamble {
+			Preamble::Signed(addr, sig, ext) => {
+				assert_eq!(addr, &address);
+				assert_eq!(sig, &signature);
+				assert_eq!(ext, &extension);
+			},
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+
+		assert_eq!(parsed.call_index, [1, 2]);
+	}
+
+	#[test]
+	fn can_parse_v5_bare_extrinsic() {
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV5::new_bare([1u8, 2u8, 0, 0, 0]);
+
+		let encoded = ex_v5.encode();
+
+		let parsed = ExtrinsicParser::<ParentchainTxExtension>::parse(&encoded).unwrap();
+
+		match &parsed.preamble {
+			Preamble::Bare(5) => {},
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+
+		assert_eq!(parsed.call_index, [1, 2]);
+	}
+
+	#[test]
+	fn can_parse_v5_signed_extrinsic() {
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		let (address, extension, signature) = get_default_signer_data();
+
+		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV5::new_signed(
+				[1u8, 2u8, 0, 0, 0],
+				address.clone(),
+				signature.clone(),
+				extension.clone(),
+			);
+
+		let encoded = ex_v5.encode();
+
+		let parsed = ExtrinsicParser::<ParentchainTxExtension>::parse(&encoded).unwrap();
+
+		match &parsed.preamble {
+			Preamble::Signed(addr, sig, ext) => {
+				assert_eq!(addr, &address);
+				assert_eq!(sig, &signature);
+				assert_eq!(ext, &extension);
+			},
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+
+		assert_eq!(parsed.call_index, [1, 2]);
+	}
+
+	#[test]
+	fn can_parse_v5_general_transaction() {
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		let (_, extension, _) = get_default_signer_data();
+
+		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV5::new_transaction([1u8, 2u8, 0, 0, 0], extension.clone());
+
+		let encoded = ex_v5.encode();
+
+		let parsed = ExtrinsicParser::<ParentchainTxExtension>::parse(&encoded).unwrap();
+
+		match &parsed.preamble {
+			Preamble::General(extension_version, ext) => {
+				assert_eq!(extension_version, &0);
+				assert_eq!(ext, &extension);
+			},
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+
+		assert_eq!(parsed.call_index, [1, 2]);
+	}
+
+	#[test]
+	fn can_parse_asset_hub_transaction_v4() {
+		use itp_utils::FromHexPrefixed;
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		// We only care about the preamble, so we use the `()` to stop decoding after the preamble.
+		let ex_v5: XTV5<Address, (), ParentchainSignature, ParentchainTxExtension> = XTV5::from_hex("0x4d0284007c77c5f95a72c19e051233b3b1e01df74ec13cb161b109fc5f16ce1c65316f2401f63f850629722493607fb04dfa64d9bd62c454ea325b96d71938d0a52f513c4b35681b9c323b9a09b9f7227e10a5707624afbeb2232759505119da68fa6de08b2400040000000a0300b1df638e78cd896db34d8e62722fd755360d61dac2f3b048e24cd26a5ace35690b008cb6611e01").unwrap();
+
+		match &ex_v5.preamble {
+			// If the preamble is signed, it means that an XT V4 was sent
+			Preamble::Signed(..) => {},
+			Preamble::General(..) => panic!("unexpected preamble belonging to XT V5"),
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+	}
+
+	#[test]
+	fn can_parse_integritee_bare_transaction_v5() {
+		use itp_utils::FromHexPrefixed;
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		// We only care about the preamble, so we use the `()` to stop decoding after the preamble.
+		let ex_v5: XTV5<Address, (), ParentchainSignature, ParentchainTxExtension> =
+			XTV5::from_hex("0x280503000bc02a05399901").unwrap();
+
+		match &ex_v5.preamble {
+			Preamble::Bare(version) => assert_eq!(version, &5),
+			other => panic!("unexpected preamble: {:?}", other),
+		};
+	}
+
+	#[test]
+	fn opaque_extrinsic_works() {
+		use substrate_api_client::ac_primitives::extrinsics::UncheckedExtrinsic as XTV5;
+
+		let (address, extension, signature) = get_default_signer_data();
+
+		let ex_v5: XTV5<Address, _, ParentchainSignature, ParentchainTxExtension> =
+			XTV5::new_signed(
+				[1u8, 2u8, 0, 0, 0],
+				address.clone(),
+				signature.clone(),
+				extension.clone(),
+			);
+
+		let encoded = ex_v5.encode();
+		let opaque = OpaqueExtrinsic::from_bytes(&encoded).unwrap();
+
+		assert_eq!(encoded, opaque.encode());
+
+		let decoded: XTV5<Address, [u8; 5], ParentchainSignature, ParentchainTxExtension> =
+			Decode::decode(&mut opaque.encode().as_slice()).unwrap();
+		assert_eq!(ex_v5, decoded);
+	}
+
+	fn get_default_signer_data(
+	) -> (Address, GenericTxExtension<ParentchainPlainTip, Nonce>, ParentchainSignature) {
+		let address = Address::Id(AccountId32::new([0; 32]));
+		let extension = ParentchainTxExtension::new(Era::Immortal, 1, Default::default());
+		let signature =
+			ParentchainSignature::Ed25519([0u8; 64].encode().as_slice().try_into().unwrap());
+
+		(address, extension, signature)
 	}
 }

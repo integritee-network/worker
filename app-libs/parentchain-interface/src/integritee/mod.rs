@@ -38,7 +38,7 @@ use itc_parentchain_indirect_calls_executor::{
 	filter_metadata::FilterIntoDataFrom,
 	IndirectDispatch,
 };
-use itp_api_client_types::ParentchainSignedExtra;
+use itp_api_client_types::ParentchainTxExtension;
 use itp_node_api::metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes, pallet_timestamp::TimestampCallIndexes,
 };
@@ -54,7 +54,7 @@ pub use itp_types::parentchain::{AccountId, Balance, Hash};
 pub type Signature = sp_runtime::MultiSignature;
 
 /// Parses the extrinsics corresponding to the parentchain.
-pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
+pub type ParentchainExtrinsicParser = ExtrinsicParser<ParentchainTxExtension>;
 
 /// The default indirect call (extrinsic-triggered) of the Integritee-Parachain.
 #[derive(Debug, Clone, Encode, Decode, Eq, PartialEq)]

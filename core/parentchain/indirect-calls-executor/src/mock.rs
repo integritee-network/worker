@@ -7,11 +7,11 @@ use codec::{Decode, Encode};
 use core::marker::PhantomData;
 
 use itp_node_api::{
-	api_client::{CallIndex, PairSignature, UncheckedExtrinsicV4},
+	api_client::{CallIndex, PairSignature, UncheckedExtrinsic},
 	metadata::NodeMetadataTrait,
 };
 use itp_sgx_runtime_primitives::types::{AccountId, Balance};
-use itp_stf_primitives::{traits::IndirectExecutor, types::Signature};
+use itp_stf_primitives::traits::IndirectExecutor;
 use itp_test::mock::stf_mock::{GetterMock, TrustedCallMock, TrustedCallSignedMock};
 use itp_types::{
 	parentchain::{ExtrinsicStatus, FilterEvents, HandleParentchainEvents},
@@ -73,54 +73,54 @@ where
 pub struct ExtrinsicParser<SignedExtra> {
 	_phantom: PhantomData<SignedExtra>,
 }
-use itp_api_client_types::ParentchainSignedExtra;
+use itp_api_client_types::{ParentchainTxExtension, Preamble};
 use itp_stf_primitives::types::TrustedOperation;
 
 /// Parses the extrinsics corresponding to the parentchain.
-pub type MockParentchainExtrinsicParser = ExtrinsicParser<ParentchainSignedExtra>;
+pub type MockParentchainExtrinsicParser = ExtrinsicParser<ParentchainTxExtension>;
 
-/// Partially interpreted extrinsic containing the `signature` and the `call_index` whereas
+/// Partially interpreted extrinsic containing the `preamble` and the `call_index` whereas
 /// the `call_args` remain in encoded form.
 ///
 /// Intended for usage, where the actual `call_args` form is unknown.
-pub struct SemiOpaqueExtrinsic<'a> {
-	/// Signature of the Extrinsic.
-	pub signature: Signature,
+pub struct SemiOpaqueExtrinsic<'a, TxExtension> {
+	/// Preamble of the Extrinsic.
+	pub preamble: Preamble<TxExtension>,
 	/// Call index of the dispatchable.
 	pub call_index: CallIndex,
 	/// Encoded arguments of the dispatchable corresponding to the `call_index`.
 	pub call_args: &'a [u8],
 }
 
-/// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsicV4].
+/// Trait to extract signature and call indexes of an encoded [UncheckedExtrinsic].
 pub trait ParseExtrinsic {
 	/// Signed extra of the extrinsic.
-	type SignedExtra;
+	type TxExtension;
 
-	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic, codec::Error>;
+	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic<Self::TxExtension>, codec::Error>;
 }
 
-impl<SignedExtra> ParseExtrinsic for ExtrinsicParser<SignedExtra>
+impl<TxExtension> ParseExtrinsic for ExtrinsicParser<TxExtension>
 where
-	SignedExtra: Decode + Encode,
+	TxExtension: Decode + Encode,
 {
-	type SignedExtra = SignedExtra;
+	type TxExtension = TxExtension;
 
 	/// Extract a call index of an encoded call.
-	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic, codec::Error> {
+	fn parse(encoded_call: &[u8]) -> Result<SemiOpaqueExtrinsic<Self::TxExtension>, codec::Error> {
 		let call_mut = &mut &encoded_call[..];
 
 		// `()` is a trick to stop decoding after the call index. So the remaining bytes
 		//  of `call` after decoding only contain the parentchain's dispatchable's arguments.
-		let xt = UncheckedExtrinsicV4::<
+		let xt = UncheckedExtrinsic::<
             Address,
             (CallIndex, ()),
             PairSignature,
-            Self::SignedExtra,
+            Self::TxExtension,
         >::decode(call_mut)?;
 
 		Ok(SemiOpaqueExtrinsic {
-			signature: xt.signature.unwrap().1,
+			preamble: xt.preamble,
 			call_index: xt.function.0,
 			call_args: call_mut,
 		})

@@ -33,8 +33,9 @@ pub use substrate_api_client::{
 	ac_primitives::{
 		config::{AssetRuntimeConfig, Config, DefaultRuntimeConfig},
 		extrinsics::{
-			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericAdditionalSigned,
-			GenericExtrinsicParams, GenericSignedExtra, PlainTip, UncheckedExtrinsicV4,
+			AssetTip, CallIndex, ExtrinsicParams, GenericAdditionalParams, GenericExtrinsicParams,
+			GenericImplicit, GenericTxExtension, PlainTip, Preamble as GenericPreamble,
+			UncheckedExtrinsic,
 		},
 		serde_impls::StorageKey,
 		signer::{SignExtrinsic, StaticExtrinsicSigner},
@@ -60,8 +61,8 @@ pub type ParentchainAssetTip = AssetTip<Balance>;
 pub type ParentchainExtrinsicParams =
 	GenericExtrinsicParams<DefaultRuntimeConfig, ParentchainPlainTip>;
 pub type ParentchainAdditionalParams = GenericAdditionalParams<ParentchainPlainTip, Hash>;
+use sp_runtime::MultiSignature;
 pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
-
 // Pay in asset fees.
 //
 // This needs to be used if the node uses the `pallet_asset_tx_payment`.
@@ -69,12 +70,15 @@ pub use DefaultRuntimeConfig as ParentchainRuntimeConfig;
 // pub type ParentchainAdditionalParams = GenericAdditionalParams<AssetRuntimeConfig, Hash>;
 
 pub type ParentchainUncheckedExtrinsic<Call> =
-	UncheckedExtrinsicV4<Address, Call, PairSignature, ParentchainSignedExtra>;
-pub type ParentchainSignedExtra = GenericSignedExtra<ParentchainPlainTip, Index>;
-pub type ParentchainSignature = Signature<ParentchainSignedExtra>;
+	UncheckedExtrinsic<Address, Call, PairSignature, ParentchainTxExtension>;
+pub type ParentchainTxExtension = GenericTxExtension<ParentchainPlainTip, Index>;
+pub type AssetTxExtension = GenericTxExtension<ParentchainAssetTip, Index>;
+pub type ParentchainSignature = Signature;
 
-/// Signature type of the [UncheckedExtrinsicV4].
-pub type Signature<SignedExtra> = Option<(Address, PairSignature, SignedExtra)>;
+/// Signature type of the [UncheckedExtrinsicV5].
+pub type Signature = MultiSignature;
+
+pub type Preamble<TxExtension> = GenericPreamble<Address, PairSignature, TxExtension>;
 
 #[cfg(feature = "std")]
 pub use substrate_api_client::{

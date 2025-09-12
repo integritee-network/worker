@@ -211,7 +211,7 @@ fn create_shielding_call_extrinsic<ShieldingKey: ShieldingCryptoEncrypt>(
 			),
 			Address::Address32([1u8; 32]),
 			MultiSignature::Ed25519(signature),
-			default_extra_for_test.signed_extra(),
+			default_extra_for_test.transaction_extension(),
 		)
 		.encode()
 		.as_slice(),

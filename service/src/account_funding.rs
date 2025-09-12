@@ -18,6 +18,7 @@
 use crate::error::{Error, ServiceResult};
 use codec::Encode;
 use ita_parentchain_interface::{Config, ParentchainRuntimeConfig};
+use itp_api_client_types::ApiClientError;
 use itp_node_api::api_client::{AccountApi, TEEREX};
 use itp_settings::worker::REGISTERING_FEE_FACTOR_FOR_INIT_FUNDS;
 use itp_types::{
@@ -210,6 +211,7 @@ where
 			Some(vec![0u8; MAX_URL_LEN]),
 			SgxAttestationMethod::Dcap { proxied: false }
 		)
+		.ok_or(ApiClientError::ExtrinsicNotFound)?
 		.encode()
 		.into();
 		let tx_fee =
@@ -290,7 +292,9 @@ where
 	api.set_signer(alice.into());
 
 	println!("[{:?}] send extrinsic: bootstrap funding Enclave from Alice's funds", parentchain_id);
-	let xt = api.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount);
+	let xt = api
+		.balance_transfer_allow_death(MultiAddress::Id(accountid.clone()), funding_amount)
+		.ok_or_else(|| Error::Custom("Could not create funding extrinsic".into()))?;
 	let xt_report = api.submit_and_watch_extrinsic_until(xt, XtStatus::InBlock)?;
 	info!(
 		"[{:?}] L1 extrinsic success. extrinsic hash: {:?} / status: {:?}",
@@ -335,6 +339,7 @@ where
 {
 	let encoded_xt: Bytes = api
 		.balance_transfer_allow_death(AccountId::from([0u8; 32]).into(), 1000000000000)
+		.ok_or(ApiClientError::ExtrinsicNotFound)?
 		.encode()
 		.into();
 	let tx_fee = api

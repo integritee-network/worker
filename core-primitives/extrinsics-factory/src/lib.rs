@@ -121,6 +121,8 @@ where
 	NodeRuntimeConfig: Config<Hash = H256>,
 	u128: From<Tip>,
 	Tip: Copy + Default + Encode + Debug,
+	<Signer as SignExtrinsic<AccountId>>::Signature: Debug,
+	<Signer as SignExtrinsic<AccountId>>::ExtrinsicAddress: Debug,
 {
 	type Config = NodeRuntimeConfig;
 
@@ -157,17 +159,17 @@ where
 				);
 
 				log::trace!(
-					"[ExtrinsicsFactory] SignedExtra: {:?}",
-					extrinsic_params.signed_extra()
+					"[ExtrinsicsFactory] TransactionExtension: {:?}",
+					extrinsic_params.transaction_extension()
 				);
-				log::trace!(
-					"[ExtrinsicsFactory] AdditionalParams: {:?}",
-					extrinsic_params.additional_signed()
-				);
+				log::trace!("[ExtrinsicsFactory] Implicit: {:?}", extrinsic_params.implicit());
 
-				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params).encode();
+				let xt = compose_extrinsic_offline!(&self.signer, call, extrinsic_params);
+
+				log::trace!("[ExtrinsicsFactory] xt: {:?}", xt);
+
 				nonce_value += 1;
-				xt
+				xt.encode()
 			})
 			.map(|xt| {
 				OpaqueExtrinsic::from_bytes(&xt)
@@ -187,14 +189,19 @@ where
 
 #[cfg(test)]
 pub mod tests {
-
 	use super::*;
+	use codec::Decode;
 	use itp_node_api::{
-		api_client::{AssetRuntimeConfig, PairSignature, StaticExtrinsicSigner},
+		api_client::{
+			AssetRuntimeConfig, AssetTip, AssetTxExtension, PairSignature, ParentchainSignature,
+			Preamble, StaticExtrinsicSigner, UncheckedExtrinsic,
+		},
 		metadata::provider::NodeMetadataRepository,
 	};
 	use itp_nonce_cache::{GetNonce, Nonce, NonceCache, NonceValue};
+	use itp_types::Address;
 	use sp_core::{ed25519, Pair};
+	use sp_runtime::generic::Era;
 
 	#[test]
 	pub fn creating_xts_increases_nonce_for_each_xt() {
@@ -223,12 +230,13 @@ pub mod tests {
 		*nonce_cache1.load_for_mutation().unwrap() = Nonce(42);
 
 		let node_metadata_repo = Arc::new(NodeMetadataRepository::new(NodeMetadata::default()));
-		let extrinsics_factory = ExtrinsicsFactory::<_, _, _, AssetRuntimeConfig, u128>::new(
-			test_genesis_hash(),
-			StaticExtrinsicSigner::<_, PairSignature>::new(test_account()),
-			nonce_cache1.clone(),
-			node_metadata_repo,
-		);
+		let extrinsics_factory =
+			ExtrinsicsFactory::<_, _, _, AssetRuntimeConfig, AssetTip<u128>>::new(
+				test_genesis_hash(),
+				StaticExtrinsicSigner::<_, PairSignature>::new(test_account()),
+				nonce_cache1.clone(),
+				node_metadata_repo,
+			);
 
 		let nonce_cache2 = Arc::new(NonceCache::default());
 		let extrinsics_factory = extrinsics_factory.with_signer(
@@ -244,6 +252,32 @@ pub mod tests {
 		assert_eq!(opaque_calls.len(), xts.len());
 		assert_eq!(nonce_cache2.get_nonce().unwrap(), Nonce(opaque_calls.len() as NonceValue));
 		assert_eq!(nonce_cache1.get_nonce().unwrap(), Nonce(42));
+
+		let decoded: UncheckedExtrinsic<Address, [u8; 42], ParentchainSignature, AssetTxExtension> =
+			Decode::decode(&mut &xts[0].encode()[..]).unwrap();
+		let decoded2: UncheckedExtrinsic<Address, [u8; 2], ParentchainSignature, AssetTxExtension> =
+			Decode::decode(&mut &xts[1].encode()[..]).unwrap();
+
+		match decoded.preamble {
+			Preamble::Signed(_addr, _sig, ext) => {
+				assert_eq!(ext.nonce, 0);
+				assert_eq!(ext.era, Era::Immortal);
+				assert_eq!(ext.tip, AssetTip::new(0));
+			},
+			other => panic!("Unexpected preamble: {:?}", other),
+		}
+
+		match decoded2.preamble {
+			Preamble::Signed(_addr, _sig, ext) => {
+				assert_eq!(ext.nonce, 1);
+				assert_eq!(ext.era, Era::Immortal);
+				assert_eq!(ext.tip, AssetTip::new(0));
+			},
+			other => panic!("Unexpected preamble: {:?}", other),
+		}
+
+		assert_eq!(decoded.function, [3u8; 42]);
+		assert_eq!(decoded2.function, [12, 78]);
 	}
 
 	// #[test]
@@ -255,11 +289,11 @@ pub mod tests {
 	//
 	// 	let opaque_calls =
 	// 		[OpaqueCall(vec![3u8; 42]), OpaqueCall(vec![12u8, 78]), OpaqueCall(vec![15u8, 12])];
-	// 	let xts: Vec<UncheckedExtrinsicV4<OpaqueCall>> = extrinsics_factory
+	// 	let xts: Vec<UncheckedExtrinsic<OpaqueCall>> = extrinsics_factory
 	// 		.create_extrinsics(&opaque_calls)
 	// 		.unwrap()
 	// 		.iter()
-	// 		.map(|mut x| UncheckedExtrinsicV4::<OpaqueCall>::decode(&mut x))
+	// 		.map(|mut x| UncheckedExtrinsic::<OpaqueCall>::decode(&mut x))
 	// 		.collect();
 	//
 	// 	assert_eq!(xts.len(), opaque_calls.len());
