@@ -14,6 +14,7 @@
 	limitations under the License.
 
 */
+use super::*;
 use crate::{mock::*, BalanceOf, Error, Event};
 use frame_support::{
 	assert_err, assert_ok,
@@ -30,6 +31,7 @@ use sp_runtime::{
 const TEN_MIN: u64 = 600_000;
 const ONE_DAY: u64 = 86_400_000;
 const GENESIS_TIME: u64 = 1_585_058_843_000;
+
 /// Run until a particular block.
 pub fn run_to_block(n: u64) {
 	while System::block_number() < n {
@@ -80,7 +82,45 @@ fn create_class_works() {
 		let alice = AccountKeyring::Alice.to_account_id();
 		System::set_block_number(1);
 		let class_id = 42u32;
-		assert_ok!(Credits::create_class(RuntimeOrigin::signed(alice.clone()), class_id));
+		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id));
 		assert_eq!(last_event::<Test>(), Some(Event::CreatedClass { id: class_id }.into()));
+		assert!(Credits::<Test>::contains_prefix(class_id));
+	});
+}
+
+#[test]
+fn create_class_with_existing_id_fails() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		System::set_block_number(1);
+		let class_id = 42u32;
+		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id));
+		assert_err!(
+			Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id),
+			Error::<Test>::ClassIdExists
+		);
+	});
+}
+
+#[test]
+fn claim_works() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		System::set_block_number(1);
+		let class_id = 42u32;
+
+		let credit = BalanceWithExpiry { balance: 100u64, expiry: None };
+		let secret = H256::repeat_byte(1);
+		let commitment = <Test as frame_system::Config>::Hashing::hash_of(&secret);
+		let commitment_account = <Test as frame_system::Config>::AccountId::decode(
+			&mut H256::from(commitment).as_bytes(),
+		)
+		.expect("32 bytes can always construct an AccountId32");
+
+		Credits::<Test>::insert(class_id, &commitment_account, vec![credit]);
+
+		assert_ok!(Dut::claim(RuntimeOrigin::signed(alice.clone()), class_id, secret));
+		assert!(Dut::credits(class_id, &commitment_account).is_empty());
+		assert_eq!(Dut::credits(class_id, &alice), vec![credit]);
 	});
 }
