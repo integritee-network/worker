@@ -73,6 +73,7 @@ pub mod pallet {
 			id: CreditClassId,
 		},
 		Claimed {
+			id: CreditClassId,
 			commitment: T::Hash,
 		},
 		Minted {
@@ -91,7 +92,11 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		ClassIdExists,
+		InvalidClassId,
 		NoClaimableCredits,
+		Unauthorized,
+		ClassAdminUndefined,
+		ExpiryInPast,
 	}
 
 	#[pallet::storage]
@@ -109,7 +114,7 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn admin)]
 	pub(super) type Admin<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, T::AccountId, OptionQuery>;
+		StorageMap<_, Blake2_128Concat, CreditClassId, T::AccountId, OptionQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn total_minted_by)]
@@ -175,7 +180,36 @@ pub mod pallet {
 			let mut sender_credits = <Credits<T>>::get(id, &sender);
 			sender_credits.append(&mut claimables);
 			<Credits<T>>::insert(id, &sender, sender_credits);
-			Self::deposit_event(Event::Claimed { commitment });
+			Self::deposit_event(Event::Claimed { id, commitment });
+			Ok(().into())
+		}
+
+		#[pallet::call_index(2)]
+		#[pallet::weight((<T as Config>::WeightInfo::mint(), DispatchClass::Normal, Pays::Yes)
+        )]
+		pub fn mint(
+			origin: OriginFor<T>,
+			id: CreditClassId,
+			owner: T::AccountId,
+			amount: BalanceOf<T>,
+			maybe_expiry: Option<T::Moment>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
+			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
+			ensure!(admin == sender, Error::<T>::Unauthorized);
+			if let Some(expiry) = maybe_expiry {
+				ensure!(expiry > <pallet_timestamp::Pallet<T>>::get(), Error::<T>::ExpiryInPast);
+			}
+			let credit = BalanceWithExpiry { balance: amount, expiry: maybe_expiry };
+
+			let mut credits = Self::credits(id, &sender);
+			// TODO expire existing credits if applicable
+			credits.push(credit);
+			Credits::<T>::insert(id, &owner, credits);
+			TotalMintedBy::<T>::mutate(id, &sender, |total| *total = total.saturating_add(amount));
+
+			Self::deposit_event(Event::Minted { id, to: owner, amount, expiry: maybe_expiry });
 			Ok(().into())
 		}
 	}

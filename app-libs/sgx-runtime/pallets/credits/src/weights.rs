@@ -4,6 +4,7 @@ pub use frame_support::weights::{constants::RocksDbWeight, Weight};
 pub trait WeightInfo {
 	fn create_class() -> Weight;
 	fn claim() -> Weight;
+	fn mint() -> Weight;
 }
 
 /// Weights for pallet_parentchain using the Integritee parachain node and recommended hardware.
@@ -13,6 +14,10 @@ impl WeightInfo for () {
 	}
 
 	fn claim() -> Weight {
+		Weight::from_parts(10_000, 0u64)
+	}
+
+	fn mint() -> Weight {
 		Weight::from_parts(10_000, 0u64)
 	}
 }

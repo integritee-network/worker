@@ -122,5 +122,40 @@ fn claim_works() {
 		assert_ok!(Dut::claim(RuntimeOrigin::signed(alice.clone()), class_id, secret));
 		assert!(Dut::credits(class_id, &commitment_account).is_empty());
 		assert_eq!(Dut::credits(class_id, &alice), vec![credit]);
+
+		assert_eq!(last_event::<Test>(), Some(Event::Claimed { id: class_id, commitment }.into()));
+	});
+}
+
+#[test]
+fn mint_works() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		let bob = AccountKeyring::Bob.to_account_id();
+		System::set_block_number(1);
+		set_timestamp(GENESIS_TIME);
+		let class_id = 42u32;
+		Credits::<Test>::insert::<_, _, Vec<BalanceWithExpiry<BalanceOf<Test>, Moment>>>(
+			class_id,
+			&alice,
+			vec![],
+		);
+		Admin::<Test>::insert(class_id, &alice);
+
+		let balance = 100u64;
+		let expiry = Some(GENESIS_TIME + ONE_DAY);
+		assert_ok!(Dut::mint(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			balance,
+			expiry
+		));
+		assert_eq!(
+			last_event::<Test>(),
+			Some(Event::Minted { id: class_id, to: bob.clone(), amount: balance, expiry }.into())
+		);
+		assert_eq!(Dut::credits(class_id, &bob), vec![BalanceWithExpiry { balance, expiry }]);
+		assert_eq!(Dut::total_minted_by(class_id, &alice), balance);
 	});
 }
