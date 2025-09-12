@@ -1,14 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::Decode;
+use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,
 	pallet_prelude::Get,
 	traits::{Currency, ExistenceRequirement, OnTimestampSet},
-	PalletId,
+	PalletId, StorageDoubleMap as StorageDoubleMapTrait,
 };
 use itp_randomness::Randomness;
 use log::*;
+use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{
 	traits::{CheckedDiv, Hash, Saturating, Zero},
@@ -21,9 +22,14 @@ pub use pallet::*;
 pub type BalanceOf<T> =
 	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-pub struct BalanceWithExpiry<T> {
-	balance: BalanceOf<T>,
-	expiry: Option<T::Moment>,
+#[derive(Encode, Decode, Debug, Copy, Clone, PartialEq, Eq, Default, TypeInfo)]
+pub struct BalanceWithExpiry<Balance, Moment>
+where
+	Balance: Copy + Saturating + Zero + Encode + Decode,
+	Moment: Copy + Saturating + Zero + Encode + Decode,
+{
+	balance: Balance,
+	expiry: Option<Moment>,
 }
 
 pub type CreditClassId = u32;
@@ -58,9 +64,6 @@ pub mod pallet {
 		type MomentsPerDay: Get<Self::Moment>;
 
 		type Currency: Currency<Self::AccountId>;
-		/// The pallet id, used for deriving technical account ID for the pot.
-		#[pallet::constant]
-		type PalletId: Get<PalletId>;
 	}
 
 	#[pallet::event]
@@ -68,6 +71,9 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		CreatedClass {
 			id: CreditClassId,
+		},
+		Claimed {
+			commitment: T::Hash,
 		},
 		Minted {
 			id: CreditClassId,
@@ -85,6 +91,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		ClassIdExists,
+		NoClaimableCredits,
 	}
 
 	#[pallet::storage]
@@ -95,7 +102,7 @@ pub mod pallet {
 		CreditClassId,
 		Blake2_128Concat,
 		T::AccountId,
-		Vec<BalanceWithExpiry<T>>,
+		Vec<BalanceWithExpiry<BalanceOf<T>, T::Moment>>,
 		ValueQuery,
 	>;
 
@@ -135,19 +142,46 @@ pub mod pallet {
 	{
 		/// create a new credit class
 		#[pallet::call_index(0)]
-		#[pallet::weight((<T as Config>::WeightInfo::create(), DispatchClass::Normal, Pays::Yes)
+		#[pallet::weight((<T as Config>::WeightInfo::create_class(), DispatchClass::Normal, Pays::Yes)
         )]
 		pub fn create_class(origin: OriginFor<T>, id: CreditClassId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
-			<Credits<T>>::insert(id, &sender, vec![]);
+			<Credits<T>>::insert::<_, _, Vec<BalanceWithExpiry<BalanceOf<T>, T::Moment>>>(
+				id,
+				&sender,
+				vec![],
+			);
 			Self::deposit_event(Event::CreatedClass { id });
+			Ok(().into())
+		}
+
+		/// create a new credit class
+		#[pallet::call_index(1)]
+		#[pallet::weight((<T as Config>::WeightInfo::claim(), DispatchClass::Normal, Pays::Yes)
+        )]
+		pub fn claim(
+			origin: OriginFor<T>,
+			id: CreditClassId,
+			secret: T::Hash,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			let commitment = T::Hashing::hash_of(&secret);
+			let commitment_account = T::AccountId::decode(&mut H256::from(commitment).as_bytes())
+				.expect("32 bytes can always construct an AccountId32");
+			let mut claimables = <Credits<T>>::get(id, &commitment_account);
+			ensure!(!claimables.is_empty(), Error::<T>::NoClaimableCredits);
+			<Credits<T>>::remove(id, &commitment_account);
+			let mut sender_credits = <Credits<T>>::get(id, &sender);
+			sender_credits.append(&mut claimables);
+			<Credits<T>>::insert(id, &sender, sender_credits);
+			Self::deposit_event(Event::Claimed { commitment });
 			Ok(().into())
 		}
 	}
 }
 
-impl<T: Config> Pallet<T> {}
+impl<T: Config> Pallet<T> where sp_core::H256: From<<T as frame_system::Config>::Hash> {}
 #[cfg(test)]
 mod mock;
 #[cfg(test)]

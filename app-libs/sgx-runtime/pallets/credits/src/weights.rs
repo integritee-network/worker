@@ -2,21 +2,17 @@ pub use frame_support::weights::{constants::RocksDbWeight, Weight};
 
 /// Weight functions needed for pallet_parentchain.
 pub trait WeightInfo {
-	fn push_by_one_day() -> Weight;
-	fn set_winnings() -> Weight;
-	fn guess() -> Weight;
+	fn create_class() -> Weight;
+	fn claim() -> Weight;
 }
 
 /// Weights for pallet_parentchain using the Integritee parachain node and recommended hardware.
 impl WeightInfo for () {
-	fn push_by_one_day() -> Weight {
+	fn create_class() -> Weight {
 		Weight::from_parts(10_000, 0u64)
 	}
 
-	fn set_winnings() -> Weight {
-		Weight::from_parts(10_000, 0u64)
-	}
-	fn guess() -> Weight {
+	fn claim() -> Weight {
 		Weight::from_parts(10_000, 0u64)
 	}
 }
