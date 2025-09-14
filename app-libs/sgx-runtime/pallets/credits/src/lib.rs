@@ -157,13 +157,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type WeightInfo: WeightInfo;
 		#[pallet::constant]
-		type MomentsPerDay: Get<Self::Moment>;
-		#[pallet::constant]
 		type MaxEntriesPerAccount: Get<u8>;
-		#[pallet::constant]
-		type ClassDeposit: Get<BalanceOf<Self>>;
-		#[pallet::constant]
-		type ItemDeposit: Get<BalanceOf<Self>>;
 		type Currency: ReservableCurrency<Self::AccountId>;
 	}
 
@@ -261,11 +255,11 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight((<T as Config>::WeightInfo::create_class(), DispatchClass::Normal, Pays::Yes)
         )]
-		pub fn create_class(origin: OriginFor<T>, id: CreditClassId) -> DispatchResultWithPostInfo {
+		pub fn create_class(origin: OriginFor<T>, id: CreditClassId, deposit: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
-			T::Currency::reserve(&sender, T::ClassDeposit::get())?;
-			TotalDeposit::<T>::insert(id, T::ClassDeposit::get());
+			T::Currency::reserve(&sender, deposit)?;
+			TotalDeposit::<T>::insert(id, deposit);
 			<Credits<T>>::insert(id, &sender, SortedCreditsStore::new());
 			<Admin<T>>::insert(id, &sender);
 			Self::deposit_event(Event::CreatedClass { id });
@@ -304,6 +298,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			id: CreditClassId,
 			secret: T::Hash,
+			item_deposit: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
@@ -320,7 +315,7 @@ pub mod pallet {
 			);
 			let expired_count = claimables.expire(<pallet_timestamp::Pallet<T>>::get());
 			if expired_count > 0 {
-				let deposit = T::ClassDeposit::get()
+				let deposit = item_deposit
 					.saturating_mul(BalanceOf::<T>::from(expired_count as u32));
 				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));
 				T::Currency::unreserve(&admin, deposit);
@@ -341,6 +336,7 @@ pub mod pallet {
 			owner: T::AccountId,
 			amount: BalanceOf<T>,
 			maybe_expiry: Option<T::Moment>,
+			item_deposit: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
@@ -358,12 +354,12 @@ pub mod pallet {
 			);
 			let expired_count = credits.expire(<pallet_timestamp::Pallet<T>>::get());
 			if expired_count > 1 {
-				let deposit = T::ItemDeposit::get()
+				let deposit = item_deposit
 					.saturating_mul(BalanceOf::<T>::from(expired_count.saturating_sub(1) as u32));
 				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));
 				T::Currency::unreserve(&admin, deposit);
 			} else if expired_count == 0 {
-				let deposit = T::ItemDeposit::get();
+				let deposit = item_deposit;
 				T::Currency::reserve(&admin, deposit)?;
 				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_add(deposit));
 			}
@@ -382,6 +378,7 @@ pub mod pallet {
 			id: CreditClassId,
 			owner: T::AccountId,
 			amount: BalanceOf<T>,
+			item_deposit: BalanceOf<T>
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
@@ -390,7 +387,7 @@ pub mod pallet {
 			let mut credits = Self::credits(id, &owner);
 			let expired_count = credits.expire(<pallet_timestamp::Pallet<T>>::get());
 			let used_count = credits.redeem(amount).map_err(|_| Error::<T>::InsufficientBalance)?;
-			let deposit = T::ItemDeposit::get().saturating_mul(BalanceOf::<T>::from(
+			let deposit = item_deposit.saturating_mul(BalanceOf::<T>::from(
 				expired_count.saturating_add(used_count) as u32,
 			));
 			TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));

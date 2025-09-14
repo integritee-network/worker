@@ -78,12 +78,9 @@ parameter_types! {
 }
 impl dut::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
-	type MomentsPerDay = MomentsPerDay;
 	type WeightInfo = ();
 	type Currency = Balances;
 	type MaxEntriesPerAccount = MaxEntriesPerAccount;
-	type ClassDeposit = ConstU64<10>;
-	type ItemDeposit = ConstU64<1>;
 }
 
 parameter_types! {

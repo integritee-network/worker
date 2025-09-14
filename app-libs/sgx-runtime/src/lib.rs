@@ -388,6 +388,19 @@ impl pallet_assets::Config for Runtime {
 	type BenchmarkHelper = ();
 }
 
+parameter_types! {
+	pub const MaxEntriesPerAccount: u8 = 10;
+	pub const ClassDeposit: Balance = ;
+}
+impl pallet_credits::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type MomentsPerDay = MomentsPerDay;
+	type WeightInfo = ();
+	type Currency = Balances;
+	type MaxEntriesPerAccount = ConstU8<10>;
+	type ClassDeposit = ConstU128<10>;
+	type ItemDeposit = ConstU128<1>;
+}
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -413,6 +426,7 @@ construct_runtime!(
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+		Credits: pallet_credits::{Pallet, Call, Storage, Event<T>} = 51,
 	}
 );
 
