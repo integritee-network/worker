@@ -100,7 +100,7 @@ fn sorted_credits_store_works() {
 
 		scs.push(credit4);
 		assert_eq!(scs.get_balance_with_soonest_expiry(), Some(credit4));
-		assert_ok!(scs.redeem(41u64));
+		assert_eq!(scs.redeem(41u64), Ok(1));
 		assert_eq!(scs.get_balance_with_soonest_expiry(), Some(BalanceWithExpiry { balance: 49u64, expiry: Some(20) }));
 		assert_err!(scs.redeem(100u64), ());
 		assert_eq!(scs.len(), 2);
@@ -111,6 +111,7 @@ fn sorted_credits_store_works() {
 		scs.append(&mut scs2);
 		assert_eq!(scs.total(), 224u64);
 		assert_eq!(scs.len(), 4);
+		assert_eq!(scs.redeem(224u64), Ok(4));
 	});
 }
 #[test]
