@@ -105,7 +105,7 @@ fn sorted_credits_store_works() {
 			scs.get_balance_with_soonest_expiry(),
 			Some(BalanceWithExpiry { balance: 49u64, expiry: Some(20) })
 		);
-		assert_err!(scs.redeem(100u64), ());
+		assert!(scs.redeem(100u64).is_err());
 		assert_eq!(scs.len(), 2);
 
 		let mut scs2 = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();

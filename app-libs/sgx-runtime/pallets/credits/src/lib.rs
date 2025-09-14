@@ -2,7 +2,6 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	dispatch::DispatchResult,
 	pallet_prelude::Get,
 	traits::{Currency, ReservableCurrency},
 	StorageDoubleMap as StorageDoubleMapTrait,
@@ -96,17 +95,17 @@ where
 			None => true,
 		});
 		let new_len = self.balances_with_expiry.len();
-		return old_len.saturating_sub(new_len);
+		old_len.saturating_sub(new_len)
 	}
 
 	/// Redeem credits, starting from the ones that expire the soonest.
 	/// Does not check expiry, that should be done explicitly beforehand using `expire()`.
-	pub fn redeem(&mut self, mut amount: Balance) -> Result<usize, ()>
+	pub fn redeem(&mut self, mut amount: Balance) -> Result<usize, DispatchError>
 	where
 		Balance: Saturating + PartialOrd,
 	{
 		if self.total() < amount {
-			return Err(());
+			return Err(DispatchError::Other("Insufficient balance"));
 		}
 		let old_len = self.balances_with_expiry.len();
 		for credit in &mut self.balances_with_expiry {
@@ -286,7 +285,7 @@ pub mod pallet {
 			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
 			ensure!(admin == sender, Error::<T>::Unauthorized);
 			// TODO: consider limiting to avoid overweight execution
-			let _ = Credits::<T>::clear_prefix(&id, u32::max_value(), None);
+			let _ = Credits::<T>::clear_prefix(id, u32::max_value(), None);
 			let unreserve = Self::total_deposit(id);
 			TotalDeposit::<T>::remove(id);
 			Admin::<T>::remove(id);
