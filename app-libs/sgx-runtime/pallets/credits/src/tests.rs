@@ -77,6 +77,42 @@ pub fn event_at_index<T: frame_system::Config>(index: usize) -> Option<T::Runtim
 }
 
 #[test]
+fn sorted_credits_store_works() {
+	new_test_ext().execute_with(|| {
+		let mut scs = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		let credit1 = BalanceWithExpiry { balance: 100u64, expiry: Some(10) };
+		let credit2 = BalanceWithExpiry { balance: 50u64, expiry: Some(20) };
+		let credit3 = BalanceWithExpiry { balance: 25u64, expiry: None };
+		let credit4 = BalanceWithExpiry { balance: 40u64, expiry: Some(15) };
+
+
+		scs.push(credit1);
+		assert_eq!(scs.total(), 100u64);
+		scs.push(credit2);
+		assert_eq!(scs.total(), 150u64);
+		scs.push(credit3);
+		assert_eq!(scs.total(), 175u64);
+
+		scs.expire(11);
+		assert_eq!(scs.total(), 75u64);
+
+		scs.push(credit4);
+		assert_eq!(scs.get_balance_with_soonest_expiry(), Some(credit4));
+		assert_ok!(scs.redeem(41u64));
+		assert_eq!(scs.get_balance_with_soonest_expiry(), Some(BalanceWithExpiry { balance: 49u64, expiry: Some(20) }));
+		assert_err!(scs.redeem(100u64), ());
+		assert_eq!(scs.len(), 2);
+
+		let mut scs2 = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		scs2.push(credit1);
+		scs2.push(credit2);
+		scs.append(&mut scs2);
+		assert_eq!(scs.total(), 224u64);
+		assert_eq!(scs.len(), 4);
+
+	});
+}
+#[test]
 fn create_class_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
@@ -110,6 +146,9 @@ fn claim_works() {
 		let class_id = 42u32;
 
 		let credit = BalanceWithExpiry { balance: 100u64, expiry: None };
+		let mut credits = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		credits.push(credit);
+
 		let secret = H256::repeat_byte(1);
 		let commitment = <Test as frame_system::Config>::Hashing::hash_of(&secret);
 		let commitment_account = <Test as frame_system::Config>::AccountId::decode(
@@ -117,11 +156,11 @@ fn claim_works() {
 		)
 		.expect("32 bytes can always construct an AccountId32");
 
-		Credits::<Test>::insert(class_id, &commitment_account, vec![credit]);
+		Credits::<Test>::insert(class_id, &commitment_account, credits.clone());
 
 		assert_ok!(Dut::claim(RuntimeOrigin::signed(alice.clone()), class_id, secret));
-		assert!(Dut::credits(class_id, &commitment_account).is_empty());
-		assert_eq!(Dut::credits(class_id, &alice), vec![credit]);
+		assert_eq!(Dut::credits(class_id, &commitment_account).len(), 0 );
+		assert_eq!(Dut::credits(class_id, &alice), credits);
 
 		assert_eq!(last_event::<Test>(), Some(Event::Claimed { id: class_id, commitment }.into()));
 	});
@@ -135,10 +174,10 @@ fn mint_works() {
 		System::set_block_number(1);
 		set_timestamp(GENESIS_TIME);
 		let class_id = 42u32;
-		Credits::<Test>::insert::<_, _, Vec<BalanceWithExpiry<BalanceOf<Test>, Moment>>>(
+		Credits::<Test>::insert(
 			class_id,
 			&alice,
-			vec![],
+			SortedCreditsStore::new()
 		);
 		Admin::<Test>::insert(class_id, &alice);
 
@@ -155,7 +194,10 @@ fn mint_works() {
 			last_event::<Test>(),
 			Some(Event::Minted { id: class_id, to: bob.clone(), amount: balance, expiry }.into())
 		);
-		assert_eq!(Dut::credits(class_id, &bob), vec![BalanceWithExpiry { balance, expiry }]);
+		let expected_credit = BalanceWithExpiry { balance, expiry };
+		let mut expected_credits = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		expected_credits.push(expected_credit);
+		assert_eq!(Dut::credits(class_id, &bob), expected_credits);
 		assert_eq!(Dut::total_minted_by(class_id, &alice), balance);
 	});
 }

@@ -15,7 +15,7 @@ use sp_runtime::{
 	traits::{CheckedDiv, Hash, Saturating, Zero},
 	SaturatedConversion,
 };
-use sp_std::{cmp::min, ops::Rem, vec, vec::Vec};
+use sp_std::{cmp::min, cmp::Ordering, ops::Rem, vec, vec::Vec};
 
 pub use pallet::*;
 
@@ -30,6 +30,102 @@ where
 {
 	balance: Balance,
 	expiry: Option<Moment>,
+}
+
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq, Default, TypeInfo)]
+pub struct SortedCreditsStore<Balance, Moment>
+where
+	Balance: Copy + Saturating + Zero + Encode + Decode,
+	Moment: Copy + Saturating + Zero + Encode + Decode + Ord,
+{
+	balances_with_expiry: Vec<BalanceWithExpiry<Balance, Moment>>,
+}
+
+impl<Balance, Moment> SortedCreditsStore<Balance, Moment>
+where
+	Balance: Copy + Saturating + Zero + Encode + Decode,
+	Moment: Copy + Saturating + Zero + Encode + Decode + Ord,
+{
+	pub fn new() -> Self {
+		Self { balances_with_expiry: vec![] }
+	}
+
+	pub fn len(&self) -> usize {
+		self.balances_with_expiry.len()
+	}
+
+	pub fn push(&mut self, credit: BalanceWithExpiry<Balance, Moment>) {
+		self.balances_with_expiry.push(credit);
+		self.balances_with_expiry.sort_by(|a, b| {
+			match (a.expiry, b.expiry) {
+				(Some(a_expiry), Some(b_expiry)) => a_expiry.cmp(&b_expiry),
+				(Some(_), None) => Ordering::Less,
+				(None, Some(_)) => Ordering::Greater,
+				(None, None) => Ordering::Equal,
+			}
+		});
+	}
+
+	pub fn append(&mut self, other: &mut SortedCreditsStore<Balance, Moment>) -> DispatchResult {
+		self.balances_with_expiry.append(&mut other.balances_with_expiry);
+		self.balances_with_expiry.sort_by(|a, b| {
+			match (a.expiry, b.expiry) {
+				(Some(a_expiry), Some(b_expiry)) => a_expiry.cmp(&b_expiry),
+				(Some(_), None) => Ordering::Less,
+				(None, Some(_)) => Ordering::Greater,
+				(None, None) => Ordering::Equal,
+			}
+		});
+		Ok(())
+	}
+
+	/// Get the total balance of all credits, ignoring expiry.
+	pub fn total(&self) -> Balance
+	where
+		Balance: Saturating,
+	{
+		self.balances_with_expiry.iter().fold(Balance::zero(), |acc, x| acc.saturating_add(x.balance))
+	}
+
+	/// Expire credits that have passed their expiry time.
+	pub fn expire(&mut self, now: Moment)
+	where
+		Moment: Saturating + PartialOrd,
+	{
+		self.balances_with_expiry.retain(|c| match c.expiry {
+			Some(expiry) => expiry > now,
+			None => true,
+		});
+	}
+
+	/// Redeem credits, starting from the ones that expire the soonest.
+	/// Does not check expiry, that should be done explicitly beforehand using `expire()`.
+	pub fn redeem(&mut self, mut amount: Balance) -> Result<(), ()>
+	where
+		Balance: Saturating + PartialOrd,
+	{
+		if self.total() < amount {
+			return Err(());
+		}
+		for credit in &mut self.balances_with_expiry {
+			if amount.is_zero() {
+				break;
+			}
+			if credit.balance <= amount {
+				amount = amount.saturating_sub(credit.balance);
+				credit.balance = Balance::zero();
+			} else {
+				credit.balance = credit.balance.saturating_sub(amount);
+				amount = Balance::zero();
+			}
+		}
+		self.balances_with_expiry.retain(|c| !c.balance.is_zero());
+		Ok(())
+	}
+
+	pub fn get_balance_with_soonest_expiry(&self) -> Option<BalanceWithExpiry<Balance, Moment>> {
+		self.balances_with_expiry.first().copied()
+	}
 }
 
 pub type CreditClassId = u32;
@@ -94,6 +190,7 @@ pub mod pallet {
 		ClassIdExists,
 		InvalidClassId,
 		NoClaimableCredits,
+		InsufficientBalance,
 		Unauthorized,
 		ClassAdminUndefined,
 		ExpiryInPast,
@@ -107,7 +204,7 @@ pub mod pallet {
 		CreditClassId,
 		Blake2_128Concat,
 		T::AccountId,
-		Vec<BalanceWithExpiry<BalanceOf<T>, T::Moment>>,
+		SortedCreditsStore<BalanceOf<T>, T::Moment>,
 		ValueQuery,
 	>;
 
@@ -152,10 +249,10 @@ pub mod pallet {
 		pub fn create_class(origin: OriginFor<T>, id: CreditClassId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
-			<Credits<T>>::insert::<_, _, Vec<BalanceWithExpiry<BalanceOf<T>, T::Moment>>>(
+			<Credits<T>>::insert(
 				id,
 				&sender,
-				vec![],
+				SortedCreditsStore::new(),
 			);
 			Self::deposit_event(Event::CreatedClass { id });
 			Ok(().into())
@@ -175,7 +272,7 @@ pub mod pallet {
 			let commitment_account = T::AccountId::decode(&mut H256::from(commitment).as_bytes())
 				.expect("32 bytes can always construct an AccountId32");
 			let mut claimables = <Credits<T>>::get(id, &commitment_account);
-			ensure!(!claimables.is_empty(), Error::<T>::NoClaimableCredits);
+			ensure!(claimables.len() > 0, Error::<T>::NoClaimableCredits);
 			<Credits<T>>::remove(id, &commitment_account);
 			let mut sender_credits = <Credits<T>>::get(id, &sender);
 			sender_credits.append(&mut claimables);
@@ -204,12 +301,35 @@ pub mod pallet {
 			let credit = BalanceWithExpiry { balance: amount, expiry: maybe_expiry };
 
 			let mut credits = Self::credits(id, &sender);
-			// TODO expire existing credits if applicable
+			credits.expire(<pallet_timestamp::Pallet<T>>::get());
 			credits.push(credit);
 			Credits::<T>::insert(id, &owner, credits);
 			TotalMintedBy::<T>::mutate(id, &sender, |total| *total = total.saturating_add(amount));
-
 			Self::deposit_event(Event::Minted { id, to: owner, amount, expiry: maybe_expiry });
+			Ok(().into())
+		}
+
+		#[pallet::call_index(3)]
+		#[pallet::weight((<T as Config>::WeightInfo::redeem(), DispatchClass::Normal, Pays::Yes)
+		)]
+		pub fn redeem(
+			origin: OriginFor<T>,
+			id: CreditClassId,
+			owner: T::AccountId,
+			amount: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
+			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
+			ensure!(admin == sender, Error::<T>::Unauthorized);
+
+			let mut credits = Self::credits(id, &sender);
+			credits.expire(<pallet_timestamp::Pallet<T>>::get());
+			credits.redeem(amount).map_err(|_| Error::<T>::InsufficientBalance)?;
+			Credits::<T>::insert(id, &owner, credits);
+			TotalRedeemedBy::<T>::mutate(id, &sender, |total| *total = total.saturating_add(amount));
+
+			Self::deposit_event(Event::Redeemed { id, from: owner, amount });
 			Ok(().into())
 		}
 	}
