@@ -80,11 +80,13 @@ pub fn event_at_index<T: frame_system::Config>(index: usize) -> Option<T::Runtim
 fn sorted_credits_store_works() {
 	new_test_ext().execute_with(|| {
 		let mut scs = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		assert_eq!(scs.total(), 0u64);
+		assert_eq!(scs.len(), 0);
+
 		let credit1 = BalanceWithExpiry { balance: 100u64, expiry: Some(10) };
 		let credit2 = BalanceWithExpiry { balance: 50u64, expiry: Some(20) };
 		let credit3 = BalanceWithExpiry { balance: 25u64, expiry: None };
 		let credit4 = BalanceWithExpiry { balance: 40u64, expiry: Some(15) };
-
 
 		scs.push(credit1);
 		assert_eq!(scs.total(), 100u64);
@@ -109,7 +111,6 @@ fn sorted_credits_store_works() {
 		scs.append(&mut scs2);
 		assert_eq!(scs.total(), 224u64);
 		assert_eq!(scs.len(), 4);
-
 	});
 }
 #[test]
@@ -199,5 +200,53 @@ fn mint_works() {
 		expected_credits.push(expected_credit);
 		assert_eq!(Dut::credits(class_id, &bob), expected_credits);
 		assert_eq!(Dut::total_minted_by(class_id, &alice), balance);
+	});
+}
+
+#[test]
+fn redeem_works() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		let bob = AccountKeyring::Bob.to_account_id();
+		System::set_block_number(1);
+
+		let class_id = 42u32;
+		Admin::<Test>::insert(class_id, &alice);
+		let balance = 50u64;
+		let credit = BalanceWithExpiry { balance: 2*balance, expiry: None };
+		let mut credits = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		credits.push(credit);
+		assert_eq!(credits.total(), 100u64);
+		Credits::<Test>::insert(class_id, &bob, credits.clone());
+
+		assert_ok!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			balance,
+		));
+		assert_eq!(
+			last_event::<Test>(),
+			Some(Event::Redeemed { id: class_id, from: bob.clone(), amount: balance }.into())
+		);
+		let expected_credit = BalanceWithExpiry { balance, expiry: None };
+		let mut expected_credits = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		expected_credits.push(expected_credit);
+		assert_eq!(Dut::credits(class_id, &bob), expected_credits);
+		assert_eq!(Dut::total_redeemed_by(class_id, &alice), balance);
+		assert_ok!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			balance,
+		));
+		assert_eq!(Dut::total_redeemed_by(class_id, &alice), 2*balance);
+
+		assert_err!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			balance,
+		), Error::<Test>::InsufficientBalance);
 	});
 }

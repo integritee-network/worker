@@ -272,6 +272,7 @@ pub mod pallet {
 			let commitment_account = T::AccountId::decode(&mut H256::from(commitment).as_bytes())
 				.expect("32 bytes can always construct an AccountId32");
 			let mut claimables = <Credits<T>>::get(id, &commitment_account);
+			claimables.expire(<pallet_timestamp::Pallet<T>>::get());
 			ensure!(claimables.len() > 0, Error::<T>::NoClaimableCredits);
 			<Credits<T>>::remove(id, &commitment_account);
 			let mut sender_credits = <Credits<T>>::get(id, &sender);
@@ -323,7 +324,7 @@ pub mod pallet {
 			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
 			ensure!(admin == sender, Error::<T>::Unauthorized);
 
-			let mut credits = Self::credits(id, &sender);
+			let mut credits = Self::credits(id, &owner);
 			credits.expire(<pallet_timestamp::Pallet<T>>::get());
 			credits.redeem(amount).map_err(|_| Error::<T>::InsufficientBalance)?;
 			Credits::<T>::insert(id, &owner, credits);
