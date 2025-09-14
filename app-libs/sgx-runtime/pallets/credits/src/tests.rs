@@ -101,7 +101,10 @@ fn sorted_credits_store_works() {
 		scs.push(credit4);
 		assert_eq!(scs.get_balance_with_soonest_expiry(), Some(credit4));
 		assert_eq!(scs.redeem(41u64), Ok(1));
-		assert_eq!(scs.get_balance_with_soonest_expiry(), Some(BalanceWithExpiry { balance: 49u64, expiry: Some(20) }));
+		assert_eq!(
+			scs.get_balance_with_soonest_expiry(),
+			Some(BalanceWithExpiry { balance: 49u64, expiry: Some(20) })
+		);
 		assert_err!(scs.redeem(100u64), ());
 		assert_eq!(scs.len(), 2);
 
@@ -175,7 +178,7 @@ fn claim_works() {
 		Credits::<Test>::insert(class_id, &commitment_account, credits.clone());
 
 		assert_ok!(Dut::claim(RuntimeOrigin::signed(alice.clone()), class_id, secret));
-		assert_eq!(Dut::credits(class_id, &commitment_account).len(), 0 );
+		assert_eq!(Dut::credits(class_id, &commitment_account).len(), 0);
 		assert_eq!(Dut::credits(class_id, &alice), credits);
 
 		assert_eq!(last_event::<Test>(), Some(Event::Claimed { id: class_id, commitment }.into()));
@@ -190,11 +193,7 @@ fn mint_works() {
 		System::set_block_number(1);
 		set_timestamp(GENESIS_TIME);
 		let class_id = 42u32;
-		Credits::<Test>::insert(
-			class_id,
-			&alice,
-			SortedCreditsStore::new()
-		);
+		Credits::<Test>::insert(class_id, &alice, SortedCreditsStore::new());
 		Admin::<Test>::insert(class_id, &alice);
 
 		let balance = 100u64;
@@ -226,11 +225,7 @@ fn mint_lacking_deposit_fails() {
 		System::set_block_number(1);
 		set_timestamp(GENESIS_TIME);
 		let class_id = 42u32;
-		Credits::<Test>::insert(
-			class_id,
-			&alice,
-			SortedCreditsStore::new()
-		);
+		Credits::<Test>::insert(class_id, &alice, SortedCreditsStore::new());
 		Admin::<Test>::insert(class_id, &alice);
 		Balances::make_free_balance_be(&alice, 0u64.into());
 
@@ -252,7 +247,7 @@ fn redeem_works() {
 		let class_id = 42u32;
 		Admin::<Test>::insert(class_id, &alice);
 		let balance = 50u64;
-		let credit = BalanceWithExpiry { balance: 2*balance, expiry: None };
+		let credit = BalanceWithExpiry { balance: 2 * balance, expiry: None };
 		let mut credits = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
 		credits.push(credit);
 		assert_eq!(credits.total(), 100u64);
@@ -279,14 +274,12 @@ fn redeem_works() {
 			bob.clone(),
 			balance,
 		));
-		assert_eq!(Dut::total_redeemed_by(class_id, &alice), 2*balance);
+		assert_eq!(Dut::total_redeemed_by(class_id, &alice), 2 * balance);
 
-		assert_err!(Dut::redeem(
-			RuntimeOrigin::signed(alice.clone()),
-			class_id,
-			bob.clone(),
-			balance,
-		), Error::<Test>::InsufficientBalance);
+		assert_err!(
+			Dut::redeem(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), balance,),
+			Error::<Test>::InsufficientBalance
+		);
 	});
 }
 
@@ -309,21 +302,12 @@ fn deposits_work() {
 		));
 		assert_eq!(Balances::reserved_balance(&alice), 11u64);
 
-		assert_ok!(Dut::redeem(
-			RuntimeOrigin::signed(alice.clone()),
-			class_id,
-			bob.clone(),
-			50u64
-		));
+		assert_ok!(Dut::redeem(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), 50u64));
 		assert_eq!(Balances::reserved_balance(&alice), 11u64);
 
-		assert_ok!(Dut::redeem(
-			RuntimeOrigin::signed(alice.clone()),
-			class_id,
-			bob.clone(),
-			50u64
-		));
+		assert_ok!(Dut::redeem(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), 50u64));
 		assert_eq!(Balances::reserved_balance(&alice), 10u64);
+		assert_eq!(TotalDeposit::<Test>::get(class_id), 10u64);
 
 		assert_ok!(Dut::destroy_class(RuntimeOrigin::signed(alice.clone()), class_id));
 		assert_eq!(Balances::reserved_balance(&alice), 0u64);

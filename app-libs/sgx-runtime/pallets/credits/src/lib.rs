@@ -4,14 +4,12 @@ use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,
 	pallet_prelude::Get,
-	traits::{ Currency, ReservableCurrency},
+	traits::{Currency, ReservableCurrency},
 	StorageDoubleMap as StorageDoubleMapTrait,
 };
 use scale_info::TypeInfo;
 use sp_core::H256;
-use sp_runtime::{
-	traits::{Hash, Saturating, Zero},
-	};
+use sp_runtime::traits::{Hash, Saturating, Zero};
 use sp_std::{cmp::Ordering, vec, vec::Vec};
 
 pub use pallet::*;
@@ -57,25 +55,21 @@ where
 
 	pub fn push(&mut self, credit: BalanceWithExpiry<Balance, Moment>) {
 		self.balances_with_expiry.push(credit);
-		self.balances_with_expiry.sort_by(|a, b| {
-			match (a.expiry, b.expiry) {
-				(Some(a_expiry), Some(b_expiry)) => a_expiry.cmp(&b_expiry),
-				(Some(_), None) => Ordering::Less,
-				(None, Some(_)) => Ordering::Greater,
-				(None, None) => Ordering::Equal,
-			}
+		self.balances_with_expiry.sort_by(|a, b| match (a.expiry, b.expiry) {
+			(Some(a_expiry), Some(b_expiry)) => a_expiry.cmp(&b_expiry),
+			(Some(_), None) => Ordering::Less,
+			(None, Some(_)) => Ordering::Greater,
+			(None, None) => Ordering::Equal,
 		});
 	}
 
 	pub fn append(&mut self, other: &mut SortedCreditsStore<Balance, Moment>) -> DispatchResult {
 		self.balances_with_expiry.append(&mut other.balances_with_expiry);
-		self.balances_with_expiry.sort_by(|a, b| {
-			match (a.expiry, b.expiry) {
-				(Some(a_expiry), Some(b_expiry)) => a_expiry.cmp(&b_expiry),
-				(Some(_), None) => Ordering::Less,
-				(None, Some(_)) => Ordering::Greater,
-				(None, None) => Ordering::Equal,
-			}
+		self.balances_with_expiry.sort_by(|a, b| match (a.expiry, b.expiry) {
+			(Some(a_expiry), Some(b_expiry)) => a_expiry.cmp(&b_expiry),
+			(Some(_), None) => Ordering::Less,
+			(None, Some(_)) => Ordering::Greater,
+			(None, None) => Ordering::Equal,
 		});
 		Ok(())
 	}
@@ -85,7 +79,9 @@ where
 	where
 		Balance: Saturating,
 	{
-		self.balances_with_expiry.iter().fold(Balance::zero(), |acc, x| acc.saturating_add(x.balance))
+		self.balances_with_expiry
+			.iter()
+			.fold(Balance::zero(), |acc, x| acc.saturating_add(x.balance))
 	}
 
 	/// Expire credits that have passed their expiry time.
@@ -250,6 +246,11 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn total_deposit)]
+	pub type TotalDeposit<T: Config> =
+		StorageMap<_, Blake2_128Concat, CreditClassId, BalanceOf<T>, ValueQuery>;
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
@@ -263,11 +264,8 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
 			T::Currency::reserve(&sender, T::ClassDeposit::get())?;
-			<Credits<T>>::insert(
-				id,
-				&sender,
-				SortedCreditsStore::new(),
-			);
+			TotalDeposit::<T>::insert(id, T::ClassDeposit::get());
+			<Credits<T>>::insert(id, &sender, SortedCreditsStore::new());
 			<Admin<T>>::insert(id, &sender);
 			Self::deposit_event(Event::CreatedClass { id });
 			Ok(().into())
@@ -277,11 +275,22 @@ pub mod pallet {
 		#[pallet::call_index(1)]
 		#[pallet::weight((<T as Config>::WeightInfo::create_class(), DispatchClass::Normal, Pays::Yes)
 		)]
-		pub fn destroy_class(origin: OriginFor<T>, id: CreditClassId) -> DispatchResultWithPostInfo {
+		pub fn destroy_class(
+			origin: OriginFor<T>,
+			id: CreditClassId,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
-			ensure!(<Credits<T>>::iter_prefix_values(id).count() == 0, Error::<T>::ClassNotEmpty);
-			// TODO
+			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
+			ensure!(admin == sender, Error::<T>::Unauthorized);
+			// TODO: consider limiting to avoid overweight execution
+			let _ = Credits::<T>::clear_prefix(&id, u32::max_value(), None);
+			let unreserve = Self::total_deposit(id);
+			TotalDeposit::<T>::remove(id);
+			Admin::<T>::remove(id);
+			TotalMintedBy::<T>::remove(id, &admin);
+			TotalRedeemedBy::<T>::remove(id, &admin);
+			T::Currency::unreserve(&admin, unreserve);
 			Self::deposit_event(Event::DestroyedClass { id });
 			Ok(().into())
 		}
@@ -305,7 +314,10 @@ pub mod pallet {
 			ensure!(!claimables.is_empty(), Error::<T>::NoClaimableCredits);
 			let expired_count = claimables.expire(<pallet_timestamp::Pallet<T>>::get());
 			if expired_count > 0 {
-				T::Currency::unreserve(&admin, T::ClassDeposit::get().saturating_mul(BalanceOf::<T>::from(expired_count as u32)));
+				let deposit = T::ClassDeposit::get()
+					.saturating_mul(BalanceOf::<T>::from(expired_count as u32));
+				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));
+				T::Currency::unreserve(&admin, deposit);
 			}
 			<Credits<T>>::remove(id, &commitment_account);
 			let mut sender_credits = <Credits<T>>::get(id, &sender);
@@ -337,9 +349,14 @@ pub mod pallet {
 			let mut credits = Self::credits(id, &sender);
 			let expired_count = credits.expire(<pallet_timestamp::Pallet<T>>::get());
 			if expired_count > 1 {
-				T::Currency::unreserve(&admin, T::ItemDeposit::get().saturating_mul(BalanceOf::<T>::from(expired_count.saturating_sub(1) as u32)));
+				let deposit = T::ItemDeposit::get()
+					.saturating_mul(BalanceOf::<T>::from(expired_count.saturating_sub(1) as u32));
+				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));
+				T::Currency::unreserve(&admin, deposit);
 			} else if expired_count == 0 {
-				T::Currency::reserve(&admin, T::ItemDeposit::get())?;
+				let deposit = T::ItemDeposit::get();
+				T::Currency::reserve(&admin, deposit)?;
+				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_add(deposit));
 			}
 			credits.push(credit);
 			Credits::<T>::insert(id, &owner, credits);
@@ -364,9 +381,15 @@ pub mod pallet {
 			let mut credits = Self::credits(id, &owner);
 			let expired_count = credits.expire(<pallet_timestamp::Pallet<T>>::get());
 			let used_count = credits.redeem(amount).map_err(|_| Error::<T>::InsufficientBalance)?;
-			T::Currency::unreserve(&admin, T::ItemDeposit::get().saturating_mul(BalanceOf::<T>::from(expired_count.saturating_add(used_count) as u32)));
+			let deposit = T::ItemDeposit::get().saturating_mul(BalanceOf::<T>::from(
+				expired_count.saturating_add(used_count) as u32,
+			));
+			TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));
+			T::Currency::unreserve(&admin, deposit);
 			Credits::<T>::insert(id, &owner, credits);
-			TotalRedeemedBy::<T>::mutate(id, &sender, |total| *total = total.saturating_add(amount));
+			TotalRedeemedBy::<T>::mutate(id, &sender, |total| {
+				*total = total.saturating_add(amount)
+			});
 
 			Self::deposit_event(Event::Redeemed { id, from: owner, amount });
 			Ok(().into())
