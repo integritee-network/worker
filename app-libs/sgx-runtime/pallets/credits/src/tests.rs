@@ -186,6 +186,35 @@ fn claim_works() {
 }
 
 #[test]
+fn claim_oversize_fails() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		System::set_block_number(1);
+		let class_id = 42u32;
+		Admin::<Test>::insert(class_id, &alice);
+		let mut store = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		for _i in 0..MaxEntriesPerAccount::get() - 1 {
+			store.push(BalanceWithExpiry { balance: 1u64, expiry: None });
+		}
+
+		let secret = H256::repeat_byte(1);
+		let commitment = <Test as frame_system::Config>::Hashing::hash_of(&secret);
+		let commitment_account = <Test as frame_system::Config>::AccountId::decode(
+			&mut H256::from(commitment).as_bytes(),
+		)
+		.expect("32 bytes can always construct an AccountId32");
+
+		Credits::<Test>::insert(class_id, &commitment_account, store.clone());
+		Credits::<Test>::insert(class_id, &alice, store);
+
+		assert_err!(
+			Dut::claim(RuntimeOrigin::signed(alice.clone()), class_id, secret),
+			Error::<Test>::TooManyEntries
+		);
+	});
+}
+
+#[test]
 fn mint_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
@@ -233,6 +262,27 @@ fn mint_lacking_deposit_fails() {
 		assert_err!(
 			Dut::mint(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), balance, None),
 			BalancesError::<Test>::InsufficientBalance
+		);
+	});
+}
+
+#[test]
+fn mint_oversize_fails() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		let bob = AccountKeyring::Bob.to_account_id();
+		System::set_block_number(1);
+		let class_id = 42u32;
+		Admin::<Test>::insert(class_id, &alice);
+		let mut store = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
+		for _i in 0..MaxEntriesPerAccount::get() {
+			store.push(BalanceWithExpiry { balance: 1u64, expiry: None });
+		}
+		Credits::<Test>::insert(class_id, &bob, store);
+
+		assert_err!(
+			Dut::mint(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), 1u64, None),
+			Error::<Test>::TooManyEntries
 		);
 	});
 }
