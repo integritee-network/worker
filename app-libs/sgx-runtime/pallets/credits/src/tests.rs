@@ -21,7 +21,7 @@ use frame_support::{
 	pallet_prelude::DispatchResultWithPostInfo,
 	traits::{Currency, Hooks},
 };
-
+use pallet_balances::Error as BalancesError;
 use sp_keyring::AccountKeyring;
 use sp_runtime::{
 	traits::{Header as HeaderT, Scale},
@@ -122,6 +122,7 @@ fn create_class_works() {
 		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id));
 		assert_eq!(last_event::<Test>(), Some(Event::CreatedClass { id: class_id }.into()));
 		assert!(Credits::<Test>::contains_prefix(class_id));
+		assert_eq!(Admin::<Test>::get(class_id), Some(alice.clone()));
 	});
 }
 
@@ -140,12 +141,25 @@ fn create_class_with_existing_id_fails() {
 }
 
 #[test]
+fn create_class_lacking_deposit_fails() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		System::set_block_number(1);
+		let class_id = 42u32;
+		Balances::make_free_balance_be(&alice, 9u64.into());
+		assert_err!(
+			Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id),
+			BalancesError::<Test>::InsufficientBalance
+		);
+	});
+}
+#[test]
 fn claim_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
 		System::set_block_number(1);
 		let class_id = 42u32;
-
+		Admin::<Test>::insert(class_id, &alice);
 		let credit = BalanceWithExpiry { balance: 100u64, expiry: None };
 		let mut credits = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
 		credits.push(credit);
@@ -204,6 +218,30 @@ fn mint_works() {
 }
 
 #[test]
+fn mint_lacking_deposit_fails() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		let bob = AccountKeyring::Bob.to_account_id();
+		System::set_block_number(1);
+		set_timestamp(GENESIS_TIME);
+		let class_id = 42u32;
+		Credits::<Test>::insert(
+			class_id,
+			&alice,
+			SortedCreditsStore::new()
+		);
+		Admin::<Test>::insert(class_id, &alice);
+		Balances::make_free_balance_be(&alice, 0u64.into());
+
+		let balance = 100u64;
+		assert_err!(
+			Dut::mint(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), balance, None),
+			BalancesError::<Test>::InsufficientBalance
+		);
+	});
+}
+
+#[test]
 fn redeem_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
@@ -248,5 +286,45 @@ fn redeem_works() {
 			bob.clone(),
 			balance,
 		), Error::<Test>::InsufficientBalance);
+	});
+}
+
+#[test]
+fn deposits_work() {
+	new_test_ext().execute_with(|| {
+		let alice = AccountKeyring::Alice.to_account_id();
+		let bob = AccountKeyring::Bob.to_account_id();
+		System::set_block_number(1);
+		let class_id = 42u32;
+		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id));
+		assert_eq!(Balances::reserved_balance(&alice), 10u64);
+
+		assert_ok!(Dut::mint(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			100u64,
+			None
+		));
+		assert_eq!(Balances::reserved_balance(&alice), 11u64);
+
+		assert_ok!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			50u64
+		));
+		assert_eq!(Balances::reserved_balance(&alice), 11u64);
+
+		assert_ok!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			50u64
+		));
+		assert_eq!(Balances::reserved_balance(&alice), 10u64);
+
+		assert_ok!(Dut::destroy_class(RuntimeOrigin::signed(alice.clone()), class_id));
+		assert_eq!(Balances::reserved_balance(&alice), 0u64);
 	});
 }

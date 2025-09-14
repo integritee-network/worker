@@ -18,7 +18,7 @@ pub use crate as dut;
 
 use frame_support::{
 	ord_parameter_types, parameter_types,
-	traits::{ConstU8, EitherOfDiverse},
+	traits::{ConstU8, ConstU64, EitherOfDiverse},
 	PalletId,
 };
 use frame_system as system;
@@ -80,6 +80,9 @@ impl dut::Config for Test {
 	type MomentsPerDay = MomentsPerDay;
 	type WeightInfo = ();
 	type Currency = Balances;
+	type MaxEntriesPerAccount = ConstU8<10>;
+	type ClassDeposit = ConstU64<10>;
+	type ItemDeposit = ConstU64<1>;
 }
 
 parameter_types! {

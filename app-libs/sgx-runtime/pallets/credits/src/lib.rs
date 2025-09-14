@@ -4,18 +4,15 @@ use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchResult,
 	pallet_prelude::Get,
-	traits::{Currency, ExistenceRequirement, OnTimestampSet},
-	PalletId, StorageDoubleMap as StorageDoubleMapTrait,
+	traits::{ Currency, ReservableCurrency},
+	StorageDoubleMap as StorageDoubleMapTrait,
 };
-use itp_randomness::Randomness;
-use log::*;
 use scale_info::TypeInfo;
 use sp_core::H256;
 use sp_runtime::{
-	traits::{CheckedDiv, Hash, Saturating, Zero},
-	SaturatedConversion,
-};
-use sp_std::{cmp::min, cmp::Ordering, ops::Rem, vec, vec::Vec};
+	traits::{Hash, Saturating, Zero},
+	};
+use sp_std::{cmp::Ordering, vec, vec::Vec};
 
 pub use pallet::*;
 
@@ -54,6 +51,10 @@ where
 		self.balances_with_expiry.len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.balances_with_expiry.is_empty()
+	}
+
 	pub fn push(&mut self, credit: BalanceWithExpiry<Balance, Moment>) {
 		self.balances_with_expiry.push(credit);
 		self.balances_with_expiry.sort_by(|a, b| {
@@ -88,25 +89,29 @@ where
 	}
 
 	/// Expire credits that have passed their expiry time.
-	pub fn expire(&mut self, now: Moment)
+	pub fn expire(&mut self, now: Moment) -> usize
 	where
 		Moment: Saturating + PartialOrd,
 	{
+		let old_len = self.balances_with_expiry.len();
 		self.balances_with_expiry.retain(|c| match c.expiry {
 			Some(expiry) => expiry > now,
 			None => true,
 		});
+		let new_len = self.balances_with_expiry.len();
+		return old_len.saturating_sub(new_len);
 	}
 
 	/// Redeem credits, starting from the ones that expire the soonest.
 	/// Does not check expiry, that should be done explicitly beforehand using `expire()`.
-	pub fn redeem(&mut self, mut amount: Balance) -> Result<(), ()>
+	pub fn redeem(&mut self, mut amount: Balance) -> Result<usize, ()>
 	where
 		Balance: Saturating + PartialOrd,
 	{
 		if self.total() < amount {
 			return Err(());
 		}
+		let old_len = self.balances_with_expiry.len();
 		for credit in &mut self.balances_with_expiry {
 			if amount.is_zero() {
 				break;
@@ -120,7 +125,8 @@ where
 			}
 		}
 		self.balances_with_expiry.retain(|c| !c.balance.is_zero());
-		Ok(())
+		let new_len = self.balances_with_expiry.len();
+		Ok(old_len.saturating_sub(new_len))
 	}
 
 	pub fn get_balance_with_soonest_expiry(&self) -> Option<BalanceWithExpiry<Balance, Moment>> {
@@ -142,7 +148,6 @@ pub mod pallet {
 	use crate::weights::WeightInfo;
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_runtime::traits::Zero;
 
 	const STORAGE_VERSION: StorageVersion = StorageVersion::new(1);
 	#[pallet::pallet]
@@ -155,17 +160,24 @@ pub mod pallet {
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		type WeightInfo: WeightInfo;
-
 		#[pallet::constant]
 		type MomentsPerDay: Get<Self::Moment>;
-
-		type Currency: Currency<Self::AccountId>;
+		#[pallet::constant]
+		type MaxEntriesPerAccount: Get<u8>;
+		#[pallet::constant]
+		type ClassDeposit: Get<BalanceOf<Self>>;
+		#[pallet::constant]
+		type ItemDeposit: Get<BalanceOf<Self>>;
+		type Currency: ReservableCurrency<Self::AccountId>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		CreatedClass {
+			id: CreditClassId,
+		},
+		DestroyedClass {
 			id: CreditClassId,
 		},
 		Claimed {
@@ -188,6 +200,7 @@ pub mod pallet {
 	#[pallet::error]
 	pub enum Error<T> {
 		ClassIdExists,
+		ClassNotEmpty,
 		InvalidClassId,
 		NoClaimableCredits,
 		InsufficientBalance,
@@ -249,17 +262,31 @@ pub mod pallet {
 		pub fn create_class(origin: OriginFor<T>, id: CreditClassId) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
+			T::Currency::reserve(&sender, T::ClassDeposit::get())?;
 			<Credits<T>>::insert(
 				id,
 				&sender,
 				SortedCreditsStore::new(),
 			);
+			<Admin<T>>::insert(id, &sender);
 			Self::deposit_event(Event::CreatedClass { id });
 			Ok(().into())
 		}
 
 		/// create a new credit class
 		#[pallet::call_index(1)]
+		#[pallet::weight((<T as Config>::WeightInfo::create_class(), DispatchClass::Normal, Pays::Yes)
+		)]
+		pub fn destroy_class(origin: OriginFor<T>, id: CreditClassId) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
+			ensure!(<Credits<T>>::iter_prefix_values(id).count() == 0, Error::<T>::ClassNotEmpty);
+			Self::deposit_event(Event::DestroyedClass { id });
+			Ok(().into())
+		}
+
+		/// create a new credit class
+		#[pallet::call_index(2)]
 		#[pallet::weight((<T as Config>::WeightInfo::claim(), DispatchClass::Normal, Pays::Yes)
         )]
 		pub fn claim(
@@ -268,12 +295,17 @@ pub mod pallet {
 			secret: T::Hash,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
+			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
+			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
 			let commitment = T::Hashing::hash_of(&secret);
 			let commitment_account = T::AccountId::decode(&mut H256::from(commitment).as_bytes())
 				.expect("32 bytes can always construct an AccountId32");
 			let mut claimables = <Credits<T>>::get(id, &commitment_account);
-			claimables.expire(<pallet_timestamp::Pallet<T>>::get());
-			ensure!(claimables.len() > 0, Error::<T>::NoClaimableCredits);
+			ensure!(!claimables.is_empty(), Error::<T>::NoClaimableCredits);
+			let expired_count = claimables.expire(<pallet_timestamp::Pallet<T>>::get());
+			if expired_count > 0 {
+				T::Currency::unreserve(&admin, T::ClassDeposit::get().saturating_mul(BalanceOf::<T>::from(expired_count as u32)));
+			}
 			<Credits<T>>::remove(id, &commitment_account);
 			let mut sender_credits = <Credits<T>>::get(id, &sender);
 			sender_credits.append(&mut claimables);
@@ -282,7 +314,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(2)]
+		#[pallet::call_index(3)]
 		#[pallet::weight((<T as Config>::WeightInfo::mint(), DispatchClass::Normal, Pays::Yes)
         )]
 		pub fn mint(
@@ -302,7 +334,12 @@ pub mod pallet {
 			let credit = BalanceWithExpiry { balance: amount, expiry: maybe_expiry };
 
 			let mut credits = Self::credits(id, &sender);
-			credits.expire(<pallet_timestamp::Pallet<T>>::get());
+			let expired_count = credits.expire(<pallet_timestamp::Pallet<T>>::get());
+			if expired_count > 1 {
+				T::Currency::unreserve(&sender, T::ItemDeposit::get().saturating_mul(BalanceOf::<T>::from(expired_count.saturating_sub(1) as u32)));
+			} else if expired_count == 0 {
+				T::Currency::reserve(&sender, T::ItemDeposit::get())?;
+			}
 			credits.push(credit);
 			Credits::<T>::insert(id, &owner, credits);
 			TotalMintedBy::<T>::mutate(id, &sender, |total| *total = total.saturating_add(amount));
@@ -310,7 +347,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::call_index(3)]
+		#[pallet::call_index(4)]
 		#[pallet::weight((<T as Config>::WeightInfo::redeem(), DispatchClass::Normal, Pays::Yes)
 		)]
 		pub fn redeem(
@@ -323,10 +360,10 @@ pub mod pallet {
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
 			let admin = Self::admin(id).ok_or(Error::<T>::ClassAdminUndefined)?;
 			ensure!(admin == sender, Error::<T>::Unauthorized);
-
 			let mut credits = Self::credits(id, &owner);
-			credits.expire(<pallet_timestamp::Pallet<T>>::get());
-			credits.redeem(amount).map_err(|_| Error::<T>::InsufficientBalance)?;
+			let expired_count = credits.expire(<pallet_timestamp::Pallet<T>>::get());
+			let used_count = credits.redeem(amount).map_err(|_| Error::<T>::InsufficientBalance)?;
+			T::Currency::unreserve(&owner, T::ItemDeposit::get().saturating_mul(BalanceOf::<T>::from(expired_count.saturating_add(used_count) as u32)));
 			Credits::<T>::insert(id, &owner, credits);
 			TotalRedeemedBy::<T>::mutate(id, &sender, |total| *total = total.saturating_add(amount));
 
