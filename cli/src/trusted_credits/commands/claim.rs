@@ -17,15 +17,13 @@
 
 use crate::{
 	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
-	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+	trusted_operation::perform_trusted_operation, Cli, CliError, CliResult, CliResultOk,
 };
 
 use crate::{
 	trusted_command_utils::get_trusted_account_info, trusted_operation::send_direct_request,
 };
-use ita_stf::{
-	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
-};
+use ita_stf::{credits::CreditsTrustedCall, Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
@@ -50,7 +48,7 @@ pub struct ClaimCommand {
 impl ClaimCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let (sender, signer, mrenclave, shard) =
-			get_basic_signing_info_from_args!(self.master, self.session_proxy, cli, trusted_args);
+			get_basic_signing_info_from_args!(self.claimer, self.session_proxy, cli, trusted_args);
 
 		println!("send trusted call credits claim");
 
@@ -59,11 +57,11 @@ impl ClaimCommand {
 			.unwrap_or_default();
 		let secret_bytes = hex::decode(self.secret.trim_start_matches("0x")).map_err(|e| {
 			error!("Decoding secret failed: {}", e);
-			CliError::Parser("Decoding secret failed".into())
+			CliError::Parser { msg: "Decoding secret failed".into() }
 		})?;
 		let secret = Hash::try_from(secret_bytes.as_slice()).map_err(|_| {
 			error!("Hash::try_from(secret) failed");
-			CliError::Parser("Hash conversion failed".into())
+			CliError::Parser { msg: "Hash conversion failed".into() }
 		})?;
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::credits(CreditsTrustedCall::claim(sender, self.id, secret))

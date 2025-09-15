@@ -20,28 +20,35 @@ use crate::{
 };
 use ita_stf::{credits::CreditsTrustedGetter, Getter, TrustedCallSigned, TrustedGetter};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use itp_types::{Balance, Moment};
+use pallet_credits::SortedCreditsStore;
 use sp_core::Pair;
 
 #[derive(Parser)]
-pub struct GetCreditClassInfoCommand {
+pub struct GetCreditsCommand {
 	/// AccountId in ss58check format, mnemonic or hex seed.
 	account: String,
 	/// credit class id
 	id: u32,
 }
 
-impl GetCreditClassInfoCommand {
+impl GetCreditsCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let who = get_pair_from_str(cli, trusted_args, &self.account);
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::credits(CreditsTrustedGetter::credits {
-				origin: who.public().into(),
-				id: self.id,
+				owner: who.public().into(),
+				class_id: self.id,
 			})
 			.sign(&KeyPair::Sr25519(Box::new(who))),
 		));
-		let credits = perform_trusted_operation::<u8>(cli, trusted_args, &top).unwrap();
-		println!("{}", credits);
+		let credits = perform_trusted_operation::<SortedCreditsStore<Balance, Moment>>(
+			cli,
+			trusted_args,
+			&top,
+		)
+		.unwrap();
+		println!("{:?}", credits);
 		Ok(CliResultOk::Credits { credits })
 	}
 }

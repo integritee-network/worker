@@ -23,9 +23,7 @@ use crate::{
 use crate::{
 	trusted_command_utils::get_trusted_account_info, trusted_operation::send_direct_request,
 };
-use ita_stf::{
-	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
-};
+use ita_stf::{credits::CreditsTrustedCall, Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
@@ -47,7 +45,7 @@ pub struct DestroyClassCommand {
 impl DestroyClassCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let (sender, signer, mrenclave, shard) =
-			get_basic_signing_info_from_args!(self.master, self.session_proxy, cli, trusted_args);
+			get_basic_signing_info_from_args!(self.admin, self.session_proxy, cli, trusted_args);
 
 		println!("send trusted call credits destroy class");
 

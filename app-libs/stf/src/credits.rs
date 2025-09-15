@@ -26,15 +26,13 @@ use alloc::format;
 use codec::{Decode, Encode};
 use frame_support::dispatch::UnfilteredDispatchable;
 use ita_parentchain_specs::MinimalChainSpec;
-use ita_sgx_runtime::{CreditClassId, Credits, Runtime, System};
+use ita_sgx_runtime::{CreditClassId, Credits, Runtime};
 use itp_node_api::metadata::provider::AccessNodeMetadata;
 use itp_node_api_metadata::NodeMetadataTrait;
 use itp_sgx_runtime_primitives::types::{Balance, Moment, ShardIdentifier};
 use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_stf_primitives::error::StfError;
 use itp_types::{parentchain::ParentchainCall, AccountId, Hash};
-use itp_utils::stringify::account_id_to_string;
-use log::*;
 use sp_std::{sync::Arc, vec, vec::Vec};
 
 #[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
@@ -169,7 +167,7 @@ where
 	}
 }
 
-pub fn get_fee_for(tc: &CreditsTrustedCall) -> Balance {
+pub fn get_fee_for(_tc: &CreditsTrustedCall) -> Balance {
 	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
 	one / crate::STF_TX_FEE_UNIT_DIVIDER
 }

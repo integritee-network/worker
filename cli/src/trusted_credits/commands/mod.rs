@@ -1,5 +1,7 @@
-pub mod get_attempts;
-pub mod get_info;
-pub mod guess;
-pub mod push_by_one_day;
-pub mod set_winnings;
+pub mod claim;
+pub mod create_class;
+pub mod destroy_class;
+pub mod get_credit_class_info;
+pub mod get_credits;
+pub mod mint;
+pub mod redeem;

@@ -43,6 +43,7 @@ mod trusted_assets;
 mod trusted_base_cli;
 mod trusted_cli;
 mod trusted_command_utils;
+mod trusted_credits;
 mod trusted_guess_the_number;
 mod trusted_operation;
 
@@ -51,11 +52,13 @@ pub mod commands;
 use crate::commands::Commands;
 use clap::Parser;
 use ita_stf::{
-	guess_the_number::GuessTheNumberInfo, AccountEssentials, ParentchainsInfo, ShardInfo,
+	credits::CreditClassInfo, guess_the_number::GuessTheNumberInfo, AccountEssentials,
+	ParentchainsInfo, ShardInfo,
 };
 use itp_node_api::api_client::Metadata;
-use itp_types::Moment;
+use itp_types::{Balance, Moment};
 use its_primitives::types::header::SidechainHeader;
+use pallet_credits::SortedCreditsStore;
 use pallet_notes::{BucketRange, TimestampedTrustedNote};
 use sp_application_crypto::KeyTypeId;
 use sp_core::{H160, H256};
@@ -149,6 +152,12 @@ pub enum CliResultOk {
 	GuessTheNumberPotInfo {
 		info: GuessTheNumberInfo,
 	},
+	CreditClassInfo {
+		info: CreditClassInfo,
+	},
+	Credits {
+		credits: SortedCreditsStore<Balance, Moment>,
+	},
 	// TODO should ideally be removed; or at least drastically less used
 	// We WANT all commands exposed by the cli to return something useful for the caller(ie instead of printing)
 	None,
@@ -164,6 +173,8 @@ pub enum CliError {
 	EvmRead { msg: String },
 	#[error("worker rpc api error: {:?}", msg)]
 	WorkerRpcApi { msg: String },
+	#[error("cli parser: {:?}", msg)]
+	Parser { msg: String },
 }
 
 pub type CliResult = Result<CliResultOk, CliError>;

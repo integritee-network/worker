@@ -17,34 +17,33 @@
 
 use crate::{trusted_cli::TrustedCli, Cli, CliResult};
 use commands::{
-	get_attempts::GetAttemptsCommand, get_info::GetInfoCommand, guess::GuessCommand,
-	push_by_one_day::PushByOneDayCommand, set_winnings::SetWinningsCommand,
+	claim::ClaimCommand, create_class::CreateClassCommand, destroy_class::DestroyClassCommand,
+	get_credit_class_info::GetCreditClassInfoCommand, get_credits::GetCreditsCommand,
+	mint::MintCommand, redeem::RedeemCommand,
 };
-
 mod commands;
 
 #[derive(Subcommand)]
-pub enum GuessTheNumberCommand {
-	/// get public info for the guess-the-number game
-	GetInfo(GetInfoCommand),
-	/// set winnings amount (must be game master)
-	SetWinnings(SetWinningsCommand),
-	/// push the end of this round by one day (must be game master)
-	PushByOneDay(PushByOneDayCommand),
-	/// submit a guess as a player
-	Guess(GuessCommand),
-	/// how many times a player has already submitted a guess this round
-	GetAttempts(GetAttemptsCommand),
+pub enum CreditsCommand {
+	CreateClass(CreateClassCommand),
+	DestroyClass(DestroyClassCommand),
+	Claim(ClaimCommand),
+	Mint(MintCommand),
+	Redeem(RedeemCommand),
+	GetCredits(GetCreditsCommand),
+	GetCreditClassInfo(GetCreditClassInfoCommand),
 }
 
-impl GuessTheNumberCommand {
+impl CreditsCommand {
 	pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
 		match self {
-			GuessTheNumberCommand::GetInfo(cmd) => cmd.run(cli, trusted_cli),
-			GuessTheNumberCommand::SetWinnings(cmd) => cmd.run(cli, trusted_cli),
-			GuessTheNumberCommand::PushByOneDay(cmd) => cmd.run(cli, trusted_cli),
-			GuessTheNumberCommand::Guess(cmd) => cmd.run(cli, trusted_cli),
-			GuessTheNumberCommand::GetAttempts(cmd) => cmd.run(cli, trusted_cli),
+			Self::CreateClass(cmd) => cmd.run(cli, trusted_cli),
+			Self::DestroyClass(cmd) => cmd.run(cli, trusted_cli),
+			Self::Claim(cmd) => cmd.run(cli, trusted_cli),
+			Self::Mint(cmd) => cmd.run(cli, trusted_cli),
+			Self::Redeem(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetCredits(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetCreditClassInfo(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

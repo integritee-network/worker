@@ -16,21 +16,18 @@
 */
 
 use crate::{
-	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
-	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+	get_basic_signing_info_from_args,
+	trusted_cli::TrustedCli,
+	trusted_command_utils::{get_accountid_from_str, get_trusted_account_info},
+	trusted_operation::{perform_trusted_operation, send_direct_request},
+	Cli, CliResult, CliResultOk,
 };
-
-use crate::{
-	trusted_command_utils::get_trusted_account_info, trusted_operation::send_direct_request,
-};
-use ita_stf::{
-	guess_the_number::GuessTheNumberTrustedCall, Getter, TrustedCall, TrustedCallSigned,
-};
+use ita_stf::{credits::CreditsTrustedCall, Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::Hash;
+use itp_types::Balance;
 use log::*;
 use std::boxed::Box;
 
@@ -52,7 +49,7 @@ pub struct RedeemCommand {
 impl RedeemCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let (sender, signer, mrenclave, shard) =
-			get_basic_signing_info_from_args!(self.master, self.session_proxy, cli, trusted_args);
+			get_basic_signing_info_from_args!(self.admin, self.session_proxy, cli, trusted_args);
 
 		let owner = get_accountid_from_str(&self.owner);
 
@@ -63,7 +60,7 @@ impl RedeemCommand {
 			.unwrap_or_default();
 
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
-			TrustedCall::credits(CreditsTrustedCall::mint(sender, self.id, owner, amount))
+			TrustedCall::credits(CreditsTrustedCall::redeem(sender, self.id, owner, self.amount))
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct);
 

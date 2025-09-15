@@ -32,8 +32,7 @@ use crate::{
 		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
 		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
-	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_CREDITS_CLASS_DEPOSIT_DIVIDER,
-	STF_CREDITS_ITEM_DEPOSIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
+	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
 	STF_SHIELDING_FEE_AMOUNT_DIVIDER, STF_TX_FEE_UNIT_DIVIDER,
 };
 use codec::{Compact, Decode, Encode};
@@ -46,9 +45,9 @@ use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use ita_sgx_runtime::{
-	Assets, CreditClassId, Hash, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
-	ParentchainInstanceTargetB, ParentchainIntegritee, Runtime, SessionProxyCredentials,
-	SessionProxyRole, ShardManagement, System,
+	Assets, gParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
+	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, ShardManagement,
+	System,
 };
 pub use ita_sgx_runtime::{Balance, Index};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};

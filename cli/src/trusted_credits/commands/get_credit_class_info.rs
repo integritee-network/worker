@@ -18,7 +18,10 @@ use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
-use ita_stf::{credits::CreditsTrustedGetter, Getter, TrustedCallSigned, TrustedGetter};
+use ita_stf::{
+	credits::{CreditClassInfo, CreditsTrustedGetter},
+	Getter, TrustedCallSigned, TrustedGetter,
+};
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use sp_core::Pair;
 
@@ -35,13 +38,13 @@ impl GetCreditClassInfoCommand {
 		let who = get_pair_from_str(cli, trusted_args, &self.account);
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
 			TrustedGetter::credits(CreditsTrustedGetter::credit_class_info {
-				origin: who.public().into(),
-				id: self.id,
+				sender: who.public().into(),
+				class_id: self.id,
 			})
 			.sign(&KeyPair::Sr25519(Box::new(who))),
 		));
-		let info = perform_trusted_operation::<u8>(cli, trusted_args, &top).unwrap();
-		println!("{}", info);
+		let info = perform_trusted_operation::<CreditClassInfo>(cli, trusted_args, &top).unwrap();
+		println!("{:?}", info);
 		Ok(CliResultOk::CreditClassInfo { info })
 	}
 }
