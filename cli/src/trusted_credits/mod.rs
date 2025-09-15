@@ -18,6 +18,7 @@
 use crate::{trusted_cli::TrustedCli, Cli, CliResult};
 use commands::{
 	claim::ClaimCommand, create_class::CreateClassCommand, destroy_class::DestroyClassCommand,
+	generate_commitment::GenerateCommitmentCommand,
 	get_credit_class_info::GetCreditClassInfoCommand, get_credits::GetCreditsCommand,
 	mint::MintCommand, redeem::RedeemCommand,
 };
@@ -25,12 +26,21 @@ mod commands;
 
 #[derive(Subcommand)]
 pub enum CreditsCommand {
+	/// Create a new credit class and become its admin.
 	CreateClass(CreateClassCommand),
+	/// Destroy a credit class. Only the class admin can do this.
 	DestroyClass(DestroyClassCommand),
+	/// Claim previously purchased credits by revealing the secret for the commitment used during purchase.
 	Claim(ClaimCommand),
+	/// Mint new credits in a credit class. Only the class admin can do this.
 	Mint(MintCommand),
+	/// Redeem credits in a credit class. Only the class admin can do this.
 	Redeem(RedeemCommand),
+	/// Generate a random secret and its commitment hash.
+	GenerateCommitment(GenerateCommitmentCommand),
+	/// Get all credit balances of an account.
 	GetCredits(GetCreditsCommand),
+	/// Get information about a credit class. Only the class admin can see this.
 	GetCreditClassInfo(GetCreditClassInfoCommand),
 }
 
@@ -42,6 +52,7 @@ impl CreditsCommand {
 			Self::Claim(cmd) => cmd.run(cli, trusted_cli),
 			Self::Mint(cmd) => cmd.run(cli, trusted_cli),
 			Self::Redeem(cmd) => cmd.run(cli, trusted_cli),
+			Self::GenerateCommitment(cmd) => cmd.run(cli, trusted_cli),
 			Self::GetCredits(cmd) => cmd.run(cli, trusted_cli),
 			Self::GetCreditClassInfo(cmd) => cmd.run(cli, trusted_cli),
 		}

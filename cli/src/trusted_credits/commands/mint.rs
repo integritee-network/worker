@@ -21,6 +21,7 @@ use crate::{
 };
 
 use crate::{
+	command_utils::hash_from_hex,
 	trusted_command_utils::{get_accountid_from_str, get_trusted_account_info},
 	trusted_operation::send_direct_request,
 };
@@ -39,7 +40,7 @@ pub struct MintCommand {
 	admin: String,
 	/// class id
 	id: u32,
-	/// who to mint to. AccountId in ss58check format
+	/// who to mint to. AccountId in ss58check format or hash commitment 0x prefixed
 	owner: String,
 	/// amount to mint
 	amount: Balance,

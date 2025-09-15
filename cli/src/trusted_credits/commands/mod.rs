@@ -1,6 +1,7 @@
 pub mod claim;
 pub mod create_class;
 pub mod destroy_class;
+pub mod generate_commitment;
 pub mod get_credit_class_info;
 pub mod get_credits;
 pub mod mint;
