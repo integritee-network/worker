@@ -24,6 +24,8 @@ use std::vec::Vec;
 #[cfg(feature = "evm")]
 use crate::evm_helpers::{create_code_hash, evm_create2_address, evm_create_address};
 use crate::{
+	credits,
+	credits::CreditsTrustedCall,
 	guess_the_number,
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
@@ -103,11 +105,7 @@ pub enum TrustedCall {
 	assets_transfer_with_note(AccountId, AccountId, AssetId, Balance, Vec<u8>) = 45,
 	force_unshield_all(AccountId, AccountId, Option<AssetId>) = 46, // (Root, Beneficiary, AssetId or native)
 	guess_the_number(GuessTheNumberTrustedCall) = 50,
-	credits_create_class(AccountId, CreditClassId) = 60,
-	credits_destroy_class(AccountId, CreditClassId) = 61,
-	credits_claim(AccountId, CreditClassId, Hash) = 62,
-	credits_mint(AccountId, CreditClassId, AccountId, Balance, Option<Moment>) = 63,
-	credits_redeem(AccountId, CreditClassId, AccountId, Balance) = 64,
+	credits(CreditsTrustedCall) = 51,
 	#[cfg(feature = "evm")]
 	evm_withdraw(AccountId, H160, Balance) = 90, // (Origin, Address EVM Account, Value)
 	// (Origin, Source, Target, Input, Value, Gas limit, Max fee per gas, Max priority fee per gas, Nonce, Access list)
@@ -179,11 +177,6 @@ impl TrustedCall {
 			Self::assets_unshield(sender_account, ..) => sender_account,
 			Self::assets_shield(sender_account, ..) => sender_account,
 			Self::assets_transfer_with_note(sender_account, ..) => sender_account,
-			Self::credits_create_class(sender_account, ..) => sender_account,
-			Self::credits_destroy_class(sender_account, ..) => sender_account,
-			Self::credits_claim(sender_account, ..) => sender_account,
-			Self::credits_mint(sender_account, ..) => sender_account,
-			Self::credits_redeem(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
 			Self::evm_withdraw(sender_account, ..) => sender_account,
 			#[cfg(feature = "evm")]
@@ -193,6 +186,7 @@ impl TrustedCall {
 			#[cfg(feature = "evm")]
 			Self::evm_create2(sender_account, ..) => sender_account,
 			Self::guess_the_number(call) => call.sender_account(),
+			Self::credits(call) => call.sender_account(),
 			Self::force_unshield_all(sender_account, ..) => sender_account,
 		}
 	}
@@ -755,86 +749,6 @@ where
 				shield_assets(&who, value, asset_id)?;
 				Ok(())
 			},
-			TrustedCall::credits_create_class(who, class_id) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
-				std::println!("⣿STF⣿ 🔄 credits_create_class by ⣿⣿⣿ class_id ⣿⣿⣿",);
-				let deposit =
-					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						/ STF_CREDITS_CLASS_DEPOSIT_DIVIDER;
-				ita_sgx_runtime::CreditsCall::<Runtime>::create_class { id: class_id, deposit }
-					.dispatch_bypass_filter(origin)
-					.map_err(|e| {
-						Self::Error::Dispatch(format!("Credits Create Class error: {:?}", e.error))
-					})?;
-				store_note(&who, self.call, vec![who.clone()])?;
-				Ok(())
-			},
-			TrustedCall::credits_destroy_class(who, class_id) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
-				std::println!("⣿STF⣿ 🔄 credits_destroy_class by ⣿⣿⣿ class_id ⣿⣿⣿",);
-				ita_sgx_runtime::CreditsCall::<Runtime>::destroy_class { id: class_id }
-					.dispatch_bypass_filter(origin)
-					.map_err(|e| {
-						Self::Error::Dispatch(format!("Credits Destroy Class error: {:?}", e.error))
-					})?;
-				store_note(&who, self.call, vec![who.clone()])?;
-				Ok(())
-			},
-			TrustedCall::credits_claim(who, class_id, secret) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
-				std::println!("⣿STF⣿ 🔄 credits_claim by ⣿⣿⣿ class_id ⣿⣿⣿ claim_hash ⣿⣿⣿",);
-				let item_deposit =
-					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						/ STF_CREDITS_ITEM_DEPOSIT_DIVIDER;
-				ita_sgx_runtime::CreditsCall::<Runtime>::claim {
-					id: class_id,
-					secret,
-					item_deposit,
-				}
-				.dispatch_bypass_filter(origin)
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("Credits Claim error: {:?}", e.error))
-				})?;
-				store_note(&who, self.call, vec![who.clone()])?;
-				Ok(())
-			},
-			TrustedCall::credits_mint(who, class_id, owner, amount, maybe_expiry) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
-				std::println!("⣿STF⣿ 🔄 credits_mint by ⣿⣿⣿ class_id ⣿⣿⣿ amount ⣿⣿⣿",);
-				let item_deposit =
-					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						/ STF_CREDITS_ITEM_DEPOSIT_DIVIDER;
-				ita_sgx_runtime::CreditsCall::<Runtime>::mint {
-					id: class_id,
-					owner: owner.clone(),
-					amount,
-					maybe_expiry,
-					item_deposit,
-				}
-				.dispatch_bypass_filter(origin)
-				.map_err(|e| Self::Error::Dispatch(format!("Credits Mint error: {:?}", e.error)))?;
-				store_note(&who, self.call, vec![who.clone(), owner])?;
-				Ok(())
-			},
-			TrustedCall::credits_redeem(who, class_id, owner, amount) => {
-				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
-				std::println!("⣿STF⣿ 🔄 credits_redeem by ⣿⣿⣿ class_id ⣿⣿⣿ amount ⣿⣿⣿",);
-				let item_deposit =
-					MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default())
-						/ STF_CREDITS_ITEM_DEPOSIT_DIVIDER;
-				ita_sgx_runtime::CreditsCall::<Runtime>::redeem {
-					id: class_id,
-					owner: owner.clone(),
-					amount,
-					item_deposit,
-				}
-				.dispatch_bypass_filter(origin)
-				.map_err(|e| {
-					Self::Error::Dispatch(format!("Credits Redeem error: {:?}", e.error))
-				})?;
-				store_note(&who, self.call, vec![who.clone(), owner])?;
-				Ok(())
-			},
 			#[cfg(feature = "evm")]
 			TrustedCall::evm_withdraw(from, address, value) => {
 				debug!("evm_withdraw({}, {}, {})", account_id_to_string(&from), address, value);
@@ -953,6 +867,7 @@ where
 				Ok(())
 			},
 			TrustedCall::guess_the_number(call) => call.execute(calls, shard, node_metadata_repo),
+			TrustedCall::credits(call) => call.execute(calls, shard, node_metadata_repo),
 			TrustedCall::force_unshield_all(enclave_account, who, maybe_asset_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				if let Some(asset_id) = maybe_asset_id {
@@ -1061,6 +976,7 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,
 		TrustedCall::balance_unshield(..) => one / STF_TX_FEE_UNIT_DIVIDER * 3,
 		TrustedCall::guess_the_number(call) => guess_the_number::get_fee_for(call), // asset fees not supported here
+		TrustedCall::credits(call) => credits::get_fee_for(call), // asset fees not supported here
 		TrustedCall::note_bloat(..) => 0,
 		TrustedCall::waste_time(..) => 0,
 		TrustedCall::spam_extrinsics(..) => 0,
@@ -1080,11 +996,6 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::send_note(_, _, note) =>
 			one / STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,
-		TrustedCall::credits_create_class(..) => one / STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::credits_destroy_class(..) => one / STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::credits_claim(..) => one / STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::credits_mint(..) => one / STF_TX_FEE_UNIT_DIVIDER,
-		TrustedCall::credits_redeem(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]
 		TrustedCall::evm_call(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]
