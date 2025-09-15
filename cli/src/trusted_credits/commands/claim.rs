@@ -21,7 +21,8 @@ use crate::{
 };
 
 use crate::{
-	trusted_command_utils::get_trusted_account_info, trusted_operation::send_direct_request,
+	command_utils::hash_from_hex, trusted_command_utils::get_trusted_account_info,
+	trusted_operation::send_direct_request,
 };
 use ita_stf::{credits::CreditsTrustedCall, Getter, TrustedCall, TrustedCallSigned};
 use itp_stf_primitives::{
@@ -55,14 +56,7 @@ impl ClaimCommand {
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)
 			.unwrap_or_default();
-		let secret_bytes = hex::decode(self.secret.trim_start_matches("0x")).map_err(|e| {
-			error!("Decoding secret failed: {}", e);
-			CliError::Parser { msg: "Decoding secret failed".into() }
-		})?;
-		let secret = Hash::try_from(secret_bytes.as_slice()).map_err(|_| {
-			error!("Hash::try_from(secret) failed");
-			CliError::Parser { msg: "Hash conversion failed".into() }
-		})?;
+		let secret = hash_from_hex(&self.secret);
 		let top: TrustedOperation<TrustedCallSigned, Getter> =
 			TrustedCall::credits(CreditsTrustedCall::claim(sender, self.id, secret))
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
