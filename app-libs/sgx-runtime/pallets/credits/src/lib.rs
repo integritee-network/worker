@@ -255,7 +255,11 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight((<T as Config>::WeightInfo::create_class(), DispatchClass::Normal, Pays::Yes)
         )]
-		pub fn create_class(origin: OriginFor<T>, id: CreditClassId, deposit: BalanceOf<T>) -> DispatchResultWithPostInfo {
+		pub fn create_class(
+			origin: OriginFor<T>,
+			id: CreditClassId,
+			deposit: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(!<Credits<T>>::contains_prefix(id), Error::<T>::ClassIdExists);
 			T::Currency::reserve(&sender, deposit)?;
@@ -298,7 +302,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			id: CreditClassId,
 			secret: T::Hash,
-			item_deposit: BalanceOf<T>
+			item_deposit: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
@@ -315,8 +319,8 @@ pub mod pallet {
 			);
 			let expired_count = claimables.expire(<pallet_timestamp::Pallet<T>>::get());
 			if expired_count > 0 {
-				let deposit = item_deposit
-					.saturating_mul(BalanceOf::<T>::from(expired_count as u32));
+				let deposit =
+					item_deposit.saturating_mul(BalanceOf::<T>::from(expired_count as u32));
 				TotalDeposit::<T>::mutate(id, |total| *total = total.saturating_sub(deposit));
 				T::Currency::unreserve(&admin, deposit);
 			}
@@ -336,7 +340,7 @@ pub mod pallet {
 			owner: T::AccountId,
 			amount: BalanceOf<T>,
 			maybe_expiry: Option<T::Moment>,
-			item_deposit: BalanceOf<T>
+			item_deposit: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);
@@ -378,7 +382,7 @@ pub mod pallet {
 			id: CreditClassId,
 			owner: T::AccountId,
 			amount: BalanceOf<T>,
-			item_deposit: BalanceOf<T>
+			item_deposit: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 			ensure!(<Credits<T>>::contains_prefix(id), Error::<T>::InvalidClassId);

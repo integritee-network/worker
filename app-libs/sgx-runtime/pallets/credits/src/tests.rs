@@ -126,7 +126,11 @@ fn create_class_works() {
 		let alice = AccountKeyring::Alice.to_account_id();
 		System::set_block_number(1);
 		let class_id = 42u32;
-		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id, CLASS_DEPOSIT));
+		assert_ok!(Dut::create_class(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			CLASS_DEPOSIT
+		));
 		assert_eq!(last_event::<Test>(), Some(Event::CreatedClass { id: class_id }.into()));
 		assert!(Credits::<Test>::contains_prefix(class_id));
 		assert_eq!(Admin::<Test>::get(class_id), Some(alice.clone()));
@@ -139,7 +143,11 @@ fn create_class_with_existing_id_fails() {
 		let alice = AccountKeyring::Alice.to_account_id();
 		System::set_block_number(1);
 		let class_id = 42u32;
-		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id, CLASS_DEPOSIT));
+		assert_ok!(Dut::create_class(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			CLASS_DEPOSIT
+		));
 		assert_err!(
 			Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id, CLASS_DEPOSIT),
 			Error::<Test>::ClassIdExists
@@ -180,7 +188,12 @@ fn claim_works() {
 
 		Credits::<Test>::insert(class_id, &commitment_account, credits.clone());
 
-		assert_ok!(Dut::claim(RuntimeOrigin::signed(alice.clone()), class_id, secret, ITEM_DEPOSIT));
+		assert_ok!(Dut::claim(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			secret,
+			ITEM_DEPOSIT
+		));
 		assert_eq!(Dut::credits(class_id, &commitment_account).len(), 0);
 		assert_eq!(Dut::credits(class_id, &alice), credits);
 
@@ -264,7 +277,14 @@ fn mint_lacking_deposit_fails() {
 
 		let balance = 100u64;
 		assert_err!(
-			Dut::mint(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), balance, None, ITEM_DEPOSIT),
+			Dut::mint(
+				RuntimeOrigin::signed(alice.clone()),
+				class_id,
+				bob.clone(),
+				balance,
+				None,
+				ITEM_DEPOSIT
+			),
 			BalancesError::<Test>::InsufficientBalance
 		);
 	});
@@ -285,7 +305,14 @@ fn mint_oversize_fails() {
 		Credits::<Test>::insert(class_id, &bob, store);
 
 		assert_err!(
-			Dut::mint(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), 1u64, None, ITEM_DEPOSIT),
+			Dut::mint(
+				RuntimeOrigin::signed(alice.clone()),
+				class_id,
+				bob.clone(),
+				1u64,
+				None,
+				ITEM_DEPOSIT
+			),
 			Error::<Test>::TooManyEntries
 		);
 	});
@@ -333,7 +360,13 @@ fn redeem_works() {
 		assert_eq!(Dut::total_redeemed_by(class_id, &alice), 2 * balance);
 
 		assert_err!(
-			Dut::redeem(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), balance, ITEM_DEPOSIT),
+			Dut::redeem(
+				RuntimeOrigin::signed(alice.clone()),
+				class_id,
+				bob.clone(),
+				balance,
+				ITEM_DEPOSIT
+			),
 			Error::<Test>::InsufficientBalance
 		);
 	});
@@ -346,7 +379,11 @@ fn deposits_work() {
 		let bob = AccountKeyring::Bob.to_account_id();
 		System::set_block_number(1);
 		let class_id = 42u32;
-		assert_ok!(Dut::create_class(RuntimeOrigin::signed(alice.clone()), class_id, CLASS_DEPOSIT));
+		assert_ok!(Dut::create_class(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			CLASS_DEPOSIT
+		));
 		assert_eq!(Balances::reserved_balance(&alice), 10u64);
 
 		assert_ok!(Dut::mint(
@@ -359,10 +396,22 @@ fn deposits_work() {
 		));
 		assert_eq!(Balances::reserved_balance(&alice), 11u64);
 
-		assert_ok!(Dut::redeem(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), 50u64, ITEM_DEPOSIT));
+		assert_ok!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			50u64,
+			ITEM_DEPOSIT
+		));
 		assert_eq!(Balances::reserved_balance(&alice), 11u64);
 
-		assert_ok!(Dut::redeem(RuntimeOrigin::signed(alice.clone()), class_id, bob.clone(), 50u64, ITEM_DEPOSIT));
+		assert_ok!(Dut::redeem(
+			RuntimeOrigin::signed(alice.clone()),
+			class_id,
+			bob.clone(),
+			50u64,
+			ITEM_DEPOSIT
+		));
 		assert_eq!(Balances::reserved_balance(&alice), 10u64);
 		assert_eq!(TotalDeposit::<Test>::get(class_id), 10u64);
 
