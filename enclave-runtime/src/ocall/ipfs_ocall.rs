@@ -15,10 +15,11 @@
 	limitations under the License.
 
 */
-
 use crate::ocall::{ffi, OcallApi};
+use alloc::vec::Vec;
 use frame_support::ensure;
 use itp_ocall_api::{EnclaveIpfsOCallApi, IpfsCid};
+use log::warn;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveIpfsOCallApi for OcallApi {
@@ -42,7 +43,7 @@ impl EnclaveIpfsOCallApi for OcallApi {
 		Ok(cid_buf)
 	}
 
-	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()> {
+	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<Vec<u8>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 
 		let res = unsafe {
@@ -51,7 +52,7 @@ impl EnclaveIpfsOCallApi for OcallApi {
 
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-
-		Ok(())
+		warn!("IPFS read not implemented, returning empty vec");
+		Ok(vec![])
 	}
 }

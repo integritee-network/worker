@@ -142,11 +142,11 @@ pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 }
 
 /// Newtype for IPFS CID
+#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
 pub struct IpfsCid(pub [u8; 46]);
 
 /// trait for o-call related to IPFS
 pub trait EnclaveIpfsOCallApi: Clone + Send + Sync {
 	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<IpfsCid>;
-
-	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()>;
+	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<Vec<u8>>;
 }

@@ -49,7 +49,9 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{
+	EnclaveIpfsOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi,
+};
 use itp_pallet_storage::{SidechainPalletStorage, SidechainPalletStorageKeys};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::key_repository::AccessKey;
@@ -344,7 +346,7 @@ pub(crate) fn send_blocks_and_execute_side_effects<
 where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
-	OCallApi: EnclaveSidechainOCallApi,
+	OCallApi: EnclaveSidechainOCallApi + EnclaveIpfsOCallApi,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
@@ -403,9 +405,11 @@ where
 		})
 		.collect();
 	if !ipfs_blobs_to_add.is_empty() {
-		warn!("Storing data on IPFS from within AURA is not yet supported.");
+		ipfs_blobs_to_add.iter().for_each(|blob| match ocall_api.write_ipfs(blob) {
+			Ok(cid) => info!("SideEffects: Stored blob on IPFS with CID: {:?}", cid),
+			Err(e) => error!("SideEffects: Failed to store blob on IPFS: {:?}", e),
+		});
 	}
-
 	Ok(())
 }
 
