@@ -270,7 +270,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// create a new credit class
+		/// Destroy an existing credit class freeing the deposit.
 		#[pallet::call_index(1)]
 		#[pallet::weight((<T as Config>::WeightInfo::create_class(), DispatchClass::Normal, Pays::Yes)
         )]
