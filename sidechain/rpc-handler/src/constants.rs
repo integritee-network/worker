@@ -20,3 +20,4 @@
 // RPC method names.
 pub const RPC_METHOD_NAME_IMPORT_BLOCKS: &str = "sidechain_importBlock";
 pub const RPC_METHOD_NAME_FETCH_BLOCKS_FROM_PEER: &str = "sidechain_fetchBlocksFromPeer";
+pub const MAX_TOP_SIZE_TO_ENTER_POOL: usize = 102_400; // 100 KB
