@@ -116,7 +116,7 @@ where
 			)
 			.map_err(|e| ConsensusError::Other(e.to_string().into()))?;
 
-		let parentchain_extrinsics = batch_execution_result.get_extrinsic_callbacks();
+		let side_effects = batch_execution_result.get_extrinsic_callbacks();
 
 		let executed_operation_hashes: Vec<_> =
 			batch_execution_result.get_executed_operation_hashes().to_vec();
@@ -157,6 +157,6 @@ where
             max_duration.as_millis(),
         );
 
-		Ok(Proposal { block: sidechain_block, parentchain_effects: parentchain_extrinsics })
+		Ok(Proposal { block: sidechain_block, side_effects })
 	}
 }

@@ -32,7 +32,7 @@ use itp_node_api_metadata::NodeMetadataTrait;
 use itp_sgx_runtime_primitives::types::{Balance, Moment, ShardIdentifier};
 use itp_stf_interface::{ExecuteCall, ExecuteGetter};
 use itp_stf_primitives::error::StfError;
-use itp_types::{parentchain::ParentchainCall, AccountId};
+use itp_types::{AccountId, TrustedCallSideEffect};
 use itp_utils::stringify::account_id_to_string;
 use log::*;
 use sp_std::{sync::Arc, vec, vec::Vec};
@@ -85,7 +85,7 @@ where
 
 	fn execute(
 		self,
-		_calls: &mut Vec<ParentchainCall>,
+		_side_effects: &mut Vec<TrustedCallSideEffect>,
 		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {

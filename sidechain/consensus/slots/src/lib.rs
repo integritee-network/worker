@@ -55,7 +55,7 @@ mod mocks;
 #[cfg(test)]
 mod per_shard_slot_worker_tests;
 
-use itp_types::parentchain::ParentchainCall;
+use itp_types::TrustedCallSideEffect;
 #[cfg(feature = "std")]
 pub use slot_stream::*;
 pub use slots::*;
@@ -65,11 +65,12 @@ pub use slots::*;
 pub struct SlotResult<SignedSidechainBlock: SignedSidechainBlockTrait> {
 	/// The result of a slot operation.
 	pub block: SignedSidechainBlock,
-	/// Parentchain state transitions triggered by sidechain state transitions.
+	/// Side effects of the trusted calls included in the block.
+	/// e.g. Parentchain state transitions triggered by sidechain state transitions.
 	///
 	/// Any sidechain stf that invokes a parentchain stf must not commit its state change
 	/// before the parentchain effect has been finalized.
-	pub parentchain_effects: Vec<ParentchainCall>,
+	pub side_effects: Vec<TrustedCallSideEffect>,
 }
 
 /// A worker that should be invoked at every new slot for a specific shard.
@@ -387,10 +388,7 @@ pub trait SimpleSlotWorker<ParentchainBlock: ParentchainBlockTrait> {
 			latest_integritee_parentchain_header.number(), latest_integritee_parentchain_header.hash()
 		);
 
-		Some(SlotResult {
-			block: proposing.block,
-			parentchain_effects: proposing.parentchain_effects,
-		})
+		Some(SlotResult { block: proposing.block, side_effects: proposing.side_effects })
 	}
 }
 

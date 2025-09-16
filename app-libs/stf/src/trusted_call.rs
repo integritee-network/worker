@@ -65,7 +65,7 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	parentchain::{GenericMortality, ParentchainCall, ParentchainId, ProxyType},
-	Address, Moment, OpaqueCall,
+	Address, Moment, OpaqueCall, TrustedCallSideEffect,
 };
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -302,7 +302,7 @@ where
 
 	fn execute(
 		self,
-		calls: &mut Vec<ParentchainCall>,
+		side_effects: &mut Vec<TrustedCallSideEffect>,
 		shard: &ShardIdentifier,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
@@ -415,7 +415,7 @@ where
 					self.call,
 					vec![account_incognito.clone(), beneficiary],
 				);
-				calls.push(parentchain_call);
+				side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 				Ok(())
 			},
 			TrustedCall::balance_unshield_through_enclave_bridge_pallet(
@@ -463,7 +463,7 @@ where
 				let mortality = get_mortality(ParentchainId::Integritee, 32)
 					.unwrap_or_else(GenericMortality::immortal);
 				let parentchain_call = ParentchainCall::Integritee { call, mortality };
-				calls.push(parentchain_call);
+				side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value, parentchain_id) => {
@@ -619,7 +619,7 @@ where
 						ParentchainId::TargetB =>
 							ParentchainCall::TargetB { call, mortality: mortality.clone() },
 					};
-					calls.push(pcall);
+					side_effects.push(TrustedCallSideEffect::ParentchainCall(pcall));
 				}
 				Ok(())
 			},
@@ -739,7 +739,7 @@ where
 					self.call,
 					vec![account_incognito.clone(), beneficiary],
 				)?;
-				calls.push(parentchain_call);
+				side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 				Ok(())
 			},
 			TrustedCall::assets_shield(enclave_account, who, asset_id, value, parentchain_id) => {
@@ -883,7 +883,8 @@ where
 				info!("Trying to create evm contract with address {:?}", contract_address);
 				Ok(())
 			},
-			TrustedCall::guess_the_number(call) => call.execute(calls, shard, node_metadata_repo),
+			TrustedCall::guess_the_number(call) =>
+				call.execute(side_effects, shard, node_metadata_repo),
 			TrustedCall::force_unshield_all(enclave_account, who, maybe_asset_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				if let Some(asset_id) = maybe_asset_id {
@@ -909,7 +910,7 @@ where
 					store_note(&who, self.call, vec![who.clone()])?;
 					burn_assets(&who, balance, asset_id)?;
 					if unshield_amount > 0 {
-						calls.push(parentchain_call);
+						side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 					}
 				} else {
 					let info = System::account(&who);
@@ -964,7 +965,7 @@ where
 						Self::Error::Dispatch(format!("Balance burn balance error: {:?}", e.error))
 					})?;
 					if unshield_amount > 0 {
-						calls.push(parentchain_call);
+						side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 					}
 				}
 				Ok(())

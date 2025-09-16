@@ -418,7 +418,7 @@ impl From<ParentchainError> for () {
 }
 
 // All info for additionalParam except tip whi
-#[derive(Encode, Debug, Clone, PartialEq, Eq)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub struct GenericMortality {
 	pub era: Era,
 	pub mortality_checkpoint: Option<Hash>,
@@ -431,7 +431,7 @@ impl GenericMortality {
 }
 
 /// a wrapper to target calls to specific parentchains
-#[derive(Encode, Debug, Clone, PartialEq, Eq)]
+#[derive(Encode, Decode, Debug, Clone, PartialEq, Eq)]
 pub enum ParentchainCall {
 	Integritee { call: OpaqueCall, mortality: GenericMortality },
 	TargetA { call: OpaqueCall, mortality: GenericMortality },

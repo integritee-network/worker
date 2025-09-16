@@ -57,14 +57,16 @@ pub type ShardConfig = enclave_bridge_primitives::ShardConfig<AccountId>;
 pub type UpgradableShardConfig =
 	enclave_bridge_primitives::UpgradableShardConfig<AccountId, BlockNumber>;
 
+use crate::parentchain::ParentchainCall;
 pub use enclave_bridge_primitives::Request;
 pub use teerex_primitives::{
 	EnclaveFingerprint, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData, SgxStatus,
 };
+
 pub type Enclave = MultiEnclave<Vec<u8>>;
 
 /// Simple blob to hold an encoded call
-#[derive(Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Decode, Debug, PartialEq, Eq, Clone, Default)]
 pub struct OpaqueCall(pub Vec<u8>);
 
 impl OpaqueCall {
@@ -131,6 +133,12 @@ pub enum WorkerResponse<H: HeaderTrait, V: Encode + Decode> {
 	ChainStorage(Vec<u8>, Option<V>, Option<Vec<Vec<u8>>>), // (storage_key, storage_value, storage_proof)
 	LatestParentchainHeaderUnverified(H),
 	NextNonce(Option<Nonce>),
+}
+
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum TrustedCallSideEffect {
+	ParentchainCall(ParentchainCall),
+	IpfsAdd(Vec<u8>),
 }
 
 impl<H: HeaderTrait> From<WorkerResponse<H, Vec<u8>>> for StorageEntry<Vec<u8>> {
