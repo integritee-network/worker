@@ -167,9 +167,15 @@ where
 	}
 }
 
-pub fn get_fee_for(_tc: &CreditsTrustedCall) -> Balance {
+pub fn get_fee_for(tc: &CreditsTrustedCall) -> Balance {
 	let one = MinimalChainSpec::one_unit(shielding_target_genesis_hash().unwrap_or_default());
-	one / crate::STF_TX_FEE_UNIT_DIVIDER
+	match tc {
+		CreditsTrustedCall::create_class(_, _) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+		CreditsTrustedCall::destroy_class(_, _) => 10 * one / crate::STF_TX_FEE_UNIT_DIVIDER, //TODO: properly benchmark based on issuance fanout
+		CreditsTrustedCall::claim(_, _, _) => 0, // claim has to be free because we don't expect credits holders to hold other assets
+		CreditsTrustedCall::mint(_, _, _, _, _) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+		CreditsTrustedCall::redeem(_, _, _, _) => one / crate::STF_TX_FEE_UNIT_DIVIDER,
+	}
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
