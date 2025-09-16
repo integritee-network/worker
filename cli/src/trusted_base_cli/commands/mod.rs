@@ -14,6 +14,7 @@ pub mod get_total_issuance;
 pub mod get_undistributed_fees;
 pub mod nonce;
 pub mod note_bloat;
+pub mod send_note;
 pub mod spam_extrinsics;
 pub mod transfer;
 pub mod unshield_funds;

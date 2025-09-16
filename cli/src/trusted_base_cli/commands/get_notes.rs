@@ -26,7 +26,7 @@ use ita_stf::{
 	TrustedGetter,
 };
 use itp_stf_primitives::types::{KeyPair, TrustedOperation};
-use itp_types::Moment;
+use itp_types::{AccountId, Moment};
 use log::error;
 use pallet_notes::{BucketIndex, TimestampedTrustedNote, TrustedNote};
 use sp_core::Pair;
@@ -42,8 +42,9 @@ pub struct GetNotesCommand {
 impl GetNotesCommand {
 	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
 		let who = get_pair_from_str(cli, trusted_args, self.account.as_str());
+		let who_accountid: AccountId = who.public().into();
 		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
-			TrustedGetter::notes_for(who.public().into(), self.bucket_index)
+			TrustedGetter::notes_for(who_accountid.clone(), self.bucket_index)
 				.sign(&KeyPair::Sr25519(Box::new(who))),
 		));
 		let notes = perform_trusted_operation::<Vec<TimestampedTrustedNote<Moment>>>(
@@ -104,6 +105,22 @@ impl GetNotesCommand {
 									sender, guess,
 								);
 							},
+							TrustedCall::send_note(from, to, note) =>
+								if from == who_accountid {
+									println!(
+										"[{}] Message to: {:?}: {}",
+										datetime_str,
+										to,
+										String::from_utf8_lossy(note.as_ref())
+									);
+								} else {
+									println!(
+										"[{}] Message from: {:?}: {}",
+										datetime_str,
+										from,
+										String::from_utf8_lossy(note.as_ref())
+									);
+								},
 							_ => println!("[{}] {:?}", datetime_str, call),
 						}
 					} else {
