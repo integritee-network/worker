@@ -30,6 +30,7 @@ use crate::{
 		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
 		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
+	relayed_note::{ConversationId, RelayedNoteRequest, RelayedNoteRetreivalInfo},
 	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
 	STF_SHIELDING_FEE_AMOUNT_DIVIDER, STF_TX_FEE_UNIT_DIVIDER,
 };
@@ -43,9 +44,9 @@ use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use ita_sgx_runtime::{
-	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, ShardManagement,
-	System,
+	Assets, MaxNoteSize, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
+	ParentchainInstanceTargetB, ParentchainIntegritee, Runtime, SessionProxyCredentials,
+	SessionProxyRole, ShardManagement, System,
 };
 pub use ita_sgx_runtime::{Balance, Index};
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
@@ -75,7 +76,7 @@ use sp_core::{
 	ed25519,
 };
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
-use std::{format, prelude::v1::*, sync::Arc, vec};
+use std::{cmp::min, format, prelude::v1::*, sync::Arc, vec};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -95,6 +96,8 @@ pub enum TrustedCall {
 	waste_time(AccountId, u32) = 11,
 	spam_extrinsics(AccountId, u32, ParentchainId) = 12,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
+	send_relayed_note(AccountId, AccountId, ConversationId, RelayedNoteRequest) = 21,
+	send_relayed_note_stripped(AccountId, AccountId, ConversationId, RelayedNoteRetreivalInfo) = 22, // without payload
 	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
 	assets_transfer(AccountId, AccountId, AssetId, Balance) = 42,
 	assets_unshield(AccountId, AccountId, AssetId, Balance, ShardIdentifier) = 43,
@@ -165,6 +168,8 @@ impl TrustedCall {
 				sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
 			Self::send_note(sender_account, ..) => sender_account,
+			Self::send_relayed_note(sender_account, ..) => sender_account,
+			Self::send_relayed_note_stripped(sender_account, ..) => sender_account,
 			Self::spam_extrinsics(sender_account, ..) => sender_account,
 			Self::add_session_proxy(sender_account, ..) => sender_account,
 			Self::note_bloat(sender_account, ..) => sender_account,
@@ -619,8 +624,25 @@ where
 				Ok(())
 			},
 			TrustedCall::send_note(from, to, _note) => {
-				let _origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 send_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
+				store_note(&from, self.call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::send_relayed_note(from, to, conversation_id, _blob) => {
+				std::println!("⣿STF⣿ 🔄 send_relayed_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
+				let retreival_info =
+					RelayedNoteRetreivalInfo::Undeclared { encryption_key: [0u8; 32] };
+				let stripped_call = TrustedCall::send_relayed_note_stripped(
+					from.clone(),
+					to.clone(),
+					conversation_id,
+					retreival_info,
+				);
+				store_note(&from, stripped_call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::send_relayed_note_stripped(from, to, _conversation_id, _retreival) => {
+				std::println!("⣿STF⣿ 🔄 send_relayed_note_stripped from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
 				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
 			},
@@ -915,7 +937,8 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER * 3,
+						) / STF_TX_FEE_UNIT_DIVIDER
+							* 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(
@@ -988,6 +1011,23 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::send_note(_, _, note) =>
 			one / STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,
+		TrustedCall::send_relayed_note(_, _, _, blob) =>
+			one / STF_TX_FEE_UNIT_DIVIDER
+				+ one.saturating_mul(Balance::from(min(
+					MaxNoteSize::get(),
+					blob.encoded_size() as u32,
+				))) / STF_BYTE_FEE_UNIT_DIVIDER,
+		TrustedCall::send_relayed_note_stripped(_, _, _, retrieval_info) => {
+			let byte_fee = match retrieval_info {
+				RelayedNoteRetreivalInfo::Undeclared { .. } => 32 * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for undeclared
+				RelayedNoteRetreivalInfo::Ipfs { .. } =>
+					(46 + 32) * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for ipfs
+				RelayedNoteRetreivalInfo::Here { msg } =>
+					(one.saturating_mul(Balance::from(msg.len() as u32)))
+						/ STF_BYTE_FEE_UNIT_DIVIDER,
+			};
+			byte_fee + one / STF_TX_FEE_UNIT_DIVIDER
+		},
 		#[cfg(feature = "evm")]
 		TrustedCall::evm_call(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]
