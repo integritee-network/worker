@@ -330,7 +330,12 @@ pub mod pallet {
 			Self::deposit_event(Event::Claimed { id, commitment });
 			Ok(().into())
 		}
-
+   /// Mint credits to `owner`. New credits are created increasing the total deposit.
+   ///
+   /// Can only be called by the admin of the credit class.
+   ///
+   /// The `owner` may be a commitment account derived by a secret so that the credits can later
+   /// claimed unlinkably.
 		#[pallet::call_index(3)]
 		#[pallet::weight((<T as Config>::WeightInfo::mint(), DispatchClass::Normal, Pays::Yes)
         )]
