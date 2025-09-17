@@ -173,7 +173,10 @@ mod tests {
 	use super::*;
 	use itp_sgx_externalities::SgxExternalities;
 	use itp_test::mock::stf_mock::{GetterMock, TrustedCallSignedMock};
-	use itp_types::{parentchain::GenericMortality, OpaqueCall};
+	use itp_types::{
+		parentchain::{GenericMortality, ParentchainCall},
+		OpaqueCall,
+	};
 	use sp_runtime::generic::Era;
 
 	#[test]

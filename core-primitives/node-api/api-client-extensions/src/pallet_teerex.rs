@@ -18,7 +18,7 @@
 use crate::ApiResult;
 use itp_api_client_types::{traits::GetStorage, Api, Config, Request};
 use itp_types::{
-	AccountId, IpfsHash, MultiEnclave, ShardIdentifier, ShardSignerStatus, ShardStatus,
+	AccountId, IpfsCid, MultiEnclave, ShardIdentifier, ShardSignerStatus, ShardStatus,
 };
 use log::error;
 
@@ -51,7 +51,7 @@ pub trait PalletTeerexApi {
 		&self,
 		shard: &ShardIdentifier,
 		at_block: Option<Self::Hash>,
-	) -> ApiResult<Option<IpfsHash>>;
+	) -> ApiResult<Option<IpfsCid>>;
 }
 
 impl<RuntimeConfig, Client> PalletTeerexApi for Api<RuntimeConfig, Client>
@@ -119,7 +119,7 @@ where
 		&self,
 		shard: &ShardIdentifier,
 		at_block: Option<Self::Hash>,
-	) -> ApiResult<Option<IpfsHash>> {
+	) -> ApiResult<Option<IpfsCid>> {
 		self.get_storage_map(TEEREX, "LatestIPFSHash", shard, at_block)
 	}
 }

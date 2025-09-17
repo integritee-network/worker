@@ -20,11 +20,11 @@ use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
 use itc_parentchain::primitives::ParentchainId;
 use itp_ocall_api::{
-	EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, IpfsCid, Result,
+	EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
 };
 use itp_types::{
-	storage::StorageEntryVerified, BlockHash, Header as ParentchainHeader, ShardIdentifier,
-	WorkerRequest, WorkerResponse, H256,
+	storage::StorageEntryVerified, BlockHash, Header as ParentchainHeader, IpfsCid,
+	ShardIdentifier, WorkerRequest, WorkerResponse, H256,
 };
 use its_primitives::types::block::SignedBlock as SignedSidechainBlockType;
 use its_sidechain::consensus_common::BlockImport;
@@ -127,7 +127,7 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 
 impl EnclaveIpfsOCallApi for ProposeToImportOCallApi {
 	fn write_ipfs(&self, _encoded_state: &[u8]) -> SgxResult<IpfsCid> {
-		Ok(IpfsCid([0u8; 46]))
+		Ok(IpfsCid::try_from("QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr").unwrap())
 	}
 	fn read_ipfs(&self, _cid: &IpfsCid) -> SgxResult<Vec<u8>> {
 		Ok(vec![])

@@ -17,6 +17,7 @@
 */
 
 use itp_enclave_api::remote_attestation::QveReport;
+use itp_types::IpfsCid;
 use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;
@@ -240,15 +241,12 @@ pub trait SidechainBridge {
 	) -> OCallBridgeResult<Vec<u8>>;
 }
 
-/// type for IPFS
-pub type Cid = [u8; 46];
-
 /// Trait for all the OCalls related to IPFS
 #[cfg_attr(test, automock)]
 pub trait IpfsBridge {
-	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<Cid>;
+	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid>;
 
-	fn read_from_ipfs(&self, cid: Cid) -> OCallBridgeResult<()>;
+	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()>;
 }
 
 /// Trait for the direct invocation OCalls

@@ -30,7 +30,7 @@ use crate::{
 		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
 		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
-	relayed_note::{ConversationId, RelayedNoteRequest, RelayedNoteRetreivalInfo},
+	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest, RelayedNoteRetreivalInfo},
 	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
 	STF_SHIELDING_FEE_AMOUNT_DIVIDER, STF_TX_FEE_UNIT_DIVIDER,
 };
@@ -67,7 +67,7 @@ use itp_types::{
 	parentchain::{GenericMortality, ParentchainCall, ParentchainId, ProxyType},
 	Address, Moment, OpaqueCall, TrustedCallSideEffect,
 };
-use itp_utils::stringify::account_id_to_string;
+use itp_utils::{stringify::account_id_to_string, IpfsCid};
 use log::*;
 use pallet_notes::{TimestampedTrustedNote, TrustedNote};
 use sp_core::{
@@ -628,10 +628,38 @@ where
 				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
 			},
-			TrustedCall::send_relayed_note(from, to, conversation_id, _blob) => {
+			TrustedCall::send_relayed_note(from, to, conversation_id, request) => {
 				std::println!("⣿STF⣿ 🔄 send_relayed_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
-				let retreival_info =
-					RelayedNoteRetreivalInfo::Undeclared { encryption_key: [0u8; 32] };
+				let retreival_info = if (self.call.encoded_size() <= MaxNoteSize::get() as usize)
+					&& (request.allow_onchain_fallback)
+				{
+					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg.clone() })
+				} else if (request.relay_type == NoteRelayType::Undeclared)
+					&& request.maybe_encryption_key.is_some()
+				{
+					Ok(RelayedNoteRetreivalInfo::Undeclared {
+						encryption_key: request
+							.maybe_encryption_key
+							.expect("is_some has been tested previously"),
+					})
+				} else if request.relay_type == NoteRelayType::Here
+					&& request.msg.len() <= MaxNoteSize::get() as usize
+				{
+					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg.clone() })
+				} else if request.relay_type == NoteRelayType::Ipfs {
+					//todo: proxy re-encryption for IPFS content. now plaintext
+					let cid = IpfsCid::from_content_bytes(&request.msg)
+						.map_err(|e| StfError::Dispatch(format!("IPFS error: {:?}", e)))?;
+					info!("storing relayed note to IPFS with CID {:?}", cid);
+					side_effects.push(TrustedCallSideEffect::IpfsAdd(request.msg));
+					Ok(RelayedNoteRetreivalInfo::Ipfs {
+						cid,
+						encryption_key: request.maybe_encryption_key.unwrap_or([0u8; 32]),
+					})
+				} else {
+					Err(StfError::Dispatch("Invalid relayed note request".into()))
+				}?;
+
 				let stripped_call = TrustedCall::send_relayed_note_stripped(
 					from.clone(),
 					to.clone(),

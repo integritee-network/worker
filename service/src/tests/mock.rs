@@ -22,6 +22,7 @@ use itp_types::{
 	parentchain::BlockNumber, AccountId, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData,
 	SgxStatus, ShardIdentifier, H256 as Hash,
 };
+use itp_utils::IpfsCid;
 
 pub struct TestNodeApi;
 
@@ -93,7 +94,7 @@ impl PalletTeerexApi for TestNodeApi {
 		&self,
 		_: &ShardIdentifier,
 		_at_block: Option<Hash>,
-	) -> ApiResult<Option<[u8; 46]>> {
+	) -> ApiResult<Option<IpfsCid>> {
 		unreachable!()
 	}
 }

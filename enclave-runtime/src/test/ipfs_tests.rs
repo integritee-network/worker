@@ -16,27 +16,30 @@
 
 */
 
-use crate::{ipfs::IpfsContent, ocall::OcallApi};
+use crate::ocall::OcallApi;
 use itp_ocall_api::EnclaveIpfsOCallApi;
+use itp_utils::IpfsCid;
 use log::*;
 use std::{fs::File, io::Read, vec::Vec};
 
 #[allow(unused)]
-fn test_ocall_read_write_ipfs() {
+pub fn test_ocall_read_write_ipfs() {
 	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
 	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
 
-	let cid = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
+	let expected_cid = IpfsCid::from_content_bytes(&enc_state).unwrap();
 
-	OcallApi.read_ipfs(&cid).unwrap();
+	let returned_cid = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
+	assert_eq!(expected_cid, returned_cid);
 
-	let cid_str = std::str::from_utf8(&cid.0).unwrap();
+	OcallApi.read_ipfs(&returned_cid).unwrap();
+
+	let cid_str = format!("{:?}", returned_cid);
 	let mut f = File::open(cid_str).unwrap();
 	let mut content_buf = Vec::new();
 	f.read_to_end(&mut content_buf).unwrap();
 	info!("reading file {:?} of size {} bytes", f, &content_buf.len());
 
-	let mut ipfs_content = IpfsContent::new(cid_str, content_buf);
-	let verification = ipfs_content.verify();
-	assert!(verification.is_ok());
+	let file_cid = IpfsCid::from_content_bytes(&content_buf).unwrap();
+	assert_eq!(expected_cid, file_cid);
 }

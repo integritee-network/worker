@@ -16,7 +16,9 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Bridge, Cid, IpfsBridge};
+use crate::ocall_bridge::bridge_api::{Bridge, IpfsBridge};
+use codec::{Decode, Encode};
+use itp_utils::IpfsCid;
 use log::*;
 use sgx_types::sgx_status_t;
 use std::{slice, sync::Arc};
@@ -50,7 +52,10 @@ fn write_ipfs(
 
 	return match ipfs_api.write_to_ipfs(state) {
 		Ok(r) => {
-			cid.clone_from_slice(&r);
+			cid.fill(0);
+			let encoded = r.encode();
+			let len = encoded.len().min(cid.len());
+			cid[..len].copy_from_slice(&encoded[..len]);
 			sgx_status_t::SGX_SUCCESS
 		},
 		Err(e) => {
@@ -61,16 +66,18 @@ fn write_ipfs(
 }
 
 fn read_ipfs(cid: *const u8, cid_size: u32, ipfs_api: Arc<dyn IpfsBridge>) -> sgx_status_t {
-	let _cid = unsafe { slice::from_raw_parts(cid, cid_size as usize) };
+	let mut cid_raw = unsafe { slice::from_raw_parts(cid, cid_size as usize) };
 
-	let mut cid: Cid = [0; 46];
-	cid.clone_from_slice(_cid);
-
-	match ipfs_api.read_from_ipfs(cid) {
-		Ok(_) => sgx_status_t::SGX_SUCCESS,
-		Err(e) => {
-			error!("OCall to read_ipfs failed: {:?}", e);
-			sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
+	if let Ok(cid) = IpfsCid::decode(&mut cid_raw) {
+		match ipfs_api.read_from_ipfs(cid) {
+			Ok(_) => sgx_status_t::SGX_SUCCESS,
+			Err(e) => {
+				error!("OCall to read_ipfs failed: {:?}", e);
+				sgx_status_t::SGX_ERROR_UNEXPECTED
+			},
+		}
+	} else {
+		error!("Decoding CID failed");
+		sgx_status_t::SGX_ERROR_UNEXPECTED
 	}
 }

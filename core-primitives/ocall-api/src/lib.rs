@@ -25,7 +25,7 @@ use core::result::Result as StdResult;
 use derive_more::{Display, From};
 use itp_storage::Error as StorageError;
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, ShardIdentifier,
+	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, IpfsCid, ShardIdentifier,
 	TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
@@ -140,10 +140,6 @@ pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 		shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>>;
 }
-
-/// Newtype for IPFS CID
-#[derive(Debug, Clone, PartialEq, Eq, Encode, Decode)]
-pub struct IpfsCid(pub [u8; 46]);
 
 /// trait for o-call related to IPFS
 pub trait EnclaveIpfsOCallApi: Clone + Send + Sync {

@@ -22,7 +22,10 @@ use crate::{
 	trusted_operation::{perform_trusted_operation, send_direct_request},
 	Cli, CliResult, CliResultOk,
 };
-use ita_stf::{Getter, TrustedCall, TrustedCallSigned};
+use ita_stf::{
+	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest},
+	Getter, TrustedCall, TrustedCallSigned,
+};
 use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
@@ -43,6 +46,14 @@ pub struct SendNoteCommand {
 	/// session proxy who can sign on behalf of the account
 	#[clap(long)]
 	session_proxy: Option<String>,
+
+	/// Instruct the worker enclave to encrypt and relay the message via IPFS instead of onchain
+	#[clap(long)]
+	ipfs_proxy: bool,
+
+	/// specify conversation ID
+	#[clap(long)]
+	conversation_id: Option<ConversationId>,
 }
 
 impl SendNoteCommand {
@@ -56,10 +67,22 @@ impl SendNoteCommand {
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)
 			.unwrap_or_default();
-		let top: TrustedOperation<TrustedCallSigned, Getter> =
+		let top: TrustedOperation<TrustedCallSigned, Getter> = if self.ipfs_proxy {
+			let request = RelayedNoteRequest {
+				allow_onchain_fallback: false,
+				relay_type: NoteRelayType::Ipfs,
+				msg: self.message.as_bytes().to_vec(),
+				maybe_encryption_key: None,
+			};
+			let conversation_id = self.conversation_id.unwrap_or_default();
+			TrustedCall::send_relayed_note(sender, to, conversation_id, request)
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct)
+		} else {
 			TrustedCall::send_note(sender, to, self.message.as_bytes().to_vec())
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
-				.into_trusted_operation(trusted_args.direct);
+				.into_trusted_operation(trusted_args.direct)
+		};
 
 		if trusted_args.direct {
 			Ok(send_direct_request(cli, trusted_args, &top).map(|_| CliResultOk::None)?)

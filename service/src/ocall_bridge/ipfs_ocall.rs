@@ -16,9 +16,10 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Cid, IpfsBridge, OCallBridgeError, OCallBridgeResult};
+use crate::ocall_bridge::bridge_api::{IpfsBridge, OCallBridgeError, OCallBridgeResult};
 use futures::TryStreamExt;
 use ipfs_api::IpfsClient;
+use itp_utils::IpfsCid;
 use log::*;
 use std::{
 	fs::File,
@@ -30,19 +31,19 @@ use std::{
 pub struct IpfsOCall;
 
 impl IpfsBridge for IpfsOCall {
-	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<Cid> {
+	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
 		debug!("    Entering ocall_write_ipfs");
-		Ok(write_to_ipfs(data))
+		write_to_ipfs(data)
 	}
 
-	fn read_from_ipfs(&self, cid: Cid) -> OCallBridgeResult<()> {
+	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()> {
 		debug!("Entering ocall_read_ipfs");
 
-		let result = read_from_ipfs(cid);
+		let result = read_from_ipfs(&cid);
 		match result {
 			Ok(res) => {
-				let filename = str::from_utf8(&cid).unwrap();
-				create_file(filename, &res).map_err(OCallBridgeError::IpfsError)
+				let filename = format!("{:?}", cid);
+				create_file(&filename, &res).map_err(OCallBridgeError::IpfsError)
 			},
 			Err(_) => Err(OCallBridgeError::IpfsError("failed to read from IPFS".to_string())),
 		}
@@ -59,14 +60,16 @@ fn create_file(filename: &str, result: &[u8]) -> Result<(), String> {
 }
 
 #[tokio::main]
-async fn write_to_ipfs(data: &'static [u8]) -> Cid {
+async fn write_to_ipfs(data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
 	// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
 	// If not found, tries to connect to `localhost:5001`.
 	let client = IpfsClient::default();
-
 	match client.version().await {
 		Ok(version) => info!("version: {:?}", version.version),
-		Err(e) => eprintln!("error getting version: {}", e),
+		Err(e) => {
+			error!("error getting version: {}", e);
+			return Err(OCallBridgeError::IpfsError(format!("error getting version: {}", e)));
+		},
 	}
 
 	let datac = Cursor::new(data);
@@ -74,27 +77,38 @@ async fn write_to_ipfs(data: &'static [u8]) -> Cid {
 
 	match client.add(datac).await {
 		Ok(res) => {
-			info!("Result Hash {}", res.hash);
+			info!("Result IpfsCid {}", res.hash);
 			tx.send(res.hash.into_bytes()).unwrap();
 		},
-		Err(e) => eprintln!("error adding file: {}", e),
+		Err(e) => {
+			error!("error adding file: {}", e);
+			return Err(OCallBridgeError::IpfsError(format!("error adding file: {}", e)));
+		},
 	}
-	let mut cid: Cid = [0; 46];
-	cid.clone_from_slice(&rx.recv().unwrap());
-	cid
+	rx.recv()
+		.map_err(|e| OCallBridgeError::IpfsError(format!("error receiving cid: {}", e)))
+		.and_then(|cid_str| {
+			str::from_utf8(&cid_str)
+				.map_err(|e| OCallBridgeError::IpfsError(format!("invalid UTF-8 in cid: {}", e)))
+				.and_then(|cid_utf8| {
+					IpfsCid::try_from(cid_utf8).map_err(|e| {
+						OCallBridgeError::IpfsError(format!("invalid IpfsCid: {:?}", e))
+					})
+				})
+		})
 }
 
 #[tokio::main]
-pub async fn read_from_ipfs(cid: Cid) -> Result<Vec<u8>, String> {
+pub async fn read_from_ipfs(cid: &IpfsCid) -> Result<Vec<u8>, String> {
 	// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
 	// If not found, tries to connect to `localhost:5001`.
 	let client = IpfsClient::default();
-	let h = str::from_utf8(&cid).unwrap();
+	let h = format!("{:?}", cid);
 
 	info!("Fetching content from: {}", h);
 
 	client
-		.cat(h)
+		.cat(&h)
 		.map_ok(|chunk| chunk.to_vec())
 		.map_err(|e| e.to_string())
 		.try_concat()
