@@ -25,6 +25,7 @@
 #![cfg_attr(target_env = "sgx", feature(rustc_private))]
 
 extern crate alloc;
+extern crate core;
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
 extern crate sgx_tstd as std;
 

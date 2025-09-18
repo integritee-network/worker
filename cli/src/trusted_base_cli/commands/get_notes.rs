@@ -29,7 +29,7 @@ use itp_stf_primitives::types::{KeyPair, TrustedOperation};
 use itp_types::{AccountId, Moment};
 use log::error;
 use pallet_notes::{BucketIndex, TimestampedTrustedNote, TrustedNote};
-use sp_core::Pair;
+use sp_core::{crypto::Ss58Codec, Pair};
 
 #[derive(Parser)]
 pub struct GetNotesCommand {
@@ -108,19 +108,43 @@ impl GetNotesCommand {
 							TrustedCall::send_note(from, to, note) =>
 								if from == who_accountid {
 									println!(
-										"[{}] Message to: {:?}: {}",
+										"[{}] Message to: {}: {}",
 										datetime_str,
-										to,
+										to.to_ss58check(),
 										String::from_utf8_lossy(note.as_ref())
 									);
 								} else {
 									println!(
-										"[{}] Message from: {:?}: {}",
+										"[{}] Message from: {}: {}",
 										datetime_str,
-										from,
+										from.to_ss58check(),
 										String::from_utf8_lossy(note.as_ref())
 									);
 								},
+							TrustedCall::send_relayed_note_stripped(
+								from,
+								to,
+								conversation_id,
+								retreival,
+							) =>
+								if from == who_accountid {
+									println!(
+										"[{}] Message in conversation {} to: {}: {:?}",
+										datetime_str,
+										conversation_id,
+										to.to_ss58check(),
+										retreival
+									);
+								} else {
+									println!(
+										"[{}] Message in conversation {} from: {}: {:?}",
+										datetime_str,
+										conversation_id,
+										from.to_ss58check(),
+										retreival
+									);
+								},
+
 							_ => println!("[{}] {:?}", datetime_str, call),
 						}
 					} else {

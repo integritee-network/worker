@@ -78,6 +78,17 @@ impl SendNoteCommand {
 			TrustedCall::send_relayed_note(sender, to, conversation_id, request)
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
 				.into_trusted_operation(trusted_args.direct)
+		} else if self.conversation_id.is_some() {
+			let request = RelayedNoteRequest {
+				allow_onchain_fallback: false,
+				relay_type: NoteRelayType::Here,
+				msg: self.message.as_bytes().to_vec(),
+				maybe_encryption_key: None,
+			};
+			let conversation_id = self.conversation_id.unwrap_or_default();
+			TrustedCall::send_relayed_note(sender, to, conversation_id, request)
+				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
+				.into_trusted_operation(trusted_args.direct)
 		} else {
 			TrustedCall::send_note(sender, to, self.message.as_bytes().to_vec())
 				.sign(&KeyPair::Sr25519(Box::new(signer)), nonce, &mrenclave, &shard)
