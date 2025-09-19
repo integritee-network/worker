@@ -23,6 +23,7 @@ use log::*;
 use std::{fs::File, io::Read, vec::Vec};
 
 #[allow(unused)]
+/// this test neeeds an ipfs node running and configured with cli args. here for reference but may never be called
 pub fn test_ocall_read_write_ipfs() {
 	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
 	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];

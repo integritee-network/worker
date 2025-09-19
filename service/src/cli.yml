@@ -107,6 +107,18 @@ args:
       long: clean-reset
       short: c
       help: Cleans and purges any previous state and key files and generates them anew before starting.
+  - ipfs-api-url:
+      long: ipfs-api-url
+      takes_value: true
+      required: false
+      help:
+        Set the IPFS API endpoint to connect to a local or remote IPFS node. Use http(s) without api path.
+  - ipfs-api-auth:
+      long: ipfs-api-auth
+      takes_value: true
+      required: false
+      help:
+        Set the IPFS API basic auth credentials in the form username:password.
 
 subcommands:
   - run:

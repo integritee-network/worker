@@ -63,6 +63,10 @@ pub struct Config {
 	metrics_server_port: String,
 	/// Port for the untrusted HTTP server (e.g. for `is_initialized`)
 	untrusted_http_port: String,
+	/// IPFS API endpoint
+	ipfs_api_url: Option<String>,
+	/// IPFS API authentication
+	ipfs_api_auth: Option<String>,
 	/// Data directory used by all the services.
 	data_dir: PathBuf,
 	/// Config of the 'run' subcommand
@@ -88,6 +92,8 @@ impl Config {
 		enable_metrics_server: bool,
 		metrics_server_port: String,
 		untrusted_http_port: String,
+		ipfs_api_url: Option<String>,
+		ipfs_api_auth: Option<String>,
 		data_dir: PathBuf,
 		run_config: Option<RunConfig>,
 	) -> Self {
@@ -108,6 +114,8 @@ impl Config {
 			enable_metrics_server,
 			metrics_server_port,
 			untrusted_http_port,
+			ipfs_api_url,
+			ipfs_api_auth,
 			data_dir,
 			run_config,
 		}
@@ -204,6 +212,14 @@ impl Config {
 		self.untrusted_http_port.parse::<u16>().ok()
 	}
 
+	pub fn ipfs_api_url(&self) -> Option<String> {
+		self.ipfs_api_url.clone()
+	}
+
+	pub fn ipfs_api_auth(&self) -> Option<String> {
+		self.ipfs_api_auth.clone()
+	}
+
 	pub fn with_test_data_dir(&self) -> Self {
 		let mut new = self.clone();
 		new.data_dir.push("test");
@@ -220,6 +236,8 @@ impl From<&ArgMatches<'_>> for Config {
 		let metrics_server_port = m.value_of("metrics-port").unwrap_or(DEFAULT_METRICS_PORT);
 		let untrusted_http_port =
 			m.value_of("untrusted-http-port").unwrap_or(DEFAULT_UNTRUSTED_HTTP_PORT);
+		let ipfs_api_url = m.value_of("ipfs-api-url");
+		let ipfs_api_auth = m.value_of("ipfs-api-auth");
 
 		let data_dir = match m.value_of("data-dir") {
 			Some(d) => {
@@ -261,6 +279,8 @@ impl From<&ArgMatches<'_>> for Config {
 			is_metrics_server_enabled,
 			metrics_server_port.to_string(),
 			untrusted_http_port.to_string(),
+			ipfs_api_url.map(str::to_string),
+			ipfs_api_auth.map(str::to_string),
 			data_dir,
 			run_config,
 		)

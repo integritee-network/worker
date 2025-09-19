@@ -298,6 +298,12 @@ version = "0.2.6"
 source = "git+https://github.com/whalelephant/base-x-rs?branch=no_std#906c9ac59282ff5a2eec86efd25d50ad9927b147"
 
 [[package]]
+name = "base-x"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cbbc9d0964165b47557570cce6c952866c2678457aca742aafc9fb771d30270"
+
+[[package]]
 name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -687,7 +693,7 @@ name = "cid"
 version = "0.5.1"
 source = "git+https://github.com/whalelephant/rust-cid?branch=nstd#cca87467c46106c801ca3727500477258b0f13b0"
 dependencies = [
- "multibase",
+ "multibase 0.8.0",
  "multihash 0.11.4",
  "unsigned-varint 0.5.1",
 ]
@@ -769,12 +775,13 @@ dependencies = [
 
 [[package]]
 name = "common-multipart-rfc7578"
-version = "0.3.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76d0a7a42b9c13f2b2a1a7e64b949a19bcb56a49b190076e60261001ceaa5304"
+checksum = "5baee326bc603965b0f26583e1ecd7c111c41b49bd92a344897476a352798869"
 dependencies = [
  "bytes 1.4.0",
- "futures 0.3.28",
+ "futures-core 0.3.28",
+ "futures-util 0.3.28",
  "http 0.2.9",
  "mime",
  "mime_guess",
@@ -834,6 +841,15 @@ name = "core-foundation-sys"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
+
+[[package]]
+name = "core2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b49ba7ef1ad6107f8824dbe97de947cbaac53c44e7f9756a1fba0d37c1eec505"
+dependencies = [
+ "memchr 2.6.3",
+]
 
 [[package]]
 name = "cpp_demangle"
@@ -1039,6 +1055,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
 
 [[package]]
+name = "data-encoding-macro"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c904b33cc60130e1aeea4956ab803d08a3f4a0ca82d64ed757afac3891f2bb99"
+dependencies = [
+ "data-encoding",
+ "data-encoding-macro-internal",
+]
+
+[[package]]
+name = "data-encoding-macro-internal"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fdf3fce3ce863539ec1d7fd1b6dcc3c645663376b43ed376bbf887733e4f772"
+dependencies = [
+ "data-encoding",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "der"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1136,6 +1172,15 @@ name = "dirs"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30baa043103c9d0c2a57cf537cc2f35623889dc0d405e6c3cccfadbc81c71309"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca3aa72a6f96ea37bbc5aa912f6788242832f75369bdfdadcb0e38423f100059"
 dependencies = [
  "dirs-sys",
 ]
@@ -1479,28 +1524,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "failure"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
-dependencies = [
- "backtrace",
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "synstructure",
 ]
 
 [[package]]
@@ -2451,13 +2474,13 @@ dependencies = [
 
 [[package]]
 name = "hyper-multipart-rfc7578"
-version = "0.5.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3538ce6aeb81f7cd0d547a42435944d2283714a3f696630318bc47bd839fcfc9"
+checksum = "f0eb2cf73e96e9925f4bed948e763aa2901c2f1a3a5f713ee41917433ced6671"
 dependencies = [
  "bytes 1.4.0",
  "common-multipart-rfc7578",
- "futures 0.3.28",
+ "futures-core 0.3.28",
  "http 0.2.9",
  "hyper",
 ]
@@ -2697,14 +2720,14 @@ dependencies = [
  "base58",
  "chrono 0.4.26",
  "clap 2.34.0",
- "dirs",
+ "dirs 3.0.2",
  "enclave-bridge-primitives",
  "env_logger 0.9.3",
  "frame-support",
  "futures 0.3.28",
  "hex",
  "humantime",
- "ipfs-api",
+ "ipfs-api-backend-hyper",
  "ita-parentchain-interface",
  "itc-parentchain",
  "itc-parentchain-test",
@@ -2788,27 +2811,45 @@ dependencies = [
 ]
 
 [[package]]
-name = "ipfs-api"
-version = "0.11.0"
+name = "ipfs-api-backend-hyper"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c3824538e42e84c792988098df4ad5a35b47be98b19e31454e09f4e322f00fc"
+checksum = "8a9d131b408b4caafe1e7c00d410a09ad3eb7e3ab68690cf668e86904b2176b4"
 dependencies = [
+ "async-trait",
+ "base64 0.13.1",
  "bytes 1.4.0",
- "dirs",
- "failure",
  "futures 0.3.28",
  "http 0.2.9",
  "hyper",
  "hyper-multipart-rfc7578",
  "hyper-tls",
- "parity-multiaddr",
+ "ipfs-api-prelude",
+ "thiserror 1.0.44",
+]
+
+[[package]]
+name = "ipfs-api-prelude"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b74065805db266ba2c6edbd670b23c4714824a955628472b2e46cc9f3a869cb"
+dependencies = [
+ "async-trait",
+ "bytes 1.4.0",
+ "cfg-if 1.0.0",
+ "common-multipart-rfc7578",
+ "dirs 4.0.0",
+ "futures 0.3.28",
+ "http 0.2.9",
+ "multiaddr",
+ "multibase 0.9.1",
  "serde 1.0.193",
  "serde_json 1.0.103",
  "serde_urlencoded",
+ "thiserror 1.0.44",
  "tokio",
- "tokio-util 0.6.10",
+ "tokio-util 0.7.8",
  "tracing",
- "typed-builder",
  "walkdir",
 ]
 
@@ -3814,7 +3855,7 @@ dependencies = [
  "hex",
  "ipfs-unixfs",
  "log 0.4.28",
- "multibase",
+ "multibase 0.8.0",
  "parity-scale-codec",
 ]
 
@@ -4805,13 +4846,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "multiaddr"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b36f567c7099511fa8612bbbb52dda2419ce0bdbacf31714e3a5ffdb766d3bd"
+dependencies = [
+ "arrayref",
+ "byteorder 1.4.3",
+ "data-encoding",
+ "log 0.4.28",
+ "multibase 0.9.1",
+ "multihash 0.17.0",
+ "percent-encoding 2.3.1",
+ "serde 1.0.193",
+ "static_assertions",
+ "unsigned-varint 0.7.1",
+ "url 2.5.0",
+]
+
+[[package]]
 name = "multibase"
 version = "0.8.0"
 source = "git+https://github.com/whalelephant/rust-multibase?branch=nstd#df67fb30e86998f7c10d4eea16a1cd480d2448c0"
 dependencies = [
- "base-x",
+ "base-x 0.2.6",
  "data-encoding",
  "lazy_static",
+]
+
+[[package]]
+name = "multibase"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b3539ec3c1f04ac9748a260728e855f261b4977f5c3406612c884564f329404"
+dependencies = [
+ "base-x 0.2.11",
+ "data-encoding",
+ "data-encoding-macro",
 ]
 
 [[package]]
@@ -4830,20 +4901,20 @@ dependencies = [
 
 [[package]]
 name = "multihash"
-version = "0.13.2"
+version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dac63698b887d2d929306ea48b63760431ff8a24fac40ddb22f9c7f49fb7cab"
+checksum = "835d6ff01d610179fbce3de1694d007e500bf33a7f29689838941d6bf783ae40"
 dependencies = [
- "generic-array 0.14.7",
+ "core2",
  "multihash-derive",
- "unsigned-varint 0.5.1",
+ "unsigned-varint 0.7.1",
 ]
 
 [[package]]
 name = "multihash-derive"
-version = "0.7.2"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "424f6e86263cd5294cbd7f1e95746b95aca0e0d66bff31e5a40d6baa87b4aa99"
+checksum = "1d6d4752e6230d8ef7adf7bd5d8c4b1f6561c1014c5ba9a37445ccefe18aa1db"
 dependencies = [
  "proc-macro-crate",
  "proc-macro-error",
@@ -5566,24 +5637,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parity-multiaddr"
-version = "0.11.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58341485071825827b7f03cf7efd1cb21e6a709bea778fb50227fd45d2f361b4"
-dependencies = [
- "arrayref",
- "bs58",
- "byteorder 1.4.3",
- "data-encoding",
- "multihash 0.13.2",
- "percent-encoding 2.3.1",
- "serde 1.0.193",
- "static_assertions",
- "unsigned-varint 0.7.1",
- "url 2.5.0",
-]
-
-[[package]]
 name = "parity-scale-codec"
 version = "3.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5881,12 +5934,12 @@ dependencies = [
 
 [[package]]
 name = "proc-macro-crate"
-version = "1.3.1"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f4c021e1093a56626774e81216a4ce732a735e5bad4868a03f3ed65ca0c3919"
+checksum = "e17d47ce914bf4de440332250b0edd23ce48c005f59fab39d3335866b114f11a"
 dependencies = [
- "once_cell 1.18.0",
- "toml_edit",
+ "thiserror 1.0.44",
+ "toml",
 ]
 
 [[package]]
@@ -8421,20 +8474,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_datetime"
-version = "0.6.3"
+name = "toml"
+version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cda73e2f1397b1262d6dfdcef8aafae14d1de7748d66822d3bfeeb6d03e5e4b"
-
-[[package]]
-name = "toml_edit"
-version = "0.19.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b5bb770da30e5cbfde35a2d7b9b8a2c4b8ef89548a7a6aeab5c9a576e3e7421"
+checksum = "f4f7f0dd8d50a853a531c426359045b1998f04219d88799810762cd4ad314234"
 dependencies = [
- "indexmap 2.0.0",
- "toml_datetime",
- "winnow",
+ "serde 1.0.193",
 ]
 
 [[package]]
@@ -8657,17 +8702,6 @@ dependencies = [
  "digest 0.10.7",
  "rand 0.8.5",
  "static_assertions",
-]
-
-[[package]]
-name = "typed-builder"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a46ee5bd706ff79131be9c94e7edcb82b703c487766a114434e5790361cf08c5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -9427,15 +9461,6 @@ name = "windows_x86_64_msvc"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a515f5799fe4961cb532f983ce2b23082366b898e52ffbce459c86f67c8378a"
-
-[[package]]
-name = "winnow"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25b5872fa2e10bd067ae946f927e726d7d603eaeb6e02fa6a350e0722d2b8c11"
-dependencies = [
- "memchr 2.6.3",
-]
 
 [[package]]
 name = "winreg"
