@@ -94,8 +94,8 @@ pub struct Cli {
 	#[clap(short = 'P', long, default_value_t = String::from("2000"))]
 	trusted_worker_port: String,
 
-	/// IPFS gateway url including query path, e.g. "https://ipfs.integritee.network/ipfs"
-	#[clap(short = 'i', long, default_value_t = String::from("https://ipfs.integritee.network/ipfs"))]
+	/// IPFS gateway url, e.g. "https://ipfs.integritee.network"
+	#[clap(short = 'i', long, default_value_t = String::from("https://ipfs.integritee.network"))]
 	ipfs_gateway_url: String,
 
 	#[clap(subcommand)]
