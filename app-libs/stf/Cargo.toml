@@ -24,6 +24,7 @@ itp-node-api = { default-features = false, path = "../../core-primitives/node-ap
 itp-node-api-metadata = { default-features = false, path = "../../core-primitives/node-api/metadata" }
 itp-pallet-storage = { path = "../../core-primitives/pallet-storage", default-features = false }
 itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
+itp-sgx-crypto = { default-features = false, path = "../../core-primitives/sgx/crypto" }
 itp-sgx-externalities = { default-features = false, path = "../../core-primitives/substrate-sgx/externalities" }
 itp-sgx-runtime-primitives = { default-features = false, path = "../../core-primitives/sgx-runtime-primitives" }
 itp-stf-interface = { default-features = false, path = "../../core-primitives/stf-interface" }

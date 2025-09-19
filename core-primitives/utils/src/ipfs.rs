@@ -1,7 +1,10 @@
 use alloc::vec::Vec;
 use cid::Cid;
 use codec::{Decode, Encode};
-use core::{convert::TryFrom, fmt::Debug};
+use core::{
+	convert::TryFrom,
+	fmt::{Debug, Display},
+};
 use ipfs_unixfs::file::adder::FileAdder;
 use multibase::Base;
 
@@ -53,6 +56,13 @@ impl Decode for IpfsCid {
 }
 
 impl Debug for IpfsCid {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let cid_str = Base::Base58Btc.encode(self.0.hash().as_bytes());
+		write!(f, "{}", cid_str)
+	}
+}
+
+impl Display for IpfsCid {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		let cid_str = Base::Base58Btc.encode(self.0.hash().as_bytes());
 		write!(f, "{}", cid_str)

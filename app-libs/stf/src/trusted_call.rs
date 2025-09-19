@@ -57,6 +57,8 @@ use itp_node_api_metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
+use itp_randomness::{Randomness, SgxRandomness};
+use itp_sgx_crypto::{aes::Aes, StateCrypto};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
@@ -647,15 +649,19 @@ where
 				{
 					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg.clone() })
 				} else if request.relay_type == NoteRelayType::Ipfs {
-					//todo: proxy re-encryption for IPFS content. now plaintext
-					let cid = IpfsCid::from_content_bytes(&request.msg)
+					let key = SgxRandomness::random_128bits();
+					let iv = SgxRandomness::random_128bits();
+					let encryption_key: [u8; 32] =
+						[key.as_ref(), iv.as_ref()].concat().try_into().expect("2x16=32. q.e.d.");
+					let aes = Aes::new(key, iv);
+					let mut ciphertext = request.msg.clone();
+					aes.encrypt(&mut ciphertext)
+						.map_err(|e| StfError::Dispatch(format!("AES encrypt error: {:?}", e)))?;
+					let cid = IpfsCid::from_content_bytes(&ciphertext)
 						.map_err(|e| StfError::Dispatch(format!("IPFS error: {:?}", e)))?;
 					info!("storing relayed note to IPFS with CID {:?}", cid);
-					side_effects.push(TrustedCallSideEffect::IpfsAdd(request.msg));
-					Ok(RelayedNoteRetreivalInfo::Ipfs {
-						cid,
-						encryption_key: request.maybe_encryption_key.unwrap_or([0u8; 32]),
-					})
+					side_effects.push(TrustedCallSideEffect::IpfsAdd(ciphertext));
+					Ok(RelayedNoteRetreivalInfo::Ipfs { cid, encryption_key })
 				} else {
 					Err(StfError::Dispatch("Invalid relayed note request".into()))
 				}?;
