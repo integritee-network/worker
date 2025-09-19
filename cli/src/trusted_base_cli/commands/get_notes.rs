@@ -185,12 +185,12 @@ fn fetch_ipfs_data(gateway_url: &str, ipfs_hash: &str) -> Result<Vec<u8>, reqwes
 	Ok(bytes)
 }
 
-fn decrypt(data: &Vec<u8>, encryption_key: &[u8; 32]) -> Vec<u8> {
+fn decrypt(data: &[u8], encryption_key: &[u8; 32]) -> Vec<u8> {
 	let key: [u8; 16] = encryption_key[0..16].try_into().unwrap();
 	let iv: [u8; 16] = encryption_key[16..32].try_into().unwrap();
 	debug!("decrypting with \n key 0x{} \n iv 0x{}", hex::encode(key), hex::encode(iv));
 	let aes = Aes::new(key, iv);
-	let mut decrypted_data = data.clone();
+	let mut decrypted_data = data.to_vec();
 	aes.decrypt(&mut decrypted_data).unwrap();
 	decrypted_data
 }

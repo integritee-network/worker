@@ -164,9 +164,9 @@ where
 	let encrypted_trusted_call: Vec<u8> = request.cyphertext;
 
 	if encrypted_trusted_call.len() > MAX_TOP_SIZE_TO_ENTER_POOL {
-		let error_msg = format!("Trusted operation too large");
+		let error_msg = "Trusted operation too large";
 		error!("{}", error_msg);
-		return Err(error_msg)
+		return Err(error_msg.into())
 	}
 
 	let result = async { author.watch_top(encrypted_trusted_call, shard).await };

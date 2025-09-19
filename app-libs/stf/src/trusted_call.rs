@@ -635,7 +635,7 @@ where
 				let retreival_info = if (self.call.encoded_size() <= MaxNoteSize::get() as usize)
 					&& (request.allow_onchain_fallback)
 				{
-					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg.clone() })
+					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg })
 				} else if (request.relay_type == NoteRelayType::Undeclared)
 					&& request.maybe_encryption_key.is_some()
 				{
@@ -647,14 +647,14 @@ where
 				} else if request.relay_type == NoteRelayType::Here
 					&& request.msg.len() <= MaxNoteSize::get() as usize
 				{
-					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg.clone() })
+					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg })
 				} else if request.relay_type == NoteRelayType::Ipfs {
 					let key = SgxRandomness::random_128bits();
 					let iv = SgxRandomness::random_128bits();
 					let encryption_key: [u8; 32] =
 						[key.as_ref(), iv.as_ref()].concat().try_into().expect("2x16=32. q.e.d.");
 					let aes = Aes::new(key, iv);
-					let mut ciphertext = request.msg.clone();
+					let mut ciphertext = request.msg;
 					aes.encrypt(&mut ciphertext)
 						.map_err(|e| StfError::Dispatch(format!("AES encrypt error: {:?}", e)))?;
 					let cid = IpfsCid::from_content_bytes(&ciphertext)

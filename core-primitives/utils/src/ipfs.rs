@@ -37,7 +37,7 @@ impl IpfsCid {
 		}
 		let blocks = adder.finish();
 		stats.process(blocks);
-		stats.last.map(|cid| IpfsCid(cid)).ok_or(IpfsError::FinalCidMissing)
+		stats.last.map(IpfsCid).ok_or(IpfsError::FinalCidMissing)
 	}
 }
 impl Encode for IpfsCid {
@@ -105,7 +105,7 @@ impl IpfsContent {
 		}
 		let blocks = adder.finish();
 		stats.process(blocks);
-		stats.last.map(|cid| IpfsCid(cid)).ok_or(IpfsError::FinalCidMissing)
+		stats.last.map(IpfsCid).ok_or(IpfsError::FinalCidMissing)
 	}
 }
 
