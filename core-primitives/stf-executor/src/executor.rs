@@ -159,10 +159,8 @@ where
 						hex::encode(call.encode()), mortality
 					),
 				},
-				TrustedCallSideEffect::IpfsAdd(blob) => trace!(
-						"trusted_call wants to add blob of size {} to ipfs",
-						blob.len()
-					),
+				TrustedCallSideEffect::IpfsAdd(blob) =>
+					trace!("trusted_call wants to add blob of size {} to ipfs", blob.len()),
 			}
 		}
 		Ok(ExecutedOperation::success(operation_hash, top_or_hash, trusted_call_side_effects))

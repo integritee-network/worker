@@ -160,8 +160,7 @@ impl<
 		PeerBlockFetcher,
 		TokioHandle,
 		MetricsReceiver,
-	>
-where
+	> where
 	IntegriteeRuntimeConfig:
 		Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
 	TargetARuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,

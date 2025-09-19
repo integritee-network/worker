@@ -8,12 +8,12 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
+cid = { default-features = false, git = "https://github.com/whalelephant/rust-cid", branch = "nstd" }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
-log = "0.4.28"
-cid = { default-features = false, git = "https://github.com/whalelephant/rust-cid", branch = "nstd" }
-multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
 ipfs-unixfs = { default-features = false, git = "https://github.com/whalelephant/rust-ipfs", branch = "w-nstd" }
+log = "0.4.28"
+multibase = { default-features = false, git = "https://github.com/whalelephant/rust-multibase", branch = "nstd" }
 
 [features]
 default = ["std"]

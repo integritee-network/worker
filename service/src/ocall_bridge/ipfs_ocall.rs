@@ -82,7 +82,7 @@ async fn write_to_ipfs(client: &IpfsClient, data: &'static [u8]) -> OCallBridgeR
 		},
 		Err(e) => {
 			error!("error adding file: {}", e);
-			return Err(OCallBridgeError::IpfsError(format!("error adding file: {}", e)));
+			return Err(OCallBridgeError::IpfsError(format!("error adding file: {}", e)))
 		},
 	}
 	rx.recv()
