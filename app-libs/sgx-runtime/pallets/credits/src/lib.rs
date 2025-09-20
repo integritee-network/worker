@@ -294,7 +294,7 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		/// create a new credit class
+		/// Claim credits belonging to the commitment accout corresponding to the `secret`.
 		#[pallet::call_index(2)]
 		#[pallet::weight((<T as Config>::WeightInfo::claim(), DispatchClass::Normal, Pays::Yes)
         )]
