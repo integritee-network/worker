@@ -27,8 +27,9 @@ use crate::{
 	guess_the_number,
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
-		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
-		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
+		enclave_signer_account, encrypt_with_fresh_key, ensure_enclave_signer_account,
+		ensure_maintainer_account, get_mortality, shard_vault, shielding_target_genesis_hash,
+		store_note, wrap_bytes,
 	},
 	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest, RelayedNoteRetrievalInfo},
 	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
@@ -57,8 +58,6 @@ use itp_node_api_metadata::{
 	pallet_enclave_bridge::EnclaveBridgeCallIndexes,
 	pallet_proxy::ProxyCallIndexes,
 };
-use itp_randomness::{Randomness, SgxRandomness};
-use itp_sgx_crypto::{aes::Aes, StateCrypto};
 use itp_stf_interface::ExecuteCall;
 use itp_stf_primitives::{
 	error::StfError,
@@ -649,14 +648,7 @@ where
 				{
 					Ok(RelayedNoteRetrievalInfo::Here { msg: request.msg })
 				} else if request.relay_type == NoteRelayType::Ipfs {
-					let key = SgxRandomness::random_128bits();
-					let iv = SgxRandomness::random_128bits();
-					let encryption_key: [u8; 32] =
-						[key.as_ref(), iv.as_ref()].concat().try_into().expect("2x16=32. q.e.d.");
-					let aes = Aes::new(key, iv);
-					let mut ciphertext = request.msg;
-					aes.encrypt(&mut ciphertext)
-						.map_err(|e| StfError::Dispatch(format!("AES encrypt error: {:?}", e)))?;
+					let (ciphertext, encryption_key) = encrypt_with_fresh_key(request.msg)?;
 					let cid = IpfsCid::from_content_bytes(&ciphertext)
 						.map_err(|e| StfError::Dispatch(format!("IPFS error: {:?}", e)))?;
 					info!("storing relayed note to IPFS with CID {:?}", cid);
@@ -972,8 +964,7 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER
-							* 3,
+						) / STF_TX_FEE_UNIT_DIVIDER * 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(

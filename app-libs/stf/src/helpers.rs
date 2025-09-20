@@ -18,6 +18,8 @@ use crate::{TrustedCall, ENCLAVE_ACCOUNT_KEY};
 use codec::{Decode, Encode};
 use frame_support::dispatch::UnfilteredDispatchable;
 use ita_sgx_runtime::{ParentchainIntegritee, ParentchainTargetA, ParentchainTargetB, Runtime};
+use itp_randomness::{Randomness, SgxRandomness};
+use itp_sgx_crypto::{aes::Aes, StateCrypto};
 use itp_stf_interface::{BlockMetadata, ShardCreationInfo};
 use itp_stf_primitives::{
 	error::{StfError, StfResult},
@@ -255,4 +257,19 @@ pub fn store_note(
 	.dispatch_bypass_filter(ita_sgx_runtime::RuntimeOrigin::signed(sender.clone()))
 	.map_err(|e| StfError::Dispatch(format!("Store note error: {:?}", e.error)))?;
 	Ok(())
+}
+
+/// Encrypt data with AES-128-OFB with a fresh key and IV.
+/// Encrypts data in-place and returns the ciphertext and the full encryption key (key + iv).
+/// The full encryption key is 32 bytes: first 16 bytes are the AES key,
+/// the last 16 bytes are the IV.
+pub fn encrypt_with_fresh_key(mut data: Vec<u8>) -> StfResult<(Vec<u8>, [u8; 32])> {
+	let key = SgxRandomness::random_128bits();
+	let iv = SgxRandomness::random_128bits();
+	let aes = Aes::new(key, iv);
+	aes.encrypt(&mut data)
+		.map_err(|e| StfError::Dispatch(format!("AES encrypt error: {:?}", e)))?;
+	let full_encryption_key: [u8; 32] =
+		[key.as_ref(), iv.as_ref()].concat().try_into().expect("2x16=32. q.e.d.");
+	Ok((data, full_encryption_key))
 }
