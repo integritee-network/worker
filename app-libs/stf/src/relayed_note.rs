@@ -34,7 +34,7 @@ pub enum NoteRelayType {
 
 /// Necessary information for recipient to retrieve and potentially decrypt a relayed note
 #[derive(Encode, Decode, Clone, PartialEq, Eq)]
-pub enum RelayedNoteRetreivalInfo {
+pub enum RelayedNoteRetrievalInfo {
 	/// the message is included within and not actually relayed
 	Here { msg: Vec<u8> },
 	/// the message is stored on ipfs, encrypted with the provided key
@@ -44,21 +44,21 @@ pub enum RelayedNoteRetreivalInfo {
 	Undeclared { encryption_key: [u8; 32] },
 }
 
-impl Debug for RelayedNoteRetreivalInfo {
+impl Debug for RelayedNoteRetrievalInfo {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		match self {
-			RelayedNoteRetreivalInfo::Here { msg } => write!(
+			RelayedNoteRetrievalInfo::Here { msg } => write!(
 				f,
 				"Here {{ msg: {} }}",
 				core::str::from_utf8(msg).unwrap_or("<invalid utf8>")
 			),
-			RelayedNoteRetreivalInfo::Ipfs { cid, encryption_key } => write!(
+			RelayedNoteRetrievalInfo::Ipfs { cid, encryption_key } => write!(
 				f,
 				"Ipfs {{ cid: {:?}, encryption_key: 0x{} }}",
 				cid,
 				hex::encode(encryption_key)
 			),
-			RelayedNoteRetreivalInfo::Undeclared { encryption_key } =>
+			RelayedNoteRetrievalInfo::Undeclared { encryption_key } =>
 				write!(f, "Undeclared {{ encryption_key: 0x{} }}", hex::encode(encryption_key)),
 		}
 	}

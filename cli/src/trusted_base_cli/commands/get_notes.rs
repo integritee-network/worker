@@ -21,7 +21,7 @@ use crate::{
 };
 use codec::Decode;
 use ita_stf::{
-	guess_the_number::GuessTheNumberTrustedCall, relayed_note::RelayedNoteRetreivalInfo, Getter,
+	guess_the_number::GuessTheNumberTrustedCall, relayed_note::RelayedNoteRetrievalInfo, Getter,
 	TrustedCall, TrustedCallSigned, TrustedGetter,
 };
 use itp_sgx_crypto::{aes::Aes, StateCrypto};
@@ -126,10 +126,10 @@ impl GetNotesCommand {
 								from,
 								to,
 								conversation_id,
-								retreival,
+								retrieval,
 							) => {
-								let msg = match retreival {
-									RelayedNoteRetreivalInfo::Ipfs { cid, encryption_key } => {
+								let msg = match retrieval {
+									RelayedNoteRetrievalInfo::Ipfs { cid, encryption_key } => {
 										debug!("fetching ipfs data for cid: {:?}", cid);
 										let ciphertext = fetch_ipfs_data(
 											&cli.ipfs_gateway_url,
@@ -139,9 +139,9 @@ impl GetNotesCommand {
 										let plaintext = decrypt(&ciphertext, &encryption_key);
 										String::from_utf8_lossy(&plaintext).to_string()
 									},
-									RelayedNoteRetreivalInfo::Here { msg } =>
+									RelayedNoteRetrievalInfo::Here { msg } =>
 										String::from_utf8_lossy(msg.as_ref()).to_string(),
-									RelayedNoteRetreivalInfo::Undeclared { .. } => {
+									RelayedNoteRetrievalInfo::Undeclared { .. } => {
 										"[encryption key provided: *****, but message relay is undeclared]".into()
 									},
 								};

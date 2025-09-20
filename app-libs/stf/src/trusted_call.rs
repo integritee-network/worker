@@ -30,7 +30,7 @@ use crate::{
 		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
 		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
-	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest, RelayedNoteRetreivalInfo},
+	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest, RelayedNoteRetrievalInfo},
 	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
 	STF_SHIELDING_FEE_AMOUNT_DIVIDER, STF_TX_FEE_UNIT_DIVIDER,
 };
@@ -99,7 +99,7 @@ pub enum TrustedCall {
 	spam_extrinsics(AccountId, u32, ParentchainId) = 12,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
 	send_relayed_note(AccountId, AccountId, ConversationId, RelayedNoteRequest) = 21,
-	send_relayed_note_stripped(AccountId, AccountId, ConversationId, RelayedNoteRetreivalInfo) = 22, // without payload
+	send_relayed_note_stripped(AccountId, AccountId, ConversationId, RelayedNoteRetrievalInfo) = 22, // without payload
 	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
 	assets_transfer(AccountId, AccountId, AssetId, Balance) = 42,
 	assets_unshield(AccountId, AccountId, AssetId, Balance, ShardIdentifier) = 43,
@@ -632,14 +632,14 @@ where
 			},
 			TrustedCall::send_relayed_note(from, to, conversation_id, request) => {
 				std::println!("⣿STF⣿ 🔄 send_relayed_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
-				let retreival_info = if (self.call.encoded_size() <= MaxNoteSize::get() as usize)
+				let retrieval_info = if (self.call.encoded_size() <= MaxNoteSize::get() as usize)
 					&& (request.allow_onchain_fallback)
 				{
-					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg })
+					Ok(RelayedNoteRetrievalInfo::Here { msg: request.msg })
 				} else if (request.relay_type == NoteRelayType::Undeclared)
 					&& request.maybe_encryption_key.is_some()
 				{
-					Ok(RelayedNoteRetreivalInfo::Undeclared {
+					Ok(RelayedNoteRetrievalInfo::Undeclared {
 						encryption_key: request
 							.maybe_encryption_key
 							.expect("is_some has been tested previously"),
@@ -647,7 +647,7 @@ where
 				} else if request.relay_type == NoteRelayType::Here
 					&& request.msg.len() <= MaxNoteSize::get() as usize
 				{
-					Ok(RelayedNoteRetreivalInfo::Here { msg: request.msg })
+					Ok(RelayedNoteRetrievalInfo::Here { msg: request.msg })
 				} else if request.relay_type == NoteRelayType::Ipfs {
 					let key = SgxRandomness::random_128bits();
 					let iv = SgxRandomness::random_128bits();
@@ -661,7 +661,7 @@ where
 						.map_err(|e| StfError::Dispatch(format!("IPFS error: {:?}", e)))?;
 					info!("storing relayed note to IPFS with CID {:?}", cid);
 					side_effects.push(TrustedCallSideEffect::IpfsAdd(ciphertext));
-					Ok(RelayedNoteRetreivalInfo::Ipfs { cid, encryption_key })
+					Ok(RelayedNoteRetrievalInfo::Ipfs { cid, encryption_key })
 				} else {
 					Err(StfError::Dispatch("Invalid relayed note request".into()))
 				}?;
@@ -670,12 +670,12 @@ where
 					from.clone(),
 					to.clone(),
 					conversation_id,
-					retreival_info,
+					retrieval_info,
 				);
 				store_note(&from, stripped_call, vec![from.clone(), to])?;
 				Ok(())
 			},
-			TrustedCall::send_relayed_note_stripped(from, to, _conversation_id, _retreival) => {
+			TrustedCall::send_relayed_note_stripped(from, to, _conversation_id, _retrieval) => {
 				std::println!("⣿STF⣿ 🔄 send_relayed_note_stripped from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
 				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
@@ -972,7 +972,8 @@ where
 					let unshield_amount = balance.saturating_sub(
 						MinimalChainSpec::one_unit(
 							shielding_target_genesis_hash().unwrap_or_default(),
-						) / STF_TX_FEE_UNIT_DIVIDER * 3,
+						) / STF_TX_FEE_UNIT_DIVIDER
+							* 3,
 					);
 					let parentchain_call = parentchain_vault_proxy_call(
 						unshield_native_from_vault_parentchain_call(
@@ -1053,10 +1054,10 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 				))) / STF_BYTE_FEE_UNIT_DIVIDER,
 		TrustedCall::send_relayed_note_stripped(_, _, _, retrieval_info) => {
 			let byte_fee = match retrieval_info {
-				RelayedNoteRetreivalInfo::Undeclared { .. } => 32 * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for undeclared
-				RelayedNoteRetreivalInfo::Ipfs { .. } =>
+				RelayedNoteRetrievalInfo::Undeclared { .. } => 32 * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for undeclared
+				RelayedNoteRetrievalInfo::Ipfs { .. } =>
 					(46 + 32) * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for ipfs
-				RelayedNoteRetreivalInfo::Here { msg } =>
+				RelayedNoteRetrievalInfo::Here { msg } =>
 					(one.saturating_mul(Balance::from(msg.len() as u32)))
 						/ STF_BYTE_FEE_UNIT_DIVIDER,
 			};
