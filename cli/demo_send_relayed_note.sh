@@ -1,31 +1,18 @@
 #!/bin/bash
 
-# Executes a direct call on a worker and checks the balance afterwards.
+# Sends a relayed note with a direct call to the worker which is expected
+# to relay it via IPFS in encrypted form
 #
-# setup:
-# run all on localhost:
-#   integritee-node purge-chain --dev
-#   integritee-node --tmp --dev -lruntime=debug
-#   rm light_client_db.bin
-#   export RUST_LOG=integritee_service=info,ita_stf=debug
-#   integritee-service init_shard
-#   integritee-service shielding-key
-#   integritee-service signing-key
-#   integritee-service run
-#
-# then run this script
+
 
 # usage:
-#  demo_direct_call.sh -p <NODEPORT> -P <WORKERPORT> -t <TEST_BALANCE_RUN>
+#  demo-send-relayed-note.sh -p <NODEPORT> -P <WORKERPORT> -i <IPFS_GATEWAY>
 #
 # TEST_BALANCE_RUN is either "first" or "second"
 
 
 while getopts ":p:P:t:u:V:C:" opt; do
     case $opt in
-        t)
-            TEST=$OPTARG
-            ;;
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
             ;;

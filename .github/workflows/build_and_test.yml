@@ -273,7 +273,7 @@ jobs:
             sgx_mode: HW
           - test: relayed-notes
             flavor_id: sidechain
-            demo_name: demo-send_relayed_note
+            demo_name: demo-send-relayed-note
             host: test-runner-sgx
             sgx_mode: HW
           - test: Sidechain
