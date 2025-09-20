@@ -11,7 +11,7 @@
 # TEST_BALANCE_RUN is either "first" or "second"
 
 
-while getopts ":p:P:t:u:V:C:" opt; do
+while getopts ":p:P:t:u:V:C:i:" opt; do
     case $opt in
         p)
             INTEGRITEE_RPC_PORT=$OPTARG
@@ -43,6 +43,7 @@ INTEGRITEE_RPC_URL=${INTEGRITEE_RPC_URL:-"ws://127.0.0.1"}
 
 WORKER_1_PORT=${WORKER_1_PORT:-2000}
 WORKER_1_URL=${WORKER_1_URL:-"wss://127.0.0.1"}
+IPFS_GATEWAY=${IPFS_GATEWAY:-"http://127.0.0.1:8080"}
 
 CLIENT_BIN=${CLIENT_BIN:-"./../bin/integritee-cli"}
 
