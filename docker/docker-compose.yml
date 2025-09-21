@@ -84,7 +84,7 @@ services:
     ports:
       - "4001:4001"   # Swarm
       - "5001:5001"   # API
-      - "8080:8080"   # Gateway
+      - "8082:8080"   # Gateway
     networks:
       - integritee-test-network
 networks:
