@@ -75,6 +75,7 @@ COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < dock
 Run
 
 ```
+export ADDITIONAL_RUNTIME_FLAGS="--skip-ra"
 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-direct-call.yml) up demo-direct-call --exit-code-from demo-direct-call
 ```
 

@@ -3,7 +3,7 @@
 # The demo is parameterized with the interval that the teeracle uses to query its sources.
 # Set the `TEERACLE_INTERVAL_SECONDS` variable when invoking, e.g. `TEERACLE_INTERVAL_SECONDS=4 docker compose -f docker-compose.yml -f demo-teeracle-generic.yml up --exit-code-from demo-teeracle-generic`
 # Set the `ADDITIONAL_RUNTIME_FLAGS` variable to for additional flags.
-# To skip remote attestation: `export ADDITIONAL_RUNTIME_FLAG="--skip-ra"`
+# To skip remote attestation: `export ADDITIONAL_RUNTIME_FLAGS="--skip-ra"`
 services:
   integritee-teeracle-worker-${VERSION}:
     image: integritee-worker:${VERSION:-dev}
@@ -31,7 +31,7 @@ services:
       timeout: 10s
       retries: 25
     command:
-        "--clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
+      "--clean-reset --ws-external -M integritee-teeracle-worker -T wss://integritee-teeracle-worker
         -u ws://integritee-node -U ws://integritee-teeracle-worker -P 2011 -w 2101 -p 9912 -h 4645
         run --dev ${ADDITIONAL_RUNTIME_FLAGS} --teeracle-interval ${TEERACLE_INTERVAL_SECONDS}s"
     restart: always

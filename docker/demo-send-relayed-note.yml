@@ -1,3 +1,5 @@
+# Set the `ADDITIONAL_RUNTIME_FLAGS` variable to for additional flags.
+# To skip remote attestation: `export ADDITIONAL_RUNTIME_FLAGS="--skip-ra"`
 services:
   demo-send-relayed-note:
     image: integritee-cli:${VERSION:-dev}
