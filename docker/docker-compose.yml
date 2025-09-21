@@ -28,6 +28,8 @@ services:
     depends_on:
       "integritee-node-${VERSION}":
         condition: service_healthy
+      ipfs-node:
+        condition: service_started
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
@@ -57,6 +59,8 @@ services:
         condition: service_healthy
       "integritee-worker-1-${VERSION}":
         condition: service_healthy
+      ipfs-node:
+        condition: service_started
     devices:
       - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
       - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
@@ -72,8 +76,17 @@ services:
       interval: 10s
       timeout: 10s
       retries: 25
-    command: "--clean-reset --data-dir /tmp/worker2 --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 run --dev ${ADDITIONAL_RUNTIME_FLAGS}"
+    command: "--clean-reset --data-dir /tmp/worker2 --ws-external -M integritee-worker-2 -T wss://integritee-worker-2 -u ws://integritee-node -U ws://integritee-worker-2 -P 2012 -w 2102 -p 9912 -h 4646 --ipfs-api-url http://ipfs-node:5001 run --dev ${ADDITIONAL_RUNTIME_FLAGS}"
     restart: "no"
+  ipfs-node:
+    image: ipfs/kubo:latest
+    hostname: ipfs-node
+    ports:
+      - "4001:4001"   # Swarm
+      - "5001:5001"   # API
+      - "8080:8080"   # Gateway
+    networks:
+      - integritee-test-network
 networks:
   integritee-test-network:
     driver: bridge

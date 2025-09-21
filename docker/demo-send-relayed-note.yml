@@ -16,20 +16,14 @@ services:
         condition: service_healthy
       integritee-worker-1-${VERSION}:
         condition: service_healthy
+      ipfs-node:
+        condition: service_started
     networks:
       - integritee-test-network
     entrypoint:
       "/usr/local/worker-cli/demo_send_relayed_note.sh -p 9912 -u ws://integritee-node
       -V wss://integritee-worker-1 -P 2011 -i http://ipfs-node:8080 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
-  ipfs-node:
-    image: ipfs/kubo:latest
-    ports:
-      - "4001:4001"   # Swarm
-      - "5001:5001"   # API
-      - "8080:8080"   # Gateway
-    networks:
-      - integritee-test-network
 networks:
   integritee-test-network:
     driver: bridge
