@@ -22,7 +22,7 @@ services:
       - integritee-test-network
     entrypoint:
       "/usr/local/worker-cli/demo_send_relayed_note.sh -p 9912 -u ws://integritee-node
-      -V wss://integritee-worker-1 -P 2011 -i http://ipfs-node:8082 -C /usr/local/bin/integritee-cli 2>&1"
+      -V wss://integritee-worker-1 -P 2011 -i http://ipfs-node:8080 -C /usr/local/bin/integritee-cli 2>&1"
     restart: "no"
 networks:
   integritee-test-network:
