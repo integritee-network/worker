@@ -160,7 +160,8 @@ impl<
 		PeerBlockFetcher,
 		TokioHandle,
 		MetricsReceiver,
-	> where
+	>
+where
 	IntegriteeRuntimeConfig:
 		Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
 	TargetARuntimeConfig: Config<Hash = BlockHash, Index = Nonce, AccountId = AccountId> + 'static,
@@ -203,6 +204,7 @@ impl<
 		Arc::new(IpfsOCall::new(
 			self.maybe_ipfs_url_and_auth.0.clone(),
 			self.maybe_ipfs_url_and_auth.1.clone(),
+			self.log_dir.clone(),
 		))
 	}
 
