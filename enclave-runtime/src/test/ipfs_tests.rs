@@ -20,7 +20,13 @@ use crate::ocall::OcallApi;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use itp_utils::IpfsCid;
 use log::*;
-use std::{fs::File, io::Read, vec::Vec};
+use std::{
+	fs,
+	io::Read,
+	path::{Path, PathBuf},
+	string::{String, ToString},
+	vec::Vec,
+};
 
 #[allow(unused)]
 /// this test neeeds an ipfs node running and configured with cli args. here for reference but may never be called
@@ -36,11 +42,49 @@ pub fn test_ocall_read_write_ipfs() {
 	OcallApi.read_ipfs(&returned_cid).unwrap();
 
 	let cid_str = format!("{:?}", returned_cid);
-	let mut f = File::open(cid_str).unwrap();
+	let mut f = fs::File::open(cid_str).unwrap();
 	let mut content_buf = Vec::new();
 	f.read_to_end(&mut content_buf).unwrap();
 	info!("reading file {:?} of size {} bytes", f, &content_buf.len());
 
 	let file_cid = IpfsCid::from_content_bytes(&content_buf).unwrap();
 	assert_eq!(expected_cid, file_cid);
+}
+
+pub fn test_ocall_write_ipfs_fallback() {
+	info!("testing IPFS write if api is unreachable. Expected to fallback to dump local file...");
+	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
+	let expected_cid = IpfsCid::from_content_bytes(&enc_state).unwrap();
+	let result = OcallApi.write_ipfs(enc_state.as_slice());
+
+	if result.is_ok() {
+		panic!("write_ipfs succeeded, but was expected to fail and fallback to local file dump. Did you accidentally provide an ipfs api url to the test?");
+	} else {
+		let dumpfile =
+			find_first_matching_file(expected_cid.to_string()).expect("dumped file not found");
+		let mut f = fs::File::open(dumpfile).unwrap();
+		let mut content_buf = Vec::new();
+		f.read_to_end(&mut content_buf).unwrap();
+		info!("reading file {:?} of size {} bytes", f, &content_buf.len());
+		let file_cid = IpfsCid::from_content_bytes(&content_buf).unwrap();
+		assert_eq!(expected_cid, file_cid);
+		return
+	}
+}
+
+fn find_first_matching_file(cid_str: String) -> Option<PathBuf> {
+	let dir = Path::new("log-ipfs-failing-add");
+	let prefix = "ipfs-";
+	let suffix = format!("-{}.bin", cid_str);
+
+	for entry in fs::read_dir(dir).ok()? {
+		let entry = entry.ok()?;
+		let file_name = entry.file_name();
+		debug!("Checking file: {:?}", file_name);
+		let file_name = file_name.to_string_lossy();
+		if file_name.starts_with(prefix) && file_name.ends_with(suffix.as_str()) {
+			return Some(entry.path());
+		}
+	}
+	None
 }

@@ -129,7 +129,7 @@ async fn write_to_ipfs(
             let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
                 .unwrap_or_else(|e| e.to_string().into());
             OCallBridgeError::IpfsError(format!(
-                "error receiving cid: {}. Dumped contents to local file: {}",
+                "error receiving cid: {}. Dumped content to local file instead: {}",
                 e,
                 dumpfile.display()
             ))
