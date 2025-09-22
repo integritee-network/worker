@@ -115,14 +115,24 @@ async fn write_to_ipfs(
             tx.send(res.hash.into_bytes()).unwrap();
         }
         Err(e) => {
-            let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone()).unwrap_or_else(|e| e.to_string().into());
-            return Err(OCallBridgeError::IpfsError(format!("error adding file to IPFS: {}. Dumped content to local file instead: {}", e, dumpfile.display())));
+            let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
+                .unwrap_or_else(|e| e.to_string().into());
+            return Err(OCallBridgeError::IpfsError(format!(
+                "error adding file to IPFS: {}. Dumped content to local file instead: {}",
+                e,
+                dumpfile.display()
+            )));
         }
     }
     rx.recv()
         .map_err(|e| {
-            let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone()).unwrap_or_else(|e| e.to_string().into());
-            OCallBridgeError::IpfsError(format!("error receiving cid: {}. Dumped contents to local file: {}", e, dumpfile.display()))
+            let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
+                .unwrap_or_else(|e| e.to_string().into());
+            OCallBridgeError::IpfsError(format!(
+                "error receiving cid: {}. Dumped contents to local file: {}",
+                e,
+                dumpfile.display()
+            ))
         })
         .and_then(|cid_str| {
             str::from_utf8(&cid_str)
@@ -158,5 +168,5 @@ fn log_failing_blob_to_file(blob: Vec<u8>, log_dir: Arc<Path>) -> io::Result<Pat
     let file_path = log_dir.join(file_name);
     let mut file = File::create(file_path.clone())?;
     file.write_all(&blob)?;
-    Ok(file_path.into())
+    Ok(file_path)
 }

@@ -190,7 +190,7 @@ pub(crate) fn main() {
 		config.integritee_rpc_endpoint(),
 		AccountKeyring::Alice.pair(),
 	));
-	let enclave = Arc::new(enclave_init(&config).unwrap());
+	let enclave = Arc::new(enclave_init(&config).expect("Failed to initialize enclave"));
 	let initialization_handler = Arc::new(InitializationHandler::default());
 	let worker = Arc::new(EnclaveWorker::new(
 		config.clone(),
