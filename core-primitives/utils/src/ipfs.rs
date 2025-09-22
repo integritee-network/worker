@@ -150,4 +150,12 @@ mod tests {
 		let decoded = IpfsCid::decode(&mut &encoded[..]).unwrap();
 		assert_eq!(decoded, expected_cid);
 	}
+
+	#[test]
+	pub fn test_default_cid_works() {
+		let expected_cid_str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";
+		let expected_cid = IpfsCid::try_from(expected_cid_str).unwrap();
+		let def = IpfsCid::default();
+		assert_eq!(def, expected_cid);
+	}
 }
