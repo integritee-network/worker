@@ -1,3 +1,20 @@
+/*
+	Copyright 2021 Integritee AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Decode, Encode};
@@ -330,12 +347,12 @@ pub mod pallet {
 			Self::deposit_event(Event::Claimed { id, commitment });
 			Ok(().into())
 		}
-   /// Mint credits to `owner`. New credits are created increasing the total deposit.
-   ///
-   /// Can only be called by the admin of the credit class.
-   ///
-   /// The `owner` may be a commitment account derived by a secret so that the credits can later
-   /// claimed unlinkably.
+		/// Mint credits to `owner`. New credits are created increasing the total deposit.
+		///
+		/// Can only be called by the admin of the credit class.
+		///
+		/// The `owner` may be a commitment account derived by a secret so that the credits can later
+		/// claimed unlinkably.
 		#[pallet::call_index(3)]
 		#[pallet::weight((<T as Config>::WeightInfo::mint(), DispatchClass::Normal, Pays::Yes)
         )]

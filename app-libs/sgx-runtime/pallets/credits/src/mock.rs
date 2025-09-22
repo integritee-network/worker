@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2021 Integritee AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 	limitations under the License.
 
 */
+
 pub use crate as dut;
 
 use frame_support::{

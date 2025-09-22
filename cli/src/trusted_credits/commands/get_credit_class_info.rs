@@ -1,5 +1,5 @@
 /*
-	Copyright 2021 Integritee AG and Supercomputing Systems AG
+	Copyright 2021 Integritee AG
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 	limitations under the License.
 
 */
+
 use crate::{
 	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
 	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
