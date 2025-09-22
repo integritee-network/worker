@@ -87,6 +87,12 @@ impl Display for IpfsCid {
 	}
 }
 
+impl Default for IpfsCid {
+	fn default() -> Self {
+		IpfsCid::from_content_bytes(&Vec::new()).expect("known to work for empty vec")
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub enum IpfsError {
 	InputCidInvalid,

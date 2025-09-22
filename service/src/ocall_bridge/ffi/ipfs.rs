@@ -52,10 +52,11 @@ fn write_ipfs(
 
 	return match ipfs_api.write_to_ipfs(state) {
 		Ok(r) => {
-			cid.fill(0);
-			let encoded = r.encode();
-			let len = encoded.len().min(cid.len());
-			cid[..len].copy_from_slice(&encoded[..len]);
+			// TODO: actually return cid
+			// cid.fill(0);
+			// let encoded = r.encode();
+			// let len = encoded.len().min(cid.len());
+			// cid[..len].copy_from_slice(&encoded[..len]);
 			sgx_status_t::SGX_SUCCESS
 		},
 		Err(e) => {

@@ -17,7 +17,7 @@
 */
 use crate::ocall::{ffi, OcallApi};
 use alloc::vec::Vec;
-use codec::{Decode, Encode};
+use codec::Encode;
 use frame_support::ensure;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use itp_types::IpfsCid;
@@ -40,8 +40,10 @@ impl EnclaveIpfsOCallApi for OcallApi {
 
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-		let cid = IpfsCid::decode(&mut cid_buf.as_slice())
-			.map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
+		let cid = IpfsCid::default();
+		// TODO: actually decode the returned cid
+		// cid.decode(&mut cid_buf.as_slice())
+		//	.map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
 		Ok(cid)
 	}
 
