@@ -25,7 +25,7 @@ use log::warn;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveIpfsOCallApi for OcallApi {
-	fn write_ipfs(&self, content: &[u8]) -> SgxResult<IpfsCid> {
+	fn write_ipfs(&self, content: &[u8]) -> SgxResult<Vec<u8>> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let mut cid_buf = [0u8; 46]; //max expected length for an encoded cid
 		let res = unsafe {
@@ -40,14 +40,11 @@ impl EnclaveIpfsOCallApi for OcallApi {
 
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-		let cid = IpfsCid::default();
-		// TODO: actually decode the returned cid
-		// cid.decode(&mut cid_buf.as_slice())
-		//	.map_err(|_| sgx_status_t::SGX_ERROR_UNEXPECTED)?;
-		Ok(cid)
+
+		Ok(cid_buf.into())
 	}
 
-	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<Vec<u8>> {
+	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		let cid_buf = cid.encode();
 		let res = unsafe {
@@ -61,6 +58,6 @@ impl EnclaveIpfsOCallApi for OcallApi {
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
 		warn!("IPFS read not implemented, returning empty vec");
-		Ok(vec![])
+		Ok(())
 	}
 }

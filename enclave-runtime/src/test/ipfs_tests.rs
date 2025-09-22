@@ -17,6 +17,7 @@
 */
 
 use crate::ocall::OcallApi;
+use codec::Decode;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use itp_utils::IpfsCid;
 use log::*;
@@ -36,7 +37,8 @@ pub fn test_ocall_read_write_ipfs() {
 
 	let expected_cid = IpfsCid::from_content_bytes(&enc_state).unwrap();
 
-	let returned_cid = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
+	let returned_cid_raw = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
+	let returned_cid = IpfsCid::decode(&mut returned_cid_raw.as_slice()).unwrap();
 	assert_eq!(expected_cid, returned_cid);
 
 	OcallApi.read_ipfs(&returned_cid).unwrap();
