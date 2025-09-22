@@ -83,7 +83,7 @@ fn find_first_matching_file(cid_str: String) -> Option<PathBuf> {
 		debug!("Checking file: {:?}", file_name);
 		let file_name = file_name.to_string_lossy();
 		if file_name.starts_with(prefix) && file_name.ends_with(suffix.as_str()) {
-			return Some(entry.path());
+			return Some(entry.path())
 		}
 	}
 	None
