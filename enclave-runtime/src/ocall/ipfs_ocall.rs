@@ -25,15 +25,14 @@ use log::warn;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveIpfsOCallApi for OcallApi {
-	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<IpfsCid> {
+	fn write_ipfs(&self, content: &[u8]) -> SgxResult<IpfsCid> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let mut cid_buf = [0u8; 46].to_vec();
-
+		let mut cid_buf = [0u8; 46]; //max expected length for an encoded cid
 		let res = unsafe {
 			ffi::ocall_write_ipfs(
 				&mut rt as *mut sgx_status_t,
-				encoded_state.as_ptr(),
-				encoded_state.len() as u32,
+				content.as_ptr(),
+				content.len() as u32,
 				cid_buf.as_mut_ptr(),
 				cid_buf.len() as u32,
 			)
