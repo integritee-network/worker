@@ -125,7 +125,6 @@ fn sorted_credits_store_works() {
 fn create_class_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		assert_ok!(Dut::create_class(
 			RuntimeOrigin::signed(alice.clone()),
@@ -142,7 +141,6 @@ fn create_class_works() {
 fn create_class_with_existing_id_fails() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		assert_ok!(Dut::create_class(
 			RuntimeOrigin::signed(alice.clone()),
@@ -160,7 +158,6 @@ fn create_class_with_existing_id_fails() {
 fn create_class_lacking_deposit_fails() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		Balances::make_free_balance_be(&alice, 9u64.into());
 		assert_err!(
@@ -173,7 +170,6 @@ fn create_class_lacking_deposit_fails() {
 fn claim_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		Admin::<Test>::insert(class_id, &alice);
 		let credit = BalanceWithExpiry { balance: 100u64, expiry: None };
@@ -206,7 +202,6 @@ fn claim_works() {
 fn claim_oversize_fails() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		Admin::<Test>::insert(class_id, &alice);
 		let mut store = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
@@ -236,7 +231,6 @@ fn mint_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		System::set_block_number(1);
 		set_timestamp(GENESIS_TIME);
 		let class_id = 42u32;
 		Credits::<Test>::insert(class_id, &alice, SortedCreditsStore::new());
@@ -269,7 +263,6 @@ fn mint_lacking_deposit_fails() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		System::set_block_number(1);
 		set_timestamp(GENESIS_TIME);
 		let class_id = 42u32;
 		Credits::<Test>::insert(class_id, &alice, SortedCreditsStore::new());
@@ -296,7 +289,6 @@ fn mint_oversize_fails() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		Admin::<Test>::insert(class_id, &alice);
 		let mut store = SortedCreditsStore::<BalanceOf<Test>, Moment>::new();
@@ -324,7 +316,6 @@ fn redeem_works() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		System::set_block_number(1);
 
 		let class_id = 42u32;
 		Admin::<Test>::insert(class_id, &alice);
@@ -378,7 +369,6 @@ fn deposits_work() {
 	new_test_ext().execute_with(|| {
 		let alice = AccountKeyring::Alice.to_account_id();
 		let bob = AccountKeyring::Bob.to_account_id();
-		System::set_block_number(1);
 		let class_id = 42u32;
 		assert_ok!(Dut::create_class(
 			RuntimeOrigin::signed(alice.clone()),
