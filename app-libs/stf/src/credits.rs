@@ -81,8 +81,8 @@ where
 		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		match self.clone() {
-			Self::create_class(who, class_id) => {
+		match self {
+			Self::create_class(ref who, class_id) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
 				std::println!("⣿STF⣿ 🔄 credits_create_class by ⣿⣿⣿ class_id ⣿⣿⣿",);
 				let deposit =
@@ -93,10 +93,10 @@ where
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Credits Create Class error: {:?}", e.error))
 					})?;
-				store_note(&who, TrustedCall::credits(self), vec![who.clone()])?;
+				store_note(&who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
 				Ok(())
 			},
-			Self::destroy_class(who, class_id) => {
+			Self::destroy_class(ref who, class_id) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
 				std::println!("⣿STF⣿ 🔄 credits_destroy_class by ⣿⣿⣿ class_id ⣿⣿⣿",);
 				ita_sgx_runtime::CreditsCall::<Runtime>::destroy_class { id: class_id }
@@ -104,10 +104,10 @@ where
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Credits Destroy Class error: {:?}", e.error))
 					})?;
-				store_note(&who, TrustedCall::credits(self), vec![who.clone()])?;
+				store_note(&who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
 				Ok(())
 			},
-			Self::claim(who, class_id, secret) => {
+			Self::claim(ref who, class_id, secret) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
 				std::println!("⣿STF⣿ 🔄 credits_claim by ⣿⣿⣿ class_id ⣿⣿⣿ claim_hash ⣿⣿⣿",);
 				let item_deposit =
@@ -122,10 +122,10 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Credits Claim error: {:?}", e.error))
 				})?;
-				store_note(&who, TrustedCall::credits(self), vec![who.clone()])?;
+				store_note(&who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
 				Ok(())
 			},
-			Self::mint(who, class_id, owner, amount, maybe_expiry) => {
+			Self::mint(ref who, class_id, ref owner, amount, maybe_expiry) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
 				std::println!("⣿STF⣿ 🔄 credits_mint by ⣿⣿⣿ class_id ⣿⣿⣿ amount ⣿⣿⣿",);
 				let item_deposit =
@@ -140,10 +140,14 @@ where
 				}
 				.dispatch_bypass_filter(origin)
 				.map_err(|e| Self::Error::Dispatch(format!("Credits Mint error: {:?}", e.error)))?;
-				store_note(&who, TrustedCall::credits(self), vec![who.clone(), owner])?;
+				store_note(
+					&who,
+					TrustedCall::credits(self.clone()),
+					vec![who.clone(), owner.clone()],
+				)?;
 				Ok(())
 			},
-			Self::redeem(who, class_id, owner, amount) => {
+			Self::redeem(ref who, class_id, ref owner, amount) => {
 				let origin = ita_sgx_runtime::RuntimeOrigin::signed(who.clone());
 				std::println!("⣿STF⣿ 🔄 credits_redeem by ⣿⣿⣿ class_id ⣿⣿⣿ amount ⣿⣿⣿",);
 				let item_deposit =
@@ -159,7 +163,11 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Credits Redeem error: {:?}", e.error))
 				})?;
-				store_note(&who, TrustedCall::credits(self), vec![who.clone(), owner])?;
+				store_note(
+					&who,
+					TrustedCall::credits(self.clone()),
+					vec![who.clone(), owner.clone()],
+				)?;
 				Ok(())
 			},
 		}?;
