@@ -457,6 +457,7 @@ construct_runtime!(
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+		Credits: pallet_credits::{Pallet, Call, Storage, Event<T>} = 51,
 	}
 );
 
