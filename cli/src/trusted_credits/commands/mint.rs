@@ -21,7 +21,6 @@ use crate::{
 };
 
 use crate::{
-	command_utils::hash_from_hex,
 	trusted_command_utils::{get_accountid_from_str, get_trusted_account_info},
 	trusted_operation::send_direct_request,
 };

@@ -122,12 +122,12 @@ where
 		Balance: Saturating + PartialOrd,
 	{
 		if self.total() < amount {
-			return Err(DispatchError::Other("Insufficient balance"));
+			return Err(DispatchError::Other("Insufficient balance"))
 		}
 		let old_len = self.balances_with_expiry.len();
 		for credit in &mut self.balances_with_expiry {
 			if amount.is_zero() {
-				break;
+				break
 			}
 			if credit.balance <= amount {
 				amount = amount.saturating_sub(credit.balance);

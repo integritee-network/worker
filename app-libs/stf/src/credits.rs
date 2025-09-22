@@ -93,7 +93,7 @@ where
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Credits Create Class error: {:?}", e.error))
 					})?;
-				store_note(&who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
+				store_note(who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
 				Ok(())
 			},
 			Self::destroy_class(ref who, class_id) => {
@@ -104,7 +104,7 @@ where
 					.map_err(|e| {
 						Self::Error::Dispatch(format!("Credits Destroy Class error: {:?}", e.error))
 					})?;
-				store_note(&who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
+				store_note(who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
 				Ok(())
 			},
 			Self::claim(ref who, class_id, secret) => {
@@ -122,7 +122,7 @@ where
 				.map_err(|e| {
 					Self::Error::Dispatch(format!("Credits Claim error: {:?}", e.error))
 				})?;
-				store_note(&who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
+				store_note(who, TrustedCall::credits(self.clone()), vec![who.clone()])?;
 				Ok(())
 			},
 			Self::mint(ref who, class_id, ref owner, amount, maybe_expiry) => {
@@ -141,7 +141,7 @@ where
 				.dispatch_bypass_filter(origin)
 				.map_err(|e| Self::Error::Dispatch(format!("Credits Mint error: {:?}", e.error)))?;
 				store_note(
-					&who,
+					who,
 					TrustedCall::credits(self.clone()),
 					vec![who.clone(), owner.clone()],
 				)?;
@@ -164,7 +164,7 @@ where
 					Self::Error::Dispatch(format!("Credits Redeem error: {:?}", e.error))
 				})?;
 				store_note(
-					&who,
+					who,
 					TrustedCall::credits(self.clone()),
 					vec![who.clone(), owner.clone()],
 				)?;

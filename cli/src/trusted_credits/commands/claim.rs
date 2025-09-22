@@ -17,7 +17,7 @@
 
 use crate::{
 	get_basic_signing_info_from_args, trusted_cli::TrustedCli,
-	trusted_operation::perform_trusted_operation, Cli, CliError, CliResult, CliResultOk,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
 };
 
 use crate::{
@@ -29,7 +29,6 @@ use itp_stf_primitives::{
 	traits::TrustedCallSigning,
 	types::{KeyPair, TrustedOperation},
 };
-use itp_types::Hash;
 use log::*;
 use std::boxed::Box;
 

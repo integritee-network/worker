@@ -15,30 +15,15 @@
 
 */
 
-use crate::{
-	command_utils::hash_from_hex,
-	get_basic_signing_info_from_args,
-	trusted_cli::TrustedCli,
-	trusted_command_utils::get_trusted_account_info,
-	trusted_operation::{perform_trusted_operation, send_direct_request},
-	Cli, CliError, CliResult, CliResultOk,
-};
-use ita_stf::{credits::CreditsTrustedCall, Getter, TrustedCall, TrustedCallSigned};
-use itp_stf_primitives::{
-	traits::TrustedCallSigning,
-	types::{KeyPair, TrustedOperation},
-};
-use itp_types::Hash;
-use log::*;
+use crate::{trusted_cli::TrustedCli, Cli, CliResult, CliResultOk};
 use rand::Rng;
 use sp_core::blake2_256;
-use std::boxed::Box;
 
 #[derive(Parser)]
 pub struct GenerateCommitmentCommand {}
 
 impl GenerateCommitmentCommand {
-	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+	pub(crate) fn run(&self, _cli: &Cli, _trusted_args: &TrustedCli) -> CliResult {
 		let mut rng = rand::thread_rng();
 		let random_bytes: [u8; 32] = rng.gen();
 		let commitment = blake2_256(&random_bytes);
