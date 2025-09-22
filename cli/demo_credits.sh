@@ -50,6 +50,8 @@ TCLIENT="${CLIENT} trusted --mrenclave ${MRENCLAVE} --direct"
 # clean up from previous runs
 ${TCLIENT} credits destroy-class //Alice 42 || true
 
+sleep 2
+
 ${TCLIENT} credits create-class //Alice 42
 ${TCLIENT} credits get-credit-class-info //Alice 42
 
