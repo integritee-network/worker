@@ -1,0 +1,27 @@
+services:
+  demo-credits:
+    image: integritee-cli:${VERSION:-dev}
+    devices:
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
+    volumes:
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
+    build:
+      context: ${PWD}/..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on:
+      integritee-node-${VERSION}:
+        condition: service_healthy
+      integritee-worker-1-${VERSION}:
+        condition: service_healthy
+    networks:
+      - integritee-test-network
+    entrypoint:
+      "/usr/local/worker-cli/demo_credits.sh -p 9912 -u ws://integritee-node
+      -V wss://integritee-worker-1 -A 2011 -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge
