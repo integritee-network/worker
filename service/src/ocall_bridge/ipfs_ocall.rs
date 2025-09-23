@@ -66,8 +66,9 @@ impl IpfsOCall {
 impl IpfsBridge for IpfsOCall {
 	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
 		eprintln!("    Entering ocall_write_ipfs to write {}B", data.len());
-		//		let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
-		//			.unwrap_or_else(|e| e.to_string().into());
+		let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
+			.unwrap_or_else(|e| e.to_string().into());
+		eprintln!("      wrote to file {}", dumpfile.display());
 		Ok(IpfsCid::default())
 		// write_to_ipfs(
 		//     self.client.as_ref().ok_or_else(|| {
