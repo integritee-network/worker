@@ -15,6 +15,7 @@ scale-info = { version = "2.10.0", default-features = false, features = ["derive
 ita-assets-map = { path = "../assets-map", default-features = false }
 itp-randomness = { path = "../../core-primitives/randomness", default-features = false }
 itp-sgx-runtime-primitives = { path = "../../core-primitives/sgx-runtime-primitives", default-features = false }
+pallet-credits = { default-features = false, path = "pallets/credits" }
 pallet-guess-the-number = { default-features = false, path = "pallets/guess-the-number" }
 pallet-notes = { default-features = false, path = "pallets/notes" }
 pallet-parentchain = { default-features = false, path = "pallets/parentchain" }

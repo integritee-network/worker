@@ -39,6 +39,7 @@ use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use crate::evm_helpers::{get_evm_account, get_evm_account_codes, get_evm_account_storages};
 
 use crate::{
+	credits::{CreditsPublicGetter, CreditsTrustedGetter},
 	guess_the_number::{GuessTheNumberPublicGetter, GuessTheNumberTrustedGetter},
 	helpers::{
 		enclave_signer_account, shielding_target, shielding_target_genesis_hash, wrap_bytes,
@@ -132,6 +133,7 @@ pub enum PublicGetter {
 	shard_info = 12,
 	asset_total_issuance(AssetId) = 40,
 	guess_the_number(GuessTheNumberPublicGetter) = 50,
+	credits(CreditsPublicGetter) = 51,
 }
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
@@ -145,6 +147,7 @@ pub enum TrustedGetter {
 	notes_for(AccountId, BucketIndex) = 10,
 	asset_balance(AccountId, AssetId) = 40,
 	guess_the_number(GuessTheNumberTrustedGetter) = 50,
+	credits(CreditsTrustedGetter) = 51,
 	#[cfg(feature = "evm")]
 	evm_nonce(AccountId) = 90,
 	#[cfg(feature = "evm")]
@@ -162,6 +165,7 @@ impl TrustedGetter {
 			TrustedGetter::notes_for(sender_account, ..) => sender_account,
 			TrustedGetter::asset_balance(sender_account, ..) => sender_account,
 			TrustedGetter::guess_the_number(getter) => getter.sender_account(),
+			TrustedGetter::credits(getter) => getter.sender_account(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(sender_account) => sender_account,
 			#[cfg(feature = "evm")]
@@ -274,6 +278,7 @@ impl ExecuteGetter for TrustedGetterSigned {
 				Some(asset_balance.encode())
 			},
 			TrustedGetter::guess_the_number(getter) => getter.execute(),
+			TrustedGetter::credits(getter) => getter.execute(),
 			#[cfg(feature = "evm")]
 			TrustedGetter::evm_nonce(who) => {
 				let evm_account = get_evm_account(&who);
@@ -394,6 +399,7 @@ impl ExecuteGetter for PublicGetter {
 			PublicGetter::asset_total_issuance(asset_id) =>
 				Some(Assets::total_supply(asset_id).encode()),
 			PublicGetter::guess_the_number(getter) => getter.execute(),
+			PublicGetter::credits(getter) => getter.execute(),
 		}
 	}
 }

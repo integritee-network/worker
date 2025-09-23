@@ -113,6 +113,7 @@ pub(crate) fn get_accountid_from_str(account: &str) -> AccountId {
 			.public()
 			.into_account()
 			.into(),
+		"0x" => sr25519::Public::from_hex(account).unwrap().into_account().into(),
 		_ => sr25519::Public::from_ss58check(account).unwrap().into_account().into(),
 	}
 }
