@@ -115,7 +115,7 @@ fn write_to_ipfs_sync(
 			eprintln!("ocall result IpfsCid {}", res.hash);
 		},
 		Err(e) => {
-			let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
+			let dumpfile = log_failing_blob_to_file(data.into(), log_dir)
 				.unwrap_or_else(|e| e.to_string().into());
 			eprintln!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
 		},

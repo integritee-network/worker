@@ -915,7 +915,7 @@ where
 			},
 			TrustedCall::guess_the_number(call) =>
 				call.execute(side_effects, shard, node_metadata_repo),
-            TrustedCall::credits(call) => call.execute(side_effects, shard, node_metadata_repo),
+			TrustedCall::credits(call) => call.execute(side_effects, shard, node_metadata_repo),
 			TrustedCall::force_unshield_all(enclave_account, who, maybe_asset_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				if let Some(asset_id) = maybe_asset_id {
