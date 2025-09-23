@@ -32,6 +32,7 @@ pub use getter::*;
 pub use stf_sgx_primitives::{types::*, Stf};
 pub use trusted_call::*;
 
+pub mod credits;
 #[cfg(feature = "evm")]
 pub mod evm_helpers;
 pub mod getter;
@@ -55,3 +56,6 @@ pub const STF_BYTE_FEE_UNIT_DIVIDER: Balance = 10_000; // 0.0001 tokens per byte
 pub const STF_GUESS_FEE_UNIT_DIVIDER: Balance = 10; // 0.1 tokens
 
 pub const STF_SESSION_PROXY_DEPOSIT_DIVIDER: Balance = 10; // 0.1 tokens
+
+pub const STF_CREDITS_CLASS_DEPOSIT_DIVIDER: Balance = 1; // 1.0 tokens
+pub const STF_CREDITS_ITEM_DEPOSIT_DIVIDER: Balance = 1000;

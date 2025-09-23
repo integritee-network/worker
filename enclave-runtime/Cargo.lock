@@ -1729,6 +1729,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "pallet-assets",
  "pallet-balances",
+ "pallet-credits",
  "pallet-evm",
  "pallet-guess-the-number",
  "pallet-notes",
@@ -3027,6 +3028,24 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-credits"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "itp-randomness",
+ "log",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]

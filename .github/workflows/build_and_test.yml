@@ -276,6 +276,11 @@ jobs:
             demo_name: demo-sidechain
             host: test-runner-sgx
             sgx_mode: HW
+          - test: Credits
+            flavor_id: sidechain
+            demo_name: demo-credits
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: M6
             flavor_id: offchain-worker
             demo_name: demo-shielding-unshielding-multiworker

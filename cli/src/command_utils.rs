@@ -24,7 +24,7 @@ use ita_parentchain_interface::{
 };
 use itc_rpc_client::direct_client::{DirectApi, DirectClient as DirectWorkerApi};
 use itp_node_api::api_client::TungsteniteRpcClient;
-use itp_types::Moment;
+use itp_types::{Hash, Moment};
 use log::*;
 use sgx_crypto_helper::rsa3072::Rsa3072PubKey;
 use sp_application_crypto::sr25519;
@@ -102,6 +102,13 @@ pub(crate) fn mrenclave_from_base58(src: &str) -> [u8; 32] {
 	let mut mrenclave = [0u8; 32];
 	mrenclave.copy_from_slice(&src.from_base58().expect("mrenclave has to be base58 encoded"));
 	mrenclave
+}
+
+pub(crate) fn hash_from_hex(src: &str) -> Hash {
+	let mut hash = [0u8; 32];
+	let vec = hex::decode(src.trim_start_matches("0x")).expect("hash has to be hex encoded");
+	hash.copy_from_slice(&vec);
+	hash.into()
 }
 
 pub(crate) fn format_moment(timestamp: Moment) -> String {

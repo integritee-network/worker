@@ -80,6 +80,7 @@ use itp_randomness::SgxRandomness;
 use itp_sgx_runtime_primitives::types::Moment;
 pub use pallet_assets::Call as AssetsCall;
 pub use pallet_balances::Call as BalancesCall;
+pub use pallet_credits::{Call as CreditsCall, CreditClassId};
 pub use pallet_guess_the_number::{Call as GuessTheNumberCall, GuessType};
 pub use pallet_notes::Call as NotesCall;
 pub use pallet_parentchain::Call as ParentchainPalletCall;
@@ -388,6 +389,15 @@ impl pallet_assets::Config for Runtime {
 	type BenchmarkHelper = ();
 }
 
+parameter_types! {
+	pub const MaxEntriesPerAccount: u8 = 10;
+}
+impl pallet_credits::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type WeightInfo = ();
+	type Currency = Balances;
+	type MaxEntriesPerAccount = MaxEntriesPerAccount;
+}
 // The plain sgx-runtime without the `evm-pallet`
 #[cfg(not(feature = "evm"))]
 construct_runtime!(
@@ -413,6 +423,7 @@ construct_runtime!(
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+		Credits: pallet_credits::{Pallet, Call, Storage, Event<T>} = 51,
 	}
 );
 
@@ -446,6 +457,7 @@ construct_runtime!(
 		SessionProxy: pallet_session_proxy::{Pallet, Call, Storage} = 41,
 
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+		Credits: pallet_credits::{Pallet, Call, Storage, Event<T>} = 51,
 	}
 );
 

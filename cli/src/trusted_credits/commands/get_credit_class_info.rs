@@ -1,0 +1,51 @@
+/*
+	Copyright 2021 Integritee AG
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+		http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+*/
+
+use crate::{
+	trusted_cli::TrustedCli, trusted_command_utils::get_pair_from_str,
+	trusted_operation::perform_trusted_operation, Cli, CliResult, CliResultOk,
+};
+use ita_stf::{
+	credits::{CreditClassInfo, CreditsTrustedGetter},
+	Getter, TrustedCallSigned, TrustedGetter,
+};
+use itp_stf_primitives::types::{KeyPair, TrustedOperation};
+use sp_core::Pair;
+
+#[derive(Parser)]
+pub struct GetCreditClassInfoCommand {
+	/// AccountId in ss58check format, mnemonic or hex seed. must be admin of class
+	account: String,
+	/// class id
+	id: u32,
+}
+
+impl GetCreditClassInfoCommand {
+	pub(crate) fn run(&self, cli: &Cli, trusted_args: &TrustedCli) -> CliResult {
+		let who = get_pair_from_str(cli, trusted_args, &self.account);
+		let top = TrustedOperation::<TrustedCallSigned, Getter>::get(Getter::trusted(
+			TrustedGetter::credits(CreditsTrustedGetter::credit_class_info {
+				sender: who.public().into(),
+				class_id: self.id,
+			})
+			.sign(&KeyPair::Sr25519(Box::new(who))),
+		));
+		let info = perform_trusted_operation::<CreditClassInfo>(cli, trusted_args, &top).unwrap();
+		println!("{:?}", info);
+		Ok(CliResultOk::CreditClassInfo { info })
+	}
+}
