@@ -72,9 +72,7 @@ impl IpfsBridge for IpfsOCall {
 		} else {
 			let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
 				.unwrap_or_else(|e| e.to_string().into());
-			Err(OCallBridgeError::IpfsError(
-				format!("No IPFS client configured, cannot write to IPFS. Dumped content to local file instead: {}", dumpfile.display())
-			))
+			Ok(IpfsCid::default())
 		}
 	}
 
