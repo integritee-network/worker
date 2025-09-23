@@ -107,27 +107,20 @@ fn write_to_ipfs_sync(
 	data: &'static [u8],
 	log_dir: Arc<Path>,
 ) -> OCallBridgeResult<IpfsCid> {
+	let datac = Cursor::new(data);
+	let rt = Runtime::new().unwrap();
+
+	match rt.block_on(client.add(datac)) {
+		Ok(res) => {
+			eprintln!("ocall result IpfsCid {}", res.hash);
+		},
+		Err(e) => {
+			let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
+				.unwrap_or_else(|e| e.to_string().into());
+			eprintln!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
+		},
+	};
 	Ok(IpfsCid::default())
-	// let datac = Cursor::new(data);
-	// let rt = Runtime::new().unwrap();
-	//
-	// match rt.block_on(client.add(datac)) {
-	// 	Ok(res) => {
-	// 		eprintln!("ocall result IpfsCid {}", res.hash);
-	// 		IpfsCid::try_from(res.hash.as_str())
-	// 			.map_err(|e| OCallBridgeError::IpfsError(format!("invalid IpfsCid: {:?}", e)))
-	// 	},
-	// 	Err(e) => {
-	// 		let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
-	// 			.unwrap_or_else(|e| e.to_string().into());
-	// 		eprintln!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
-	// 		Err(OCallBridgeError::IpfsError(format!(
-	// 			"error adding file to IPFS: {}. Dumped content to local file instead: {}",
-	// 			e,
-	// 			dumpfile.display()
-	// 		)))
-	// 	},
-	// }
 }
 
 fn log_failing_blob_to_file(blob: Vec<u8>, log_dir: Arc<Path>) -> io::Result<PathBuf> {
