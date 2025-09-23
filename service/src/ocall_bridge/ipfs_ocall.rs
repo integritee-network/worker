@@ -18,8 +18,6 @@
 
 use crate::ocall_bridge::bridge_api::{IpfsBridge, OCallBridgeError, OCallBridgeResult};
 use chrono::Local;
-use futures::TryStreamExt;
-use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use itp_utils::IpfsCid;
 use log::*;
 use std::{
@@ -28,8 +26,11 @@ use std::{
 	io::{self, Cursor, Write},
 	path::{Path, PathBuf},
 	str,
-	sync::{mpsc::channel, Arc},
+	sync::Arc,
 };
+
+// TODO: dummy type. remove
+struct IpfsClient {}
 
 pub struct IpfsOCall {
 	client: Option<Arc<IpfsClient>>,
@@ -38,38 +39,36 @@ pub struct IpfsOCall {
 
 impl IpfsOCall {
 	pub fn new(maybe_url: Option<String>, maybe_auth: Option<String>, log_dir: Arc<Path>) -> Self {
-		if let Some(url) = maybe_url {
-			let client = ipfs_api_backend_hyper::IpfsClient::from_str(&url).unwrap();
-			let client = if let Some((user, pwd)) = maybe_auth
-				.and_then(|s| s.split_once(':').map(|(u, p)| (u.to_string(), p.to_string())))
-			{
-				info!("Using IPFS node at {} with credentials ******", url);
-				client.with_credentials(user, pwd)
-			} else {
-				info!("Using IPFS node at {}", url);
-				client
-			};
-			let version = tokio::runtime::Runtime::new().unwrap().block_on(client.version());
-			match version {
-				Ok(v) => info!("Connected to IPFS node version: {}", v.version),
-				Err(e) => error!("Error getting IPFS node version: {}", e),
-			}
-			Self { client: Some(Arc::new(client)), log_dir }
-		} else {
-			info!("No IPFS URL provided, disabling IPFS.");
-			Self { client: None, log_dir }
-		}
+		// if let Some(url) = maybe_url {
+		//     let client = ipfs_api_backend_hyper::IpfsClient::from_str(&url).unwrap();
+		//     let client = if let Some((user, pwd)) = maybe_auth
+		//         .and_then(|s| s.split_once(':').map(|(u, p)| (u.to_string(), p.to_string())))
+		//     {
+		//         info!("Using IPFS node at {} with credentials ******", url);
+		//         client.with_credentials(user, pwd)
+		//     } else {
+		//         info!("Using IPFS node at {}", url);
+		//         client
+		//     };
+		//     let version = tokio::runtime::Runtime::new().unwrap().block_on(client.version());
+		//     match version {
+		//         Ok(v) => info!("Connected to IPFS node version: {}", v.version),
+		//         Err(e) => error!("Error getting IPFS node version: {}", e),
+		//     }
+		//     Self { client: Some(Arc::new(client)), log_dir }
+		// } else {
+		info!("No IPFS URL provided, disabling IPFS.");
+		Self { client: None, log_dir }
+		//}
 	}
 }
 
 impl IpfsBridge for IpfsOCall {
 	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
-		debug!("    Entering ocall_write_ipfs to write {}B", data.len());
-		let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
-			.unwrap_or_else(|e| e.to_string().into());
-		Err(OCallBridgeError::IpfsError(
-            format!("No IPFS client configured, cannot write to IPFS. Dumped content to local file instead: {}", dumpfile.display())
-        ))
+		eprintln!("    Entering ocall_write_ipfs to write {}B", data.len());
+		//		let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
+		//			.unwrap_or_else(|e| e.to_string().into());
+		Ok(IpfsCid::default())
 		// write_to_ipfs(
 		//     self.client.as_ref().ok_or_else(|| {
 		//         let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone()).unwrap_or_else(|e| e.to_string().into());
@@ -83,16 +82,17 @@ impl IpfsBridge for IpfsOCall {
 	}
 
 	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()> {
-		debug!("Entering ocall_read_ipfs");
-		let client = self.client.as_ref().ok_or_else(|| {
-			OCallBridgeError::IpfsError(
-				"No IPFS client configured, cannot read from IPFS".to_string(),
-			)
-		})?;
-		let res = read_from_ipfs(client, &cid)
-			.map_err(|_| OCallBridgeError::IpfsError("failed to read from IPFS".to_string()))?;
-		let filename = format!("{:?}", cid);
-		create_file(&filename, &res).map_err(OCallBridgeError::IpfsError)
+		eprintln!("     Entering ocall_read_ipfs");
+		Ok(())
+		// let client = self.client.as_ref().ok_or_else(|| {
+		//     OCallBridgeError::IpfsError(
+		//         "No IPFS client configured, cannot read from IPFS".to_string(),
+		//     )
+		// })?;
+		// let res = read_from_ipfs(client, &cid)
+		//     .map_err(|_| OCallBridgeError::IpfsError("failed to read from IPFS".to_string()))?;
+		// let filename = format!("{:?}", cid);
+		// create_file(&filename, &res).map_err(OCallBridgeError::IpfsError)
 	}
 }
 
@@ -103,63 +103,6 @@ fn create_file(filename: &str, result: &[u8]) -> Result<(), String> {
 			.map_or_else(|e| Err(format!("failed writing to file: {}", e)), |_| Ok(())),
 		Err(e) => Err(format!("failed to create file: {}", e)),
 	}
-}
-
-#[tokio::main]
-async fn write_to_ipfs(
-	client: &IpfsClient,
-	data: &'static [u8],
-	log_dir: Arc<Path>,
-) -> OCallBridgeResult<IpfsCid> {
-	let datac = Cursor::new(data);
-	let (tx, rx) = channel();
-
-	match client.add(datac).await {
-		Ok(res) => {
-			debug!("Result IpfsCid {}", res.hash);
-			tx.send(res.hash.into_bytes()).unwrap();
-		},
-		Err(e) => {
-			let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
-				.unwrap_or_else(|e| e.to_string().into());
-			return Err(OCallBridgeError::IpfsError(format!(
-				"error adding file to IPFS: {}. Dumped content to local file instead: {}",
-				e,
-				dumpfile.display()
-			)))
-		},
-	}
-	rx.recv()
-		.map_err(|e| {
-			let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
-				.unwrap_or_else(|e| e.to_string().into());
-			OCallBridgeError::IpfsError(format!(
-				"error receiving cid: {}. Dumped content to local file instead: {}",
-				e,
-				dumpfile.display()
-			))
-		})
-		.and_then(|cid_str| {
-			str::from_utf8(&cid_str)
-				.map_err(|e| OCallBridgeError::IpfsError(format!("invalid UTF-8 in cid: {}", e)))
-				.and_then(|cid_utf8| {
-					IpfsCid::try_from(cid_utf8).map_err(|e| {
-						OCallBridgeError::IpfsError(format!("invalid IpfsCid: {:?}", e))
-					})
-				})
-		})
-}
-
-#[tokio::main]
-pub async fn read_from_ipfs(client: &IpfsClient, cid: &IpfsCid) -> Result<Vec<u8>, String> {
-	let h = format!("{:?}", cid);
-	debug!("Fetching content with cid {}", h);
-	client
-		.cat(&h)
-		.map_ok(|chunk| chunk.to_vec())
-		.map_err(|e| e.to_string())
-		.try_concat()
-		.await
 }
 
 fn log_failing_blob_to_file(blob: Vec<u8>, log_dir: Arc<Path>) -> io::Result<PathBuf> {

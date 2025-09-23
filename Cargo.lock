@@ -2680,6 +2680,7 @@ dependencies = [
  "log 0.4.28",
  "pallet-assets",
  "pallet-balances",
+ "pallet-credits",
  "pallet-enclave-bridge",
  "pallet-evm",
  "pallet-notes",
@@ -2967,6 +2968,7 @@ dependencies = [
  "itp-sgx-runtime-primitives",
  "pallet-assets",
  "pallet-balances",
+ "pallet-credits",
  "pallet-evm",
  "pallet-guess-the-number",
  "pallet-notes",
@@ -5374,6 +5376,27 @@ dependencies = [
  "log 0.4.28",
  "parity-scale-codec",
  "scale-info",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-credits"
+version = "0.1.0"
+dependencies = [
+ "env_logger 0.9.3",
+ "frame-support",
+ "frame-system",
+ "itp-randomness",
+ "log 0.4.28",
+ "pallet-balances",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "scale-info",
+ "serde 1.0.193",
+ "sp-core",
+ "sp-io 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.42)",
+ "sp-keyring",
  "sp-runtime",
  "sp-std",
 ]
