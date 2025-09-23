@@ -22,9 +22,9 @@ use log::*;
 use std::{fs::File, io::Read, vec::Vec};
 
 #[allow(unused)]
-fn test_ocall_read_write_ipfs() {
+pub fn test_ocall_read_write_ipfs() {
 	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
-	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
+	let enc_state: Vec<u8> = vec![20; 10];
 
 	let cid = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
 

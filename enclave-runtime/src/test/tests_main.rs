@@ -25,6 +25,7 @@ use crate::{
 		fixtures::test_setup::{
 			enclave_call_signer, test_setup, TestStf, TestStfExecutor, TestTopPoolAuthor,
 		},
+		ipfs_tests,
 		mocks::types::TestStateKeyRepo,
 		sidechain_aura_tests, sidechain_event_tests, state_getter_tests, top_pool_tests,
 	},
@@ -166,7 +167,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// ipfs::test_creates_ipfs_content_struct_works,
 		// ipfs::test_verification_ok_for_correct_content,
 		// ipfs::test_verification_fails_for_incorrect_content,
-		test_ocall_read_write_ipfs,
+		ipfs_tests::test_ocall_read_write_ipfs,
 
 		// Teeracle tests
 		run_teeracle_tests,
