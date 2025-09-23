@@ -65,23 +65,17 @@ impl IpfsOCall {
 impl IpfsBridge for IpfsOCall {
 	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
 		eprintln!("    Entering ocall_write_ipfs to write {}B", data.len());
-		let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
-			.unwrap_or_else(|e| e.to_string().into());
-		eprintln!("      write to ipfs failed, wrote to file {}", dumpfile.display());
-
-		// let result = write_to_ipfs_sync(
-		//     self.client.as_ref().ok_or_else(|| {
-		//         let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone()).unwrap_or_else(|e| e.to_string().into());
-		//         eprintln!("      write to ipfs failed, wrote to file {}", dumpfile.display());
-		//         OCallBridgeError::IpfsError(
-		//             format!("No IPFS client configured, cannot write to IPFS. Dumped content to local file instead: {}", dumpfile.display())
-		//         )
-		//     })?,
-		//     data,
-		//     self.log_dir.clone(),
-		// );
-		//eprintln!("     ipfs result {:?}", result);
-		Ok(IpfsCid::default())
+		if let Some(ref client) = self.client {
+			let result = write_to_ipfs_sync(client, data, self.log_dir.clone());
+			eprintln!("     ipfs result {:?}", result);
+			Ok(IpfsCid::default())
+		} else {
+			let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
+				.unwrap_or_else(|e| e.to_string().into());
+			Err(OCallBridgeError::IpfsError(
+				format!("No IPFS client configured, cannot write to IPFS. Dumped content to local file instead: {}", dumpfile.display())
+			))
+		}
 	}
 
 	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()> {
