@@ -18,6 +18,8 @@
 
 use crate::ocall_bridge::bridge_api::{IpfsBridge, OCallBridgeError, OCallBridgeResult};
 use chrono::Local;
+use futures::TryStreamExt;
+use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use itp_utils::IpfsCid;
 use log::*;
 use std::{
@@ -26,11 +28,8 @@ use std::{
 	io::{self, Cursor, Write},
 	path::{Path, PathBuf},
 	str,
-	sync::Arc,
+	sync::{mpsc::channel, Arc},
 };
-
-// TODO: dummy type. remove
-struct IpfsClient {}
 
 pub struct IpfsOCall {
 	client: Option<Arc<IpfsClient>>,
@@ -39,47 +38,46 @@ pub struct IpfsOCall {
 
 impl IpfsOCall {
 	pub fn new(maybe_url: Option<String>, maybe_auth: Option<String>, log_dir: Arc<Path>) -> Self {
-		// if let Some(url) = maybe_url {
-		//     let client = ipfs_api_backend_hyper::IpfsClient::from_str(&url).unwrap();
-		//     let client = if let Some((user, pwd)) = maybe_auth
-		//         .and_then(|s| s.split_once(':').map(|(u, p)| (u.to_string(), p.to_string())))
-		//     {
-		//         info!("Using IPFS node at {} with credentials ******", url);
-		//         client.with_credentials(user, pwd)
-		//     } else {
-		//         info!("Using IPFS node at {}", url);
-		//         client
-		//     };
-		//     let version = tokio::runtime::Runtime::new().unwrap().block_on(client.version());
-		//     match version {
-		//         Ok(v) => info!("Connected to IPFS node version: {}", v.version),
-		//         Err(e) => error!("Error getting IPFS node version: {}", e),
-		//     }
-		//     Self { client: Some(Arc::new(client)), log_dir }
-		// } else {
-		info!("No IPFS URL provided, disabling IPFS.");
-		Self { client: None, log_dir }
-		//}
+		if let Some(url) = maybe_url {
+			let client = ipfs_api_backend_hyper::IpfsClient::from_str(&url).unwrap();
+			let client = if let Some((user, pwd)) = maybe_auth
+				.and_then(|s| s.split_once(':').map(|(u, p)| (u.to_string(), p.to_string())))
+			{
+				info!("Using IPFS node at {} with credentials ******", url);
+				client.with_credentials(user, pwd)
+			} else {
+				info!("Using IPFS node at {}", url);
+				client
+			};
+			let version = tokio::runtime::Runtime::new().unwrap().block_on(client.version());
+			match version {
+				Ok(v) => info!("Connected to IPFS node version: {}", v.version),
+				Err(e) => error!("Error getting IPFS node version: {}", e),
+			}
+			Self { client: Some(Arc::new(client)), log_dir }
+		} else {
+			info!("No IPFS URL provided, disabling IPFS.");
+			Self { client: None, log_dir }
+		}
 	}
 }
 
 impl IpfsBridge for IpfsOCall {
 	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
 		eprintln!("    Entering ocall_write_ipfs to write {}B", data.len());
-		let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
-			.unwrap_or_else(|e| e.to_string().into());
-		eprintln!("      wrote to file {}", dumpfile.display());
+		let result = write_to_ipfs_sync(
+            self.client.as_ref().ok_or_else(|| {
+                let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone()).unwrap_or_else(|e| e.to_string().into());
+                eprintln!("      write to ipfs failed, wrote to file {}", dumpfile.display());
+                OCallBridgeError::IpfsError(
+                    format!("No IPFS client configured, cannot write to IPFS. Dumped content to local file instead: {}", dumpfile.display())
+                )
+            })?,
+            data,
+            self.log_dir.clone(),
+        );
+		eprintln!("     ipfs result {:?}", result);
 		Ok(IpfsCid::default())
-		// write_to_ipfs(
-		//     self.client.as_ref().ok_or_else(|| {
-		//         let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone()).unwrap_or_else(|e| e.to_string().into());
-		//         OCallBridgeError::IpfsError(
-		//             format!("No IPFS client configured, cannot write to IPFS. Dumped content to local file instead: {}", dumpfile.display())
-		//         )
-		//     })?,
-		//     data,
-		//     self.log_dir.clone(),
-		// )
 	}
 
 	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()> {
@@ -103,6 +101,35 @@ fn create_file(filename: &str, result: &[u8]) -> Result<(), String> {
 			.write_all(result)
 			.map_or_else(|e| Err(format!("failed writing to file: {}", e)), |_| Ok(())),
 		Err(e) => Err(format!("failed to create file: {}", e)),
+	}
+}
+
+use tokio::runtime::Runtime;
+
+fn write_to_ipfs_sync(
+	client: &IpfsClient,
+	data: &'static [u8],
+	log_dir: Arc<Path>,
+) -> OCallBridgeResult<IpfsCid> {
+	let datac = Cursor::new(data);
+	let rt = Runtime::new().unwrap();
+
+	match rt.block_on(client.add(datac)) {
+		Ok(res) => {
+			eprintln!("ocall result IpfsCid {}", res.hash);
+			IpfsCid::try_from(res.hash.as_str())
+				.map_err(|e| OCallBridgeError::IpfsError(format!("invalid IpfsCid: {:?}", e)))
+		},
+		Err(e) => {
+			let dumpfile = log_failing_blob_to_file(data.into(), log_dir.clone())
+				.unwrap_or_else(|e| e.to_string().into());
+			eprintln!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
+			Err(OCallBridgeError::IpfsError(format!(
+				"error adding file to IPFS: {}. Dumped content to local file instead: {}",
+				e,
+				dumpfile.display()
+			)))
+		},
 	}
 }
 

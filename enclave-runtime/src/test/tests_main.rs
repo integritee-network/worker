@@ -164,7 +164,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 
 		// this test needs an ipfs node running..
 		crate::test::ipfs_tests::test_ocall_read_write_ipfs,
-		//crate::test::ipfs_tests::test_ocall_write_ipfs_fallback,
+		crate::test::ipfs_tests::test_ocall_write_ipfs_fallback,
 
 		// Teeracle tests
 		run_teeracle_tests,
