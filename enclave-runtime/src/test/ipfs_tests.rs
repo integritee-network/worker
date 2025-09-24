@@ -37,7 +37,7 @@ pub fn test_ocall_read_write_ipfs() {
 	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
 	let enc_state: Vec<u8> = vec![20; 100 * 1024];
 
-	let result = OcallApi.write_ipfs(enc_state.as_slice());
+	let result = OcallApi.write_ipfs(enc_state);
 	eprintln!("write_ipfs ocall result : {:?}", result);
 
 	// let returned_cid_raw = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
@@ -60,9 +60,9 @@ pub fn test_ocall_write_ipfs_fallback() {
 	let payload_size = 100; // in kB
 	eprintln!("testing IPFS write of {}kB if api is unreachable. Expected to fallback to dump local file...", payload_size);
 	let enc_state: Vec<u8> = vec![20; payload_size * 1024];
-	let result = OcallApi.write_ipfs(enc_state.as_slice());
-	eprintln!("write_ipfs ocall result : {:?}", result);
 	let res_expected_cid = IpfsCid::from_content_bytes(&enc_state);
+	let result = OcallApi.write_ipfs(enc_state);
+	eprintln!("write_ipfs ocall result : {:?}", result);
 	eprintln!("expected cid: {:?}", res_expected_cid);
 	assert!(res_expected_cid.is_ok());
 	let expected_cid = res_expected_cid.expect("known to be ok");

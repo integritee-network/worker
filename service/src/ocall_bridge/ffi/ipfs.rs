@@ -25,8 +25,12 @@ use std::{slice, sync::Arc};
 
 /// C-API exposed for o-call from enclave
 #[no_mangle]
-pub unsafe extern "C" fn ocall_write_ipfs(content: *const u8, content_size: u32) -> sgx_status_t {
-	let content = unsafe { slice::from_raw_parts(content, content_size as usize) };
+pub unsafe extern "C" fn ocall_write_ipfs(
+	content_ptr: *const u8,
+	content_size: u32,
+) -> sgx_status_t {
+	let content: Vec<u8> =
+		unsafe { Vec::from(slice::from_raw_parts(content_ptr, content_size as usize)) };
 	let _ = Bridge::get_ipfs_api().write_to_ipfs(content);
 	sgx_status_t::SGX_SUCCESS
 }

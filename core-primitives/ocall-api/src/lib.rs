@@ -143,5 +143,5 @@ pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 
 /// trait for o-call related to IPFS
 pub trait EnclaveIpfsOCallApi: Clone + Send + Sync {
-	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<()>;
+	fn write_ipfs(&self, encoded_state: Vec<u8>) -> SgxResult<()>;
 }

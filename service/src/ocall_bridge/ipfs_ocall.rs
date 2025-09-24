@@ -63,10 +63,10 @@ impl IpfsOCall {
 }
 
 impl IpfsBridge for IpfsOCall {
-	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<()> {
+	fn write_to_ipfs(&self, data: Vec<u8>) -> OCallBridgeResult<()> {
 		trace!("    Entering ocall_write_ipfs to write {}B", data.len());
 		if let Some(ref client) = self.client {
-			let datac = Cursor::new(data);
+			let datac = Cursor::new(data.clone());
 			let rt = Runtime::new().unwrap();
 			match rt.block_on(client.add(datac)) {
 				Ok(res) => {

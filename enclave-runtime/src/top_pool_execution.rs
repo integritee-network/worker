@@ -410,7 +410,7 @@ where
 			trace!("Storing blob of size {}B on IPFS", blob.len());
 			// ignore errors here. ipfs is optimistic and a fallback is implemented.
 			// Moreover, we can't handle failures anyway
-			let _ = ocall_api.write_ipfs(blob);
+			let _ = ocall_api.write_ipfs(blob.clone());
 		});
 	}
 	Ok(())

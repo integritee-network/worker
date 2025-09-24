@@ -25,14 +25,15 @@ use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveIpfsOCallApi for OcallApi {
-	fn write_ipfs(&self, content: &[u8]) -> SgxResult<()> {
+	fn write_ipfs(&self, content: Vec<u8>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		trace!("calling OCallApi::write_ipfs with {} bytes", content.len());
+		let payload = content.clone();
 		let res = unsafe {
 			ffi::ocall_write_ipfs(
 				&mut rt as *mut sgx_status_t,
-				content.as_ptr(),
-				content.len() as u32,
+				payload.as_ptr(),
+				payload.len() as u32,
 			)
 		};
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
