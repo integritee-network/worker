@@ -405,9 +405,12 @@ where
 		})
 		.collect();
 	if !ipfs_blobs_to_add.is_empty() {
-		ipfs_blobs_to_add.iter().for_each(|blob| match ocall_api.write_ipfs(blob) {
-			Ok(cid) => info!("SideEffects: Stored blob on IPFS with CID: {:?}", cid),
-			Err(e) => error!("SideEffects: Failed to store blob on IPFS: {:?}", e),
+		debug!("Enclave wants to store {} blob(s) on IPFS", ipfs_blobs_to_add.len());
+		ipfs_blobs_to_add.iter().for_each(|blob| {
+			trace!("Storing blob of size {}B on IPFS", blob.len());
+			// ignore errors here. ipfs is optimistic and a fallback is implemented.
+			// Moreover, we can't handle failures anyway
+			let _ = ocall_api.write_ipfs(blob);
 		});
 	}
 	Ok(())
