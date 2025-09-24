@@ -18,7 +18,6 @@
 
 use crate::ocall_bridge::bridge_api::{IpfsBridge, OCallBridgeError, OCallBridgeResult};
 use chrono::Local;
-use futures::TryStreamExt;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
 use itp_utils::IpfsCid;
 use log::*;
@@ -30,6 +29,7 @@ use std::{
 	str,
 	sync::Arc,
 };
+use tokio::runtime::Runtime;
 
 pub struct IpfsOCall {
 	client: Option<Arc<IpfsClient>>,
@@ -63,64 +63,30 @@ impl IpfsOCall {
 }
 
 impl IpfsBridge for IpfsOCall {
-	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid> {
+	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<()> {
 		eprintln!("    Entering ocall_write_ipfs to write {}B", data.len());
 		if let Some(ref client) = self.client {
-			let result = write_to_ipfs_sync(client, data, self.log_dir.clone());
-			eprintln!("     ipfs result {:?}", result);
-			Ok(IpfsCid::default())
+			let datac = Cursor::new(data);
+			let rt = Runtime::new().unwrap();
+			match rt.block_on(client.add(datac)) {
+				Ok(res) => {
+					eprintln!("ocall result IpfsCid {}", res.hash);
+				},
+				Err(e) => {
+					let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
+						.unwrap_or_else(|e| e.to_string().into());
+					eprintln!(
+						"      write to ipfs failed late, wrote to file {}",
+						dumpfile.display()
+					);
+				},
+			};
 		} else {
 			let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
 				.unwrap_or_else(|e| e.to_string().into());
-			Ok(IpfsCid::default())
-		}
-	}
-
-	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()> {
-		eprintln!("     Entering ocall_read_ipfs");
+		};
 		Ok(())
-		// let client = self.client.as_ref().ok_or_else(|| {
-		//     OCallBridgeError::IpfsError(
-		//         "No IPFS client configured, cannot read from IPFS".to_string(),
-		//     )
-		// })?;
-		// let res = read_from_ipfs(client, &cid)
-		//     .map_err(|_| OCallBridgeError::IpfsError("failed to read from IPFS".to_string()))?;
-		// let filename = format!("{:?}", cid);
-		// create_file(&filename, &res).map_err(OCallBridgeError::IpfsError)
 	}
-}
-
-fn create_file(filename: &str, result: &[u8]) -> Result<(), String> {
-	match File::create(filename) {
-		Ok(mut f) => f
-			.write_all(result)
-			.map_or_else(|e| Err(format!("failed writing to file: {}", e)), |_| Ok(())),
-		Err(e) => Err(format!("failed to create file: {}", e)),
-	}
-}
-
-use tokio::runtime::Runtime;
-
-fn write_to_ipfs_sync(
-	client: &IpfsClient,
-	data: &'static [u8],
-	log_dir: Arc<Path>,
-) -> OCallBridgeResult<IpfsCid> {
-	let datac = Cursor::new(data);
-	let rt = Runtime::new().unwrap();
-
-	match rt.block_on(client.add(datac)) {
-		Ok(res) => {
-			eprintln!("ocall result IpfsCid {}", res.hash);
-		},
-		Err(e) => {
-			let dumpfile = log_failing_blob_to_file(data.into(), log_dir)
-				.unwrap_or_else(|e| e.to_string().into());
-			eprintln!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
-		},
-	};
-	Ok(IpfsCid::default())
 }
 
 fn log_failing_blob_to_file(blob: Vec<u8>, log_dir: Arc<Path>) -> io::Result<PathBuf> {

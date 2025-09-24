@@ -244,9 +244,7 @@ pub trait SidechainBridge {
 /// Trait for all the OCalls related to IPFS
 #[cfg_attr(test, automock)]
 pub trait IpfsBridge {
-	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<IpfsCid>;
-
-	fn read_from_ipfs(&self, cid: IpfsCid) -> OCallBridgeResult<()>;
+	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<()>;
 }
 
 /// Trait for the direct invocation OCalls

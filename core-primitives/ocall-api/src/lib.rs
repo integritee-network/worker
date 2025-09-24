@@ -25,7 +25,7 @@ use core::result::Result as StdResult;
 use derive_more::{Display, From};
 use itp_storage::Error as StorageError;
 use itp_types::{
-	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, IpfsCid, ShardIdentifier,
+	parentchain::ParentchainId, storage::StorageEntryVerified, BlockHash, ShardIdentifier,
 	TrustedOperationStatus, WorkerRequest, WorkerResponse,
 };
 use sgx_types::*;
@@ -143,6 +143,5 @@ pub trait EnclaveSidechainOCallApi: Clone + Send + Sync {
 
 /// trait for o-call related to IPFS
 pub trait EnclaveIpfsOCallApi: Clone + Send + Sync {
-	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<Vec<u8>>;
-	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()>;
+	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<()>;
 }

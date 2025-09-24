@@ -126,10 +126,7 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 }
 
 impl EnclaveIpfsOCallApi for ProposeToImportOCallApi {
-	fn write_ipfs(&self, _encoded_state: &[u8]) -> SgxResult<Vec<u8>> {
-		Ok(vec![])
-	}
-	fn read_ipfs(&self, _cid: &IpfsCid) -> SgxResult<()> {
+	fn write_ipfs(&self, _encoded_state: &[u8]) -> SgxResult<()> {
 		Ok(())
 	}
 }

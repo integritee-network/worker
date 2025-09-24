@@ -25,60 +25,8 @@ use std::{slice, sync::Arc};
 
 /// C-API exposed for o-call from enclave
 #[no_mangle]
-pub unsafe extern "C" fn ocall_write_ipfs(
-	enc_state: *const u8,
-	enc_state_size: u32,
-	cid: *mut u8,
-	cid_size: u32,
-) -> sgx_status_t {
-	write_ipfs(enc_state, enc_state_size, cid, cid_size, Bridge::get_ipfs_api())
-}
-
-/// C-API exposed for o-call from enclave
-#[no_mangle]
-pub unsafe extern "C" fn ocall_read_ipfs(cid: *const u8, cid_size: u32) -> sgx_status_t {
-	read_ipfs(cid, cid_size, Bridge::get_ipfs_api())
-}
-
-fn write_ipfs(
-	enc_state: *const u8,
-	enc_state_size: u32,
-	cid: *mut u8,
-	cid_size: u32,
-	ipfs_api: Arc<dyn IpfsBridge>,
-) -> sgx_status_t {
-	let state = unsafe { slice::from_raw_parts(enc_state, enc_state_size as usize) };
-	let cid = unsafe { slice::from_raw_parts_mut(cid, cid_size as usize) };
-
-	return match ipfs_api.write_to_ipfs(state) {
-		Ok(r) => {
-			// TODO: actually return cid
-			// cid.fill(0);
-			// let encoded = r.encode();
-			// let len = encoded.len().min(cid.len());
-			// cid[..len].copy_from_slice(&encoded[..len]);
-			sgx_status_t::SGX_SUCCESS
-		},
-		Err(e) => {
-			error!("OCall to write_ipfs failed: {:?}", e);
-			sgx_status_t::SGX_ERROR_UNEXPECTED
-		},
-	}
-}
-
-fn read_ipfs(cid: *const u8, cid_size: u32, ipfs_api: Arc<dyn IpfsBridge>) -> sgx_status_t {
-	let mut cid_raw = unsafe { slice::from_raw_parts(cid, cid_size as usize) };
-
-	if let Ok(cid) = IpfsCid::decode(&mut cid_raw) {
-		match ipfs_api.read_from_ipfs(cid) {
-			Ok(_) => sgx_status_t::SGX_SUCCESS,
-			Err(e) => {
-				error!("OCall to read_ipfs failed: {:?}", e);
-				sgx_status_t::SGX_ERROR_UNEXPECTED
-			},
-		}
-	} else {
-		error!("Decoding CID failed");
-		sgx_status_t::SGX_ERROR_UNEXPECTED
-	}
+pub unsafe extern "C" fn ocall_write_ipfs(content: *const u8, content_size: u32) -> sgx_status_t {
+	let content = unsafe { slice::from_raw_parts(content, content_size as usize) };
+	let _ = Bridge::get_ipfs_api().write_to_ipfs(content);
+	sgx_status_t::SGX_SUCCESS
 }
