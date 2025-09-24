@@ -21,12 +21,13 @@ use codec::Encode;
 use frame_support::ensure;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use itp_types::IpfsCid;
-use log::warn;
+use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveIpfsOCallApi for OcallApi {
 	fn write_ipfs(&self, content: &[u8]) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
+		trace!("calling OCallApi::write_ipfs with {} bytes", content.len());
 		let res = unsafe {
 			ffi::ocall_write_ipfs(
 				&mut rt as *mut sgx_status_t,
@@ -36,6 +37,7 @@ impl EnclaveIpfsOCallApi for OcallApi {
 		};
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
+		trace!("completed OCallApi::write_ipfs");
 		Ok(())
 	}
 }
