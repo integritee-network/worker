@@ -60,16 +60,19 @@ pub fn test_ocall_write_ipfs_fallback() {
 	let payload_size = 101; // in kB
 	eprintln!("testing IPFS write of {}kB if api is unreachable. Expected to fallback to dump local file...", payload_size);
 	let enc_state: Vec<u8> = vec![20; payload_size * 1024];
-	let _result = OcallApi.write_ipfs(enc_state.as_slice());
+	let result = OcallApi.write_ipfs(enc_state.as_slice());
+	eprintln!("write_ipfs ocall result : {:?}", result);
 	let expected_cid = IpfsCid::from_content_bytes(&enc_state).unwrap();
+	eprintln!("expected cid: {:?}", expected_cid);
 	let dumpfile =
 		find_first_matching_file(expected_cid.to_string()).expect("dumped file not found");
+	eprintln!("found dumped file: {:?}", dumpfile);
 	let mut f = fs::File::open(dumpfile).unwrap();
 	let mut content_buf = Vec::new();
 	f.read_to_end(&mut content_buf).unwrap();
 	eprintln!("reading file {:?} of size {} bytes", f, &content_buf.len());
 	let file_cid = IpfsCid::from_content_bytes(&content_buf).unwrap();
-
+	eprintln!("file cid: {:?}", file_cid);
 	assert_eq!(expected_cid, file_cid);
 }
 
