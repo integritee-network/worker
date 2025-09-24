@@ -28,7 +28,7 @@ use std::{
 	io::{self, Cursor, Write},
 	path::{Path, PathBuf},
 	str,
-	sync::{mpsc::channel, Arc},
+	sync::Arc,
 };
 
 pub struct IpfsOCall {

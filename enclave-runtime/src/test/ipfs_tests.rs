@@ -57,7 +57,7 @@ pub fn test_ocall_read_write_ipfs() {
 }
 
 pub fn test_ocall_write_ipfs_fallback() {
-	let payload_size = 100; // in kB
+	let payload_size = 101; // in kB
 	eprintln!("testing IPFS write of {}kB if api is unreachable. Expected to fallback to dump local file...", payload_size);
 	let enc_state: Vec<u8> = vec![20; payload_size * 1024];
 	let _result = OcallApi.write_ipfs(enc_state.as_slice());

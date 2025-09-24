@@ -163,7 +163,7 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		itc_parentchain::light_client::io::sgx_tests::sealing_creates_backup,
 
 		// this test needs an ipfs node running..
-		crate::test::ipfs_tests::test_ocall_read_write_ipfs,
+		// crate::test::ipfs_tests::test_ocall_read_write_ipfs,
 		crate::test::ipfs_tests::test_ocall_write_ipfs_fallback,
 
 		// Teeracle tests
@@ -427,7 +427,8 @@ fn test_create_state_diff() {
 	assert_eq!(
 		sender_acc_info.data.free,
 		ita_stf::test_genesis::ENDOWED_ACC_FUNDS
-			- TX_AMOUNT - 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
+			- TX_AMOUNT
+			- 1_000_000_000_000 / ita_stf::STF_TX_FEE_UNIT_DIVIDER
 	);
 }
 
