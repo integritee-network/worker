@@ -38,7 +38,10 @@ pub mod sgx_reexport_prelude {
 	pub use webpki_sgx as webpki;
 	pub use yasna_sgx as yasna;
 }
-
+use cid::Cid;
+use multihash::Multihash;
+const SHA2_256: u64 = 0x12;
+const RAW: u64 = 0x55;
 #[derive(Clone, PartialEq, Eq)]
 pub struct IpfsCid {
 	hash: [u8; 32],
@@ -51,6 +54,9 @@ impl IpfsCid {
 		};
 		let hash = rsgx_sha256_slice(&chunk).map_err(|_| IpfsError::InputTooLarge)?;
 		info!("hash: {:?}", hash);
+		let mh = Multihash::wrap(SHA2_256, &hash).map_err(|_| IpfsError::InputTooLarge)?;
+		let cid = Cid::new_v1(RAW, mh);
+		info!("cid: {:?}", cid);
 		Ok(Self { hash })
 	}
 }
