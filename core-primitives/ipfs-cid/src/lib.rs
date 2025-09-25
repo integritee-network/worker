@@ -26,21 +26,6 @@ extern crate sgx_tstd as std;
 
 use log::*;
 
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-use sgx_tcrypto::rsgx_sha256_slice;
-#[cfg(not(all(not(feature = "std"), feature = "sgx")))]
-use sha2::{Digest, Sha256};
-// re-export module to properly feature gate sgx and regular std environment
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-pub mod sgx_reexport_prelude {
-	pub use base64_sgx as base64;
-	pub use chrono_sgx as chrono;
-	pub use rustls_sgx as rustls;
-	pub use serde_json_sgx as serde_json;
-	pub use thiserror_sgx as thiserror;
-	pub use webpki_sgx as webpki;
-	pub use yasna_sgx as yasna;
-}
 use cid::Cid;
 use codec::{Decode, Encode};
 use multibase::Base;
@@ -52,8 +37,41 @@ use std::{
 };
 const SHA2_256: u64 = 0x12;
 const RAW: u64 = 0x55;
+
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+// sha2 crashes enclaves. therefore we need to use this SDK-provided hasher for sgx builds
+fn hasher(chunk: &[u8]) -> Result<[u8; 32], IpfsError> {
+	use sgx_tcrypto::rsgx_sha256_slice;
+	rsgx_sha256_slice(&chunk).map_err(|_| IpfsError::InputTooLarge)
+}
+#[cfg(not(all(not(feature = "std"), feature = "sgx")))]
+fn hasher(chunk: &[u8]) -> Result<[u8; 32], IpfsError> {
+	use sha2::{Digest, Sha256};
+	Ok(Sha256::digest(chunk).into())
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct IpfsCid(pub Cid);
+
+impl IpfsCid {
+	pub fn from_chunk(chunk: &[u8]) -> Result<Self, IpfsError> {
+		if chunk.len() > 256 * 1024 {
+			return Err(IpfsError::InputTooLarge);
+		};
+		let hash = hasher(chunk)?;
+		info!("hash: {:?}", hash);
+		let mh = Multihash::wrap(SHA2_256, &hash).map_err(|_| IpfsError::MultiHashFailure)?;
+		let cid = Cid::new_v1(RAW, mh);
+		info!("cid: {:?}", cid);
+		Ok(Self(cid))
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub enum IpfsError {
+	InputTooLarge,
+	MultiHashFailure,
+}
 
 impl From<Cid> for IpfsCid {
 	fn from(value: Cid) -> Self {
@@ -85,6 +103,17 @@ impl Decode for IpfsCid {
 	}
 }
 
+impl Display for IpfsCid {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		let cid_str = if self.0.codec() == RAW {
+			multibase::encode(Base::Base32Lower, self.0.to_bytes())
+		} else {
+			multibase::encode(Base::Base58Btc, self.0.to_bytes())
+		};
+		write!(f, "{}", cid_str)
+	}
+}
+
 impl Debug for IpfsCid {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		let cid = &self.0;
@@ -103,48 +132,6 @@ impl Debug for IpfsCid {
 			.field("multihash_digest", &hex::encode(mh_digest))
 			.finish()
 	}
-}
-
-impl Display for IpfsCid {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		let cid_str = if self.0.codec() == RAW {
-			multibase::encode(Base::Base32Lower, self.0.to_bytes())
-		} else {
-			multibase::encode(Base::Base58Btc, self.0.to_bytes())
-		};
-		write!(f, "{}", cid_str)
-	}
-}
-impl IpfsCid {
-	pub fn from_chunk(chunk: &[u8]) -> Result<Self, IpfsError> {
-		if chunk.len() > 256 * 1024 {
-			return Err(IpfsError::InputTooLarge);
-		};
-		let hash = hasher(chunk)?;
-		info!("hash: {:?}", hash);
-		let mh = Multihash::wrap(SHA2_256, &hash).map_err(|_| IpfsError::InputTooLarge)?;
-		let cid = Cid::new_v1(RAW, mh);
-		info!("cid: {:?}", cid);
-		Ok(Self(cid))
-	}
-}
-
-#[cfg(all(not(feature = "std"), feature = "sgx"))]
-// sha2 crashes enclaves. therefore we need to use this SDK-provided hasher for sgx builds
-fn hasher(chunk: &[u8]) -> Result<[u8; 32], IpfsError> {
-	rsgx_sha256_slice(&chunk).map_err(|_| IpfsError::InputTooLarge)
-}
-#[cfg(not(all(not(feature = "std"), feature = "sgx")))]
-fn hasher(chunk: &[u8]) -> Result<[u8; 32], IpfsError> {
-	Ok(Sha256::digest(chunk).into())
-}
-
-#[derive(Debug, PartialEq)]
-pub enum IpfsError {
-	InputTooLarge,
-	InputCidInvalid,
-	FinalCidMissing,
-	Verification,
 }
 
 #[cfg(test)]
