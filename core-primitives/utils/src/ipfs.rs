@@ -56,8 +56,8 @@ impl IpfsCid {
 		};
 		info!("Deriving CID from chunk of size {} bytes", chunk.len());
 		//let h = Sha256::digest(chunk);
-		let h = Code::Sha2_256.digest(chunk);
-		info!("  multihash digest: {}", hex::encode(h.digest()));
+		//let h = Code::Sha2_256.digest(chunk);
+		//info!("  multihash digest: {}", hex::encode(h.digest()));
 		//let mh = multihash::Sha2_256::digest(chunk);
 		//let cid = Cid::new_v1(RAW, h.into());
 		//info!("  returning CID: {}", cid);
