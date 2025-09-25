@@ -24,9 +24,10 @@ use codec::{Decode, Encode};
 use core::{
 	convert::TryFrom,
 	fmt::{Debug, Display},
+	hash::Hash,
 };
+use log::*;
 use multibase::Base;
-
 const RAW: u64 = 0x55;
 
 /// IPFS content identifier helper: https://docs.ipfs.tech/concepts/content-addressing/
@@ -54,10 +55,13 @@ impl IpfsCid {
 		if chunk.len() > 256 * 1024 {
 			return Err(IpfsError::InputTooLarge);
 		};
+		info!("Deriving CID from chunk of size {} bytes", chunk.len());
 		//let h = Sha256::digest(chunk);
 		let h = Code::Sha2_256.digest(chunk);
+		info!("  multihash digest: {}", hex::encode(h.digest()));
 		//let mh = multihash::Sha2_256::digest(chunk);
 		let cid = Cid::new_v1(RAW, h.into());
+		info!("  returning CID: {}", cid);
 		Ok(IpfsCid(cid))
 	}
 }

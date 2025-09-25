@@ -4849,7 +4849,6 @@ dependencies = [
  "core2",
  "digest 0.10.7",
  "multihash-derive",
- "parity-scale-codec",
  "sha2 0.10.9",
  "unsigned-varint",
 ]
