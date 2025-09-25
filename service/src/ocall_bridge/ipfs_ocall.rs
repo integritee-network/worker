@@ -67,8 +67,12 @@ impl IpfsBridge for IpfsOCall {
 		trace!("    Entering ocall_write_ipfs to write {}B", data.len());
 		if let Some(ref client) = self.client {
 			let datac = Cursor::new(data.clone());
+			let add_options = ipfs_api_backend_hyper::request::Add::builder()
+				.raw_leaves(true)
+				.cid_version(1)
+				.build();
 			let rt = Runtime::new().unwrap();
-			match rt.block_on(client.add(datac)) {
+			match rt.block_on(client.add_with_options(datac, add_options)) {
 				Ok(res) => {
 					debug!("ocall result IpfsCid {}", res.hash);
 				},
