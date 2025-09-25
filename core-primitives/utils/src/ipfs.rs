@@ -58,8 +58,8 @@ impl IpfsCid {
 			return Err(IpfsError::InputTooLarge);
 		};
 		info!("Deriving CID from chunk of size {} bytes", chunk.len());
-		let hash = Sha256::digest(b"hello world");
-		info!("  sha2-256 digest: {}", hex::encode(hash));
+		//let hash = Sha256::digest(b"hello world");
+		//info!("  sha2-256 digest: {}", hex::encode(hash));
 		//let h = Sha256::digest(chunk);
 		//let h = Code::Sha2_256.digest(chunk);
 		//info!("  multihash digest: {}", hex::encode(h.digest()));
