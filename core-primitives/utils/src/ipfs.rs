@@ -15,6 +15,9 @@
 
 */
 
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+use crate::sgx_reexport_prelude::*;
+
 use alloc::{format, vec::Vec};
 use cid::{
 	multihash::{Code, MultihashDigest},
@@ -29,7 +32,6 @@ use core::{
 use log::*;
 use multibase::Base;
 use sha2::{Digest, Sha256};
-// use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
 // use sp_io::hashing::sha2_256;
 const RAW: u64 = 0x55;
 

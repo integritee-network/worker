@@ -34,6 +34,7 @@ members = [
     "core-primitives/enclave-metrics",
     "core-primitives/extrinsics-factory",
     "core-primitives/hashing",
+    "core-primitives/ipfs-cid",
     "core-primitives/networking-utils",
     "core-primitives/node-api",
     "core-primitives/node-api/api-client-extensions",

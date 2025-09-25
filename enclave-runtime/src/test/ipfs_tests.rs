@@ -20,6 +20,7 @@
 extern crate sgx_tstd as std;
 
 use crate::ocall::OcallApi;
+use itp_ipfs_cid::IpfsCid as ItpIpfsCid;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use itp_utils::IpfsCid;
 use log::*;
@@ -81,6 +82,10 @@ pub fn test_ocall_write_ipfs_fallback() {
 	eprintln!("file cid: {}", file_cid);
 
 	assert_eq!(expected_cid, file_cid);
+
+	// now try the alternative:
+	let alt_cid = ItpIpfsCid::from_chunk(&content_buf).expect("known to be ok");
+	eprintln!("alternative file cid: {:?}", alt_cid);
 }
 
 fn find_first_matching_file(cid_str: String) -> Option<PathBuf> {
