@@ -56,7 +56,7 @@ pub struct IpfsCid(pub Cid);
 impl IpfsCid {
 	pub fn from_chunk(chunk: &[u8]) -> Result<Self, IpfsError> {
 		if chunk.len() > 256 * 1024 {
-			return Err(IpfsError::InputTooLarge);
+			return Err(IpfsError::InputTooLarge)
 		};
 		let hash = hasher(chunk)?;
 		info!("hash: {:?}", hash);
