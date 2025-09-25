@@ -161,9 +161,6 @@ pub extern "C" fn test_main_entrance() -> size_t {
 		// // light-client-test
 		// itc_parentchain::light_client::io::sgx_tests::init_parachain_light_client_works,
 		// itc_parentchain::light_client::io::sgx_tests::sealing_creates_backup,
-
-		// this test needs an ipfs node running..
-		// crate::test::ipfs_tests::test_ocall_read_write_ipfs,
 		crate::test::ipfs_tests::test_ocall_write_ipfs_fallback,
 		// Teeracle tests
 		//run_teeracle_tests,

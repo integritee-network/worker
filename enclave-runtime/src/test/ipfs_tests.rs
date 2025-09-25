@@ -31,54 +31,29 @@ use std::{
 	vec::Vec,
 };
 
-#[allow(unused)]
-/// this test neeeds an ipfs node running and configured with cli args. here for reference but may never be called
-pub fn test_ocall_read_write_ipfs() {
-	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
-	let enc_state: Vec<u8> = vec![20; 100 * 1024];
-
-	let result = OcallApi.write_ipfs(enc_state);
-	eprintln!("write_ipfs ocall result : {:?}", result);
-
-	// let returned_cid_raw = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
-	// let returned_cid = IpfsCid::decode(&mut returned_cid_raw.as_slice()).unwrap();
-	// assert_eq!(expected_cid, returned_cid);
-	//
-	// OcallApi.read_ipfs(&returned_cid).unwrap();
-	//
-	// let cid_str = format!("{:?}", returned_cid);
-	// let mut f = fs::File::open(cid_str).unwrap();
-	// let mut content_buf = Vec::new();
-	// f.read_to_end(&mut content_buf).unwrap();
-	// info!("reading file {:?} of size {} bytes", f, &content_buf.len());
-	//
-	// let file_cid = IpfsCid::from_content_bytes(&content_buf).unwrap();
-	// assert_eq!(expected_cid, file_cid);
-}
-
 pub fn test_ocall_write_ipfs_fallback() {
 	let payload_size = 100; // in kB
-	eprintln!("testing IPFS write of {}kB if api is unreachable. Expected to fallback to dump local file...", payload_size);
+	info!("testing IPFS write of {}kB if api is unreachable. Expected to fallback to dump local file...", payload_size);
 	let enc_state: Vec<u8> = vec![20; payload_size * 1024];
 	let res_expected_cid = IpfsCid::from_chunk(&enc_state);
 	let result = OcallApi.write_ipfs(enc_state);
-	eprintln!("write_ipfs ocall result : {:?}", result);
-	eprintln!("expected cid details: {:?}", res_expected_cid);
+	debug!("write_ipfs ocall result : {:?}", result);
+	debug!("expected cid details: {:?}", res_expected_cid);
 	assert!(res_expected_cid.is_ok());
 	let expected_cid = res_expected_cid.expect("known to be ok");
-	eprintln!("expected cid: {}", expected_cid);
+	info!("expected cid: {}", expected_cid);
 	let dumpfile =
 		find_first_matching_file(expected_cid.to_string()).expect("dumped file not found");
-	eprintln!("found dumped file: {:?}", dumpfile);
+	info!("found dumped file: {:?}", dumpfile);
 	let mut f = fs::File::open(dumpfile).unwrap();
 	let mut content_buf = Vec::new();
 	f.read_to_end(&mut content_buf).unwrap();
-	eprintln!("reading file {:?} of size {} bytes", f, &content_buf.len());
+	debug!("reading file {:?} of size {} bytes", f, &content_buf.len());
 	let res_file_cid = IpfsCid::from_chunk(&content_buf);
-	eprintln!("file cid details: {:?}", res_file_cid);
+	debug!("file cid details: {:?}", res_file_cid);
 	assert!(res_file_cid.is_ok());
 	let file_cid = res_file_cid.expect("known to be ok");
-	eprintln!("file cid: {}", file_cid);
+	debug!("file cid: {}", file_cid);
 	assert_eq!(expected_cid, file_cid);
 }
 
