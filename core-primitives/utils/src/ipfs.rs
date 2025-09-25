@@ -15,15 +15,19 @@
 
 */
 
-use alloc::vec::Vec;
-use cid::Cid;
+use alloc::{format, vec::Vec};
+use cid::{
+	multihash::{Code, MultihashDigest},
+	Cid,
+};
 use codec::{Decode, Encode};
 use core::{
 	convert::TryFrom,
 	fmt::{Debug, Display},
 };
-use ipfs_unixfs::file::adder::FileAdder;
 use multibase::Base;
+
+const RAW: u64 = 0x55;
 
 /// IPFS content identifier helper: https://docs.ipfs.tech/concepts/content-addressing/
 #[derive(Clone, PartialEq, Eq)]
@@ -34,6 +38,8 @@ impl From<Cid> for IpfsCid {
 		IpfsCid(value)
 	}
 }
+
+#[cfg(feature = "std")]
 impl TryFrom<&str> for IpfsCid {
 	type Error = cid::Error;
 
@@ -44,22 +50,18 @@ impl TryFrom<&str> for IpfsCid {
 }
 
 impl IpfsCid {
-	pub fn from_content_bytes(content: &Vec<u8>) -> Result<Self, IpfsError> {
-		Ok(Self::try_from("QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr")
-			.expect("known to work for test"))
-		// let mut adder: FileAdder = FileAdder::default();
-		// let mut total: usize = 0;
-		// let mut stats = Stats::default();
-		// while total < content.len() {
-		// 	let (blocks, consumed) = adder.push(&content[total..]);
-		// 	total += consumed;
-		// 	stats.process(blocks);
-		// }
-		// let blocks = adder.finish();
-		// stats.process(blocks);
-		// stats.last.map(IpfsCid).ok_or(IpfsError::FinalCidMissing)
+	pub fn from_chunk(chunk: &[u8]) -> Result<Self, IpfsError> {
+		if chunk.len() > 256 * 1024 {
+			return Err(IpfsError::InputTooLarge);
+		};
+		//let h = Sha256::digest(chunk);
+		let h = Code::Sha2_256.digest(chunk);
+		//let mh = multihash::Sha2_256::digest(chunk);
+		let cid = Cid::new_v1(RAW, h.into());
+		Ok(IpfsCid(cid))
 	}
 }
+
 impl Encode for IpfsCid {
 	fn encode(&self) -> Vec<u8> {
 		self.0.to_bytes().encode()
@@ -77,26 +79,38 @@ impl Decode for IpfsCid {
 
 impl Debug for IpfsCid {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		let cid_str = Base::Base58Btc.encode(self.0.hash().as_bytes());
-		write!(f, "{}", cid_str)
+		let cid = &self.0;
+		let version = cid.version();
+		let codec = cid.codec();
+		let mh = cid.hash();
+		let mh_code = mh.code();
+		let mh_size = mh.size();
+		let mh_digest = mh.digest();
+
+		f.debug_struct("IpfsCid")
+			.field("version", &version)
+			.field("codec", &codec)
+			.field("multihash_code", &mh_code)
+			.field("multihash_size", &mh_size)
+			.field("multihash_digest", &hex::encode(mh_digest))
+			.finish()
 	}
 }
 
 impl Display for IpfsCid {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		let cid_str = Base::Base58Btc.encode(self.0.hash().as_bytes());
+		let cid_str = if self.0.codec() == RAW {
+			multibase::encode(Base::Base32Lower, self.0.to_bytes())
+		} else {
+			multibase::encode(Base::Base58Btc, self.0.to_bytes())
+		};
 		write!(f, "{}", cid_str)
 	}
 }
 
-// impl Default for IpfsCid {
-// 	fn default() -> Self {
-// 		IpfsCid::from_content_bytes(&Vec::new()).expect("known to work for empty vec")
-// 	}
-// }
-
 #[derive(Debug, PartialEq)]
 pub enum IpfsError {
+	InputTooLarge,
 	InputCidInvalid,
 	FinalCidMissing,
 	Verification,
@@ -125,22 +139,43 @@ impl Stats {
 mod tests {
 	use super::*;
 	use alloc::vec;
+
 	#[test]
-	pub fn test_from_multichunk_content_works() {
-		let expected_cid_str = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
+	pub fn test_from_max_chunk_content_works() {
+		// cross-check with ipfs cli:
+		// head -c 262144 /dev/zero | tr '\0' 'A' | ipfs block put --format=raw
+		// bafkreiexul6fkqo4zhagxgnsvbgdjfq7udb26ig3uoli34xznjlmnpaaze
+		let expected_cid_str = "bafkreiexul6fkqo4zhagxgnsvbgdjfq7udb26ig3uoli34xznjlmnpaaze";
 		let expected_cid = IpfsCid::try_from(expected_cid_str).unwrap();
-		let content: Vec<u8> = vec![20; 512 * 1024]; // bigger than one chunk of 256kB
-		let derived_cid = IpfsCid::from_content_bytes(&content).unwrap();
+		let content: Vec<u8> = vec![65; 256 * 1024]; // exactly one chunk of 256kB of "A" chars
+		let derived_cid = IpfsCid::from_chunk(&content).unwrap();
 		assert_eq!(derived_cid, expected_cid);
 	}
 
 	#[test]
-	pub fn test_cid_verification_fails_for_incorrect_multichunk_content() {
-		let expected_cid_str = "QmSaFjwJ2QtS3rZDKzC98XEzv2bqT4TfpWLCpphPPwyQTr";
+	pub fn test_cid_verification_fails_for_incorrect_single_chunk_content() {
+		let expected_cid_str = "bafkreihdcgl5emugcgwjavoknx76kmfdahpzz3jyghg5mhslvhbrznfkky";
 		let expected_cid = IpfsCid::try_from(expected_cid_str).unwrap();
-		let content: Vec<u8> = vec![99; 512 * 1024]; // bigger than one chunk of 256kB
-		let wrong_cid = IpfsCid::from_content_bytes(&content).unwrap();
+		let content: Vec<u8> = vec![99; 256 * 1024];
+		let wrong_cid = IpfsCid::from_chunk(&content).unwrap();
 		assert!(wrong_cid != expected_cid);
+	}
+	#[test]
+	pub fn test_from_text_works() {
+		// cross-check with ipfs cli:
+		// echo -n "FooBar" | ipfs block put --format=raw
+		// bafkreianosnl4e3xk42jhyg7otpy2euc4ruwo5kkd26hzrrsher2pcfnlq
+		let expected_cid_str = "bafkreianosnl4e3xk42jhyg7otpy2euc4ruwo5kkd26hzrrsher2pcfnlq";
+		let expected_cid = IpfsCid::try_from(expected_cid_str).unwrap();
+		let content = "FooBar".as_bytes();
+		let derived_cid = IpfsCid::from_chunk(content).unwrap();
+		assert_eq!(derived_cid, expected_cid);
+	}
+
+	#[test]
+	pub fn test_cid_verification_fails_for_oversize_chunk_content() {
+		let content: Vec<u8> = vec![99; 256 * 1024 + 1];
+		assert!(IpfsCid::from_chunk(&content) == Err(IpfsError::InputTooLarge));
 	}
 
 	#[test]
@@ -151,13 +186,5 @@ mod tests {
 		assert_eq!(encoded.len(), 34 + 1);
 		let decoded = IpfsCid::decode(&mut &encoded[..]).unwrap();
 		assert_eq!(decoded, expected_cid);
-	}
-
-	#[test]
-	pub fn test_default_cid_works() {
-		let expected_cid_str = "QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH";
-		let expected_cid = IpfsCid::try_from(expected_cid_str).unwrap();
-		let def = IpfsCid::default();
-		assert_eq!(def, expected_cid);
 	}
 }

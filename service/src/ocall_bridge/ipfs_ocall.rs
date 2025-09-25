@@ -91,7 +91,7 @@ fn log_failing_blob_to_file(blob: Vec<u8>, log_dir: Arc<Path>) -> io::Result<Pat
 	let log_dir = log_dir.join("log-ipfs-failing-add");
 	create_dir_all(&log_dir)?;
 	let timestamp = Local::now().format("%Y%m%d-%H%M%S-%3f").to_string();
-	let cid_str = IpfsCid::from_content_bytes(&blob)
+	let cid_str = IpfsCid::from_chunk(&blob)
 		.map(|cid| format!("{}", cid))
 		.unwrap_or_else(|_| "invalid-cid".to_string());
 	let file_name = format!("ipfs-{}-{}.bin", timestamp, cid_str);
