@@ -9,12 +9,12 @@ edition = "2021"
 
 [dependencies]
 cid = { version = "0.10.1", default-features = false, features = ["alloc"] }
-sha2 = { version = "0.10.9", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 log = "0.4.28"
 multibase = { version = "0.9.1", default-features = false }
 multihash = { version = "0.18.0", default-features = false, features = ["alloc", "multihash-impl", "sha2"] }
+sha2 = { version = "0.10.9", default-features = false }
 #sp-io = { path = "../../core-primitives/substrate-sgx/sp-io" }
 # sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 

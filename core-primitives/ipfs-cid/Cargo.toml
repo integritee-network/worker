@@ -5,10 +5,10 @@ authors = ["Integritee AG <hello@integritee.network>"]
 edition = "2021"
 
 [dependencies]
+cid = { version = "0.10.1", default-features = false, features = ["alloc"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 log = { version = "0.4", default-features = false }
-cid = { version = "0.10.1", default-features = false, features = ["alloc"] }
 multibase = { version = "0.9.1", default-features = false }
 multihash = { version = "0.18.0", default-features = false, features = ["alloc"] }
 sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
