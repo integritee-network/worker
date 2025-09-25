@@ -28,6 +28,9 @@ use core::{
 };
 use log::*;
 use multibase::Base;
+use sha2::{Digest, Sha256};
+// use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
+// use sp_io::hashing::sha2_256;
 const RAW: u64 = 0x55;
 
 /// IPFS content identifier helper: https://docs.ipfs.tech/concepts/content-addressing/
@@ -55,6 +58,8 @@ impl IpfsCid {
 			return Err(IpfsError::InputTooLarge);
 		};
 		info!("Deriving CID from chunk of size {} bytes", chunk.len());
+		let hash = Sha256::digest(b"hello world");
+		info!("  sha2-256 digest: {}", hex::encode(hash));
 		//let h = Sha256::digest(chunk);
 		//let h = Code::Sha2_256.digest(chunk);
 		//info!("  multihash digest: {}", hex::encode(h.digest()));

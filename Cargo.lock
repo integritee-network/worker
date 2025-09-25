@@ -3811,6 +3811,7 @@ dependencies = [
  "multibase",
  "multihash 0.18.1",
  "parity-scale-codec",
+ "sha2 0.10.9",
 ]
 
 [[package]]
