@@ -73,14 +73,14 @@ impl IpfsBridge for IpfsOCall {
 					debug!("ocall result IpfsCid {}", res.hash);
 				},
 				Err(e) => {
-					let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
+					let dumpfile = log_failing_blob_to_file(data, self.log_dir.clone())
 						.unwrap_or_else(|e| e.to_string().into());
 					warn!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
 				},
 			};
 		} else {
 			warn!("IPFS client not configured, writing to local file");
-			let dumpfile = log_failing_blob_to_file(data.into(), self.log_dir.clone())
+			let dumpfile = log_failing_blob_to_file(data, self.log_dir.clone())
 				.unwrap_or_else(|e| e.to_string().into());
 		};
 		Ok(())

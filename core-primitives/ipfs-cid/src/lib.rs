@@ -27,7 +27,7 @@ extern crate sgx_tstd as std;
 use log::*;
 
 #[cfg(all(not(feature = "std"), feature = "sgx"))]
-use sgx_tcrypto::{rsgx_sha256_slice, SgxEccHandle};
+use sgx_tcrypto::rsgx_sha256_slice;
 #[cfg(not(all(not(feature = "std"), feature = "sgx")))]
 use sha2::{Digest, Sha256};
 // re-export module to properly feature gate sgx and regular std environment

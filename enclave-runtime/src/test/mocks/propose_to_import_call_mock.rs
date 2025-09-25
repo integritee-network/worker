@@ -19,7 +19,6 @@
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
 use itc_parentchain::primitives::ParentchainId;
-use itp_ipfs_cid::IpfsCid;
 use itp_ocall_api::{
 	EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
 };

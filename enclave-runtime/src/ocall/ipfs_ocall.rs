@@ -17,9 +17,7 @@
 */
 use crate::ocall::{ffi, OcallApi};
 use alloc::vec::Vec;
-use codec::Encode;
 use frame_support::ensure;
-use itp_ipfs_cid::IpfsCid;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
@@ -28,7 +26,7 @@ impl EnclaveIpfsOCallApi for OcallApi {
 	fn write_ipfs(&self, content: Vec<u8>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
 		trace!("calling OCallApi::write_ipfs with {} bytes", content.len());
-		let payload = content.clone();
+		let payload = content;
 		let res = unsafe {
 			ffi::ocall_write_ipfs(
 				&mut rt as *mut sgx_status_t,
