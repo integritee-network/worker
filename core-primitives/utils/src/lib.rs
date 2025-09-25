@@ -25,12 +25,10 @@ pub mod buffer;
 pub mod error;
 pub mod hex;
 pub mod hex_display;
-pub mod ipfs;
 pub mod stringify;
 
 // Public re-exports.
 pub use self::{
 	buffer::write_slice_and_whitespace_pad,
 	hex::{FromHexPrefixed, ToHexPrefixed},
-	ipfs::IpfsCid,
 };

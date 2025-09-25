@@ -1786,6 +1786,7 @@ dependencies = [
  "ita-parentchain-specs",
  "ita-sgx-runtime",
  "itp-hashing",
+ "itp-ipfs-cid",
  "itp-node-api",
  "itp-node-api-metadata",
  "itp-pallet-storage",

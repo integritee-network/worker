@@ -17,9 +17,8 @@
 
 use crate::ApiResult;
 use itp_api_client_types::{traits::GetStorage, Api, Config, Request};
-use itp_types::{
-	AccountId, IpfsCid, MultiEnclave, ShardIdentifier, ShardSignerStatus, ShardStatus,
-};
+use itp_ipfs_cid::IpfsCid;
+use itp_types::{AccountId, MultiEnclave, ShardIdentifier, ShardSignerStatus, ShardStatus};
 use log::error;
 
 pub const TEEREX: &str = "Teerex";

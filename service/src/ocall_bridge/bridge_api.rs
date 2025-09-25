@@ -17,7 +17,7 @@
 */
 
 use itp_enclave_api::remote_attestation::QveReport;
-use itp_types::IpfsCid;
+use itp_ipfs_cid::IpfsCid;
 use lazy_static::lazy_static;
 use log::*;
 use parking_lot::RwLock;

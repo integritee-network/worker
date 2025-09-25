@@ -17,7 +17,7 @@
 
 use codec::{Decode, Encode};
 use core::fmt::Debug;
-use itp_utils::IpfsCid;
+use itp_ipfs_cid::IpfsCid;
 use sp_std::vec::Vec;
 pub type ConversationId = u32;
 

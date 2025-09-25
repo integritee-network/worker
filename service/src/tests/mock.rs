@@ -17,12 +17,12 @@
 
 use codec::Encode;
 use enclave_bridge_primitives::ShardSignerStatus;
+use itp_ipfs_cid::IpfsCid;
 use itp_node_api::api_client::{ApiResult, PalletTeerexApi};
 use itp_types::{
 	parentchain::BlockNumber, AccountId, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData,
 	SgxStatus, ShardIdentifier, H256 as Hash,
 };
-use itp_utils::IpfsCid;
 
 pub struct TestNodeApi;
 

@@ -19,7 +19,7 @@
 use crate::ocall_bridge::bridge_api::{IpfsBridge, OCallBridgeError, OCallBridgeResult};
 use chrono::Local;
 use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
-use itp_utils::IpfsCid;
+use itp_ipfs_cid::IpfsCid;
 use log::*;
 use std::{
 	fmt::Display,

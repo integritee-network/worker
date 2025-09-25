@@ -52,6 +52,7 @@ use ita_sgx_runtime::{
 	SessionProxyRole, ShardManagement, System,
 };
 pub use ita_sgx_runtime::{Balance, Index};
+use itp_ipfs_cid::IpfsCid;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
 	frame_system::SystemCallIndexes,
@@ -70,7 +71,7 @@ use itp_types::{
 	parentchain::{GenericMortality, ParentchainCall, ParentchainId, ProxyType},
 	Address, Moment, OpaqueCall, TrustedCallSideEffect,
 };
-use itp_utils::{stringify::account_id_to_string, IpfsCid};
+use itp_utils::stringify::account_id_to_string;
 use log::*;
 use pallet_notes::{TimestampedTrustedNote, TrustedNote};
 use sp_core::{

@@ -19,8 +19,8 @@ use crate::ocall::{ffi, OcallApi};
 use alloc::vec::Vec;
 use codec::Encode;
 use frame_support::ensure;
+use itp_ipfs_cid::IpfsCid;
 use itp_ocall_api::EnclaveIpfsOCallApi;
-use itp_types::IpfsCid;
 use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 

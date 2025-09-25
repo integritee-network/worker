@@ -41,7 +41,6 @@ pub type Nonce = u32;
 
 pub use itp_sgx_runtime_primitives::types::*;
 
-pub use itp_utils::IpfsCid;
 pub type MrEnclave = [u8; 32];
 
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
