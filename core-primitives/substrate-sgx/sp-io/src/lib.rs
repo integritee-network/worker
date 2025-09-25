@@ -694,10 +694,7 @@ pub mod hashing {
 
 	/// Conduct a 256-bit Sha2 hash.
 	pub fn sha2_256(data: &[u8]) -> [u8; 32] {
-		debug!("sha2_256 of {}", encode_hex(data));
-		let hash = sp_core::hashing::sha2_256(data);
-		debug!("  returning hash {}", encode_hex(&hash));
-		hash
+		unimplemented!("sha2_256 is unimplemented because it is known to crash SGX enclaves. If you need this, use rsgx_sha256_slice");
 	}
 
 	/// Conduct a 128-bit Blake2 hash.
