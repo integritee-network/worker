@@ -164,7 +164,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn opaque_call_encodes_and decodes_correctly() {
+	fn opaque_call_encodes_and_decodes_correctly() {
 		let call_tuple = ([1u8, 2u8], 5u8);
 		let call = OpaqueCall::from_tuple(&call_tuple);
 		let encoded_call = call.encode();
