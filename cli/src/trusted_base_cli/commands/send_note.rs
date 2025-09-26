@@ -62,7 +62,13 @@ impl SendNoteCommand {
 			get_basic_signing_info_from_args!(self.sender, self.session_proxy, cli, trusted_args);
 
 		let to = get_accountid_from_str(&self.recipient);
-		println!("send trusted call send-note to {}: {}", to, self.message);
+		let trimmed_msg = if self.message.len() > 100 {
+			let short = &self.message[..100];
+			format!("[{} bytes]: {}...", self.message.len(), short)
+		} else {
+			self.message.clone()
+		};
+		println!("send trusted call send-note to {}: {}", to, trimmed_msg);
 
 		let nonce = get_trusted_account_info(cli, trusted_args, &sender, &signer)
 			.map(|info| info.nonce)
