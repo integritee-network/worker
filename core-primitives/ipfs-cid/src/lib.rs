@@ -50,7 +50,7 @@ fn hasher(chunk: &[u8]) -> Result<[u8; 32], IpfsError> {
 	Ok(Sha256::digest(chunk).into())
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct IpfsCid(pub Cid);
 
 impl IpfsCid {

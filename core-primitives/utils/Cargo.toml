@@ -15,8 +15,6 @@ log = "0.4.28"
 multibase = { version = "0.9.1", default-features = false }
 multihash = { version = "0.18.0", default-features = false, features = ["alloc", "multihash-impl", "sha2"] }
 sha2 = { version = "0.10.9", default-features = false }
-#sp-io = { path = "../../core-primitives/substrate-sgx/sp-io" }
-# sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git" }
 
 [features]
 default = ["std"]
