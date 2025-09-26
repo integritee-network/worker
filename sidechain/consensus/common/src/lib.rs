@@ -50,7 +50,7 @@ pub use block_import::*;
 pub use block_import_confirmation_handler::*;
 pub use block_import_queue_worker::*;
 pub use error::*;
-use itp_types::parentchain::ParentchainCall;
+use itp_types::TrustedCallSideEffect;
 pub use peer_block_sync::*;
 
 pub trait Verifier<ParentchainBlock, SignedSidechainBlock>: Send + Sync
@@ -107,9 +107,10 @@ pub trait Proposer<
 pub struct Proposal<SignedSidechainBlock: SignedSidechainBlockTrait> {
 	/// The sidechain block that was build.
 	pub block: SignedSidechainBlock,
-	/// Parentchain state transitions triggered by sidechain state transitions.
+	/// Side effects of the trusted calls included in the block.
+	/// e.g. Parentchain state transitions triggered by sidechain state transitions.
 	///
 	/// Any sidechain stf that invokes a parentchain stf must not commit its state change
 	/// before the parentchain effect has been finalized.
-	pub parentchain_effects: Vec<ParentchainCall>,
+	pub side_effects: Vec<TrustedCallSideEffect>,
 }

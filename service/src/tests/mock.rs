@@ -17,6 +17,7 @@
 
 use codec::Encode;
 use enclave_bridge_primitives::ShardSignerStatus;
+use itp_ipfs_cid::IpfsCid;
 use itp_node_api::api_client::{ApiResult, PalletTeerexApi};
 use itp_types::{
 	parentchain::BlockNumber, AccountId, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData,
@@ -93,7 +94,7 @@ impl PalletTeerexApi for TestNodeApi {
 		&self,
 		_: &ShardIdentifier,
 		_at_block: Option<Hash>,
-	) -> ApiResult<Option<[u8; 46]>> {
+	) -> ApiResult<Option<IpfsCid>> {
 		unreachable!()
 	}
 }

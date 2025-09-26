@@ -116,17 +116,9 @@ extern "C" {
 		await_each_inclusion: c_int,
 	) -> sgx_status_t;
 
-	pub fn ocall_read_ipfs(
-		ret_val: *mut sgx_status_t,
-		cid: *const u8,
-		cid_size: u32,
-	) -> sgx_status_t;
-
 	pub fn ocall_write_ipfs(
 		ret_val: *mut sgx_status_t,
-		enc_state: *const u8,
-		enc_state_size: u32,
-		cid: *mut u8,
-		cid_size: u32,
+		content: *const u8,
+		content_size: u32,
 	) -> sgx_status_t;
 }

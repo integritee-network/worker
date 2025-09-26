@@ -19,7 +19,9 @@
 use crate::test::mocks::types::TestBlockImporter;
 use codec::{Decode, Encode};
 use itc_parentchain::primitives::ParentchainId;
-use itp_ocall_api::{EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result};
+use itp_ocall_api::{
+	EnclaveIpfsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi, Result,
+};
 use itp_types::{
 	storage::StorageEntryVerified, BlockHash, Header as ParentchainHeader, ShardIdentifier,
 	WorkerRequest, WorkerResponse, H256,
@@ -120,5 +122,11 @@ impl EnclaveSidechainOCallApi for ProposeToImportOCallApi {
 		_shard_identifier: ShardIdentifier,
 	) -> SgxResult<Vec<SignedSidechainBlock>> {
 		Ok(Vec::new())
+	}
+}
+
+impl EnclaveIpfsOCallApi for ProposeToImportOCallApi {
+	fn write_ipfs(&self, _encoded_state: Vec<u8>) -> SgxResult<()> {
+		Ok(())
 	}
 }

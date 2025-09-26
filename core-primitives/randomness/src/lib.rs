@@ -6,6 +6,7 @@ use sgx_rand::{thread_rng, Rng};
 pub trait Randomness {
 	fn shuffle<T>(values: &mut [T]);
 	fn random_u32(min: u32, max: u32) -> u32;
+	fn random_128bits() -> [u8; 16];
 }
 
 pub struct SgxRandomness;
@@ -22,6 +23,13 @@ impl Randomness for SgxRandomness {
 		let mut rng = thread_rng(); // Use thread-local random number generator
 		rng.gen_range(min, max)
 	}
+
+	fn random_128bits() -> [u8; 16] {
+		let mut rng = thread_rng(); // Use thread-local random number generator
+		let mut buf = [0u8; 16];
+		rng.fill_bytes(&mut buf);
+		buf
+	}
 }
 
 #[cfg(not(feature = "sgx"))]
@@ -29,8 +37,10 @@ impl Randomness for SgxRandomness {
 	fn shuffle<T>(_values: &mut [T]) {
 		unimplemented!()
 	}
-
 	fn random_u32(_min: u32, _max: u32) -> u32 {
+		unimplemented!()
+	}
+	fn random_128bits() -> [u8; 16] {
 		unimplemented!()
 	}
 }
@@ -48,5 +58,10 @@ impl Randomness for MockRandomness {
 	/// return the average as a deterministic mock value in the desired range
 	fn random_u32(min: u32, max: u32) -> u32 {
 		min + max / 2
+	}
+
+	/// return a deterministic 256-bit value
+	fn random_128bits() -> [u8; 16] {
+		[0u8; 16]
 	}
 }

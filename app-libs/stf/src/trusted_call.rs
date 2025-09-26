@@ -29,9 +29,11 @@ use crate::{
 	guess_the_number,
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
-		enclave_signer_account, ensure_enclave_signer_account, ensure_maintainer_account,
-		get_mortality, shard_vault, shielding_target_genesis_hash, store_note, wrap_bytes,
+		enclave_signer_account, encrypt_with_fresh_key, encrypt_with_key,
+		ensure_enclave_signer_account, ensure_maintainer_account, get_mortality, shard_vault,
+		shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
+	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest, RelayedNoteRetrievalInfo},
 	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
 	STF_SHIELDING_FEE_AMOUNT_DIVIDER, STF_TX_FEE_UNIT_DIVIDER,
 };
@@ -45,11 +47,12 @@ use ita_parentchain_specs::MinimalChainSpec;
 #[cfg(feature = "evm")]
 use ita_sgx_runtime::{AddressMapping, HashedAddressMapping};
 use ita_sgx_runtime::{
-	Assets, ParentchainInstanceIntegritee, ParentchainInstanceTargetA, ParentchainInstanceTargetB,
-	ParentchainIntegritee, Runtime, SessionProxyCredentials, SessionProxyRole, ShardManagement,
-	System,
+	Assets, MaxNoteSize, ParentchainInstanceIntegritee, ParentchainInstanceTargetA,
+	ParentchainInstanceTargetB, ParentchainIntegritee, Runtime, SessionProxyCredentials,
+	SessionProxyRole, ShardManagement, System,
 };
 pub use ita_sgx_runtime::{Balance, Index};
+use itp_ipfs_cid::IpfsCid;
 use itp_node_api::metadata::{provider::AccessNodeMetadata, NodeMetadataTrait};
 use itp_node_api_metadata::{
 	frame_system::SystemCallIndexes,
@@ -66,7 +69,7 @@ use itp_stf_primitives::{
 };
 use itp_types::{
 	parentchain::{GenericMortality, ParentchainCall, ParentchainId, ProxyType},
-	Address, Moment, OpaqueCall,
+	Address, Moment, OpaqueCall, TrustedCallSideEffect,
 };
 use itp_utils::stringify::account_id_to_string;
 use log::*;
@@ -77,7 +80,7 @@ use sp_core::{
 	ed25519,
 };
 use sp_runtime::{traits::Verify, MultiAddress, MultiSignature};
-use std::{format, prelude::v1::*, sync::Arc, vec};
+use std::{cmp::min, format, prelude::v1::*, sync::Arc, vec};
 
 #[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -97,6 +100,8 @@ pub enum TrustedCall {
 	waste_time(AccountId, u32) = 11,
 	spam_extrinsics(AccountId, u32, ParentchainId) = 12,
 	send_note(AccountId, AccountId, Vec<u8>) = 20,
+	send_relayed_note(AccountId, AccountId, ConversationId, RelayedNoteRequest) = 21,
+	send_relayed_note_stripped(AccountId, AccountId, ConversationId, RelayedNoteRetrievalInfo) = 22, // without payload
 	add_session_proxy(AccountId, AccountId, SessionProxyCredentials<Balance>) = 30,
 	assets_transfer(AccountId, AccountId, AssetId, Balance) = 42,
 	assets_unshield(AccountId, AccountId, AssetId, Balance, ShardIdentifier) = 43,
@@ -168,6 +173,8 @@ impl TrustedCall {
 				sender_account,
 			Self::timestamp_set(sender_account, ..) => sender_account,
 			Self::send_note(sender_account, ..) => sender_account,
+			Self::send_relayed_note(sender_account, ..) => sender_account,
+			Self::send_relayed_note_stripped(sender_account, ..) => sender_account,
 			Self::spam_extrinsics(sender_account, ..) => sender_account,
 			Self::add_session_proxy(sender_account, ..) => sender_account,
 			Self::note_bloat(sender_account, ..) => sender_account,
@@ -301,7 +308,7 @@ where
 
 	fn execute(
 		self,
-		calls: &mut Vec<ParentchainCall>,
+		side_effects: &mut Vec<TrustedCallSideEffect>,
 		shard: &ShardIdentifier,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
@@ -414,7 +421,7 @@ where
 					self.call,
 					vec![account_incognito.clone(), beneficiary],
 				);
-				calls.push(parentchain_call);
+				side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 				Ok(())
 			},
 			TrustedCall::balance_unshield_through_enclave_bridge_pallet(
@@ -462,7 +469,7 @@ where
 				let mortality = get_mortality(ParentchainId::Integritee, 32)
 					.unwrap_or_else(GenericMortality::immortal);
 				let parentchain_call = ParentchainCall::Integritee { call, mortality };
-				calls.push(parentchain_call);
+				side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 				Ok(())
 			},
 			TrustedCall::balance_shield(enclave_account, who, value, parentchain_id) => {
@@ -618,13 +625,60 @@ where
 						ParentchainId::TargetB =>
 							ParentchainCall::TargetB { call, mortality: mortality.clone() },
 					};
-					calls.push(pcall);
+					side_effects.push(TrustedCallSideEffect::ParentchainCall(pcall));
 				}
 				Ok(())
 			},
 			TrustedCall::send_note(from, to, _note) => {
-				let _origin = ita_sgx_runtime::RuntimeOrigin::signed(from.clone());
 				std::println!("⣿STF⣿ 🔄 send_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
+				store_note(&from, self.call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::send_relayed_note(from, to, conversation_id, request) => {
+				std::println!("⣿STF⣿ 🔄 send_relayed_note from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
+				let retrieval_info = if (self.call.encoded_size() <= MaxNoteSize::get() as usize)
+					&& (request.allow_onchain_fallback)
+				{
+					Ok(RelayedNoteRetrievalInfo::Here { msg: request.msg })
+				} else if (request.relay_type == NoteRelayType::Undeclared)
+					&& request.maybe_encryption_key.is_some()
+				{
+					Ok(RelayedNoteRetrievalInfo::Undeclared {
+						encryption_key: request
+							.maybe_encryption_key
+							.expect("is_some has been tested previously"),
+					})
+				} else if request.relay_type == NoteRelayType::Here
+					&& request.msg.len() <= MaxNoteSize::get() as usize
+				{
+					Ok(RelayedNoteRetrievalInfo::Here { msg: request.msg })
+				} else if request.relay_type == NoteRelayType::Ipfs {
+					let (ciphertext, encryption_key) =
+						if let Some(key) = request.maybe_encryption_key {
+							(encrypt_with_key(request.msg, key)?, key)
+						} else {
+							encrypt_with_fresh_key(request.msg)?
+						};
+					let cid = IpfsCid::from_chunk(&ciphertext)
+						.map_err(|e| StfError::Dispatch(format!("IPFS error: {:?}", e)))?;
+					info!("storing relayed note to IPFS with CID {:?}", cid);
+					side_effects.push(TrustedCallSideEffect::IpfsAdd(ciphertext));
+					Ok(RelayedNoteRetrievalInfo::Ipfs { cid, encryption_key })
+				} else {
+					Err(StfError::Dispatch("Invalid relayed note request".into()))
+				}?;
+
+				let stripped_call = TrustedCall::send_relayed_note_stripped(
+					from.clone(),
+					to.clone(),
+					conversation_id,
+					retrieval_info,
+				);
+				store_note(&from, stripped_call, vec![from.clone(), to])?;
+				Ok(())
+			},
+			TrustedCall::send_relayed_note_stripped(from, to, _conversation_id, _retrieval) => {
+				std::println!("⣿STF⣿ 🔄 send_relayed_note_stripped from ⣿⣿⣿ to ⣿⣿⣿ with note ⣿⣿⣿");
 				store_note(&from, self.call, vec![from.clone(), to])?;
 				Ok(())
 			},
@@ -721,7 +775,7 @@ where
 					self.call,
 					vec![account_incognito.clone(), beneficiary],
 				)?;
-				calls.push(parentchain_call);
+				side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 				Ok(())
 			},
 			TrustedCall::assets_shield(enclave_account, who, asset_id, value, parentchain_id) => {
@@ -865,8 +919,9 @@ where
 				info!("Trying to create evm contract with address {:?}", contract_address);
 				Ok(())
 			},
-			TrustedCall::guess_the_number(call) => call.execute(calls, shard, node_metadata_repo),
-			TrustedCall::credits(call) => call.execute(calls, shard, node_metadata_repo),
+			TrustedCall::guess_the_number(call) =>
+				call.execute(side_effects, shard, node_metadata_repo),
+			TrustedCall::credits(call) => call.execute(side_effects, shard, node_metadata_repo),
 			TrustedCall::force_unshield_all(enclave_account, who, maybe_asset_id) => {
 				ensure_enclave_signer_account(&enclave_account)?;
 				if let Some(asset_id) = maybe_asset_id {
@@ -892,7 +947,7 @@ where
 					store_note(&who, self.call, vec![who.clone()])?;
 					burn_assets(&who, balance, asset_id)?;
 					if unshield_amount > 0 {
-						calls.push(parentchain_call);
+						side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 					}
 				} else {
 					let info = System::account(&who);
@@ -946,7 +1001,7 @@ where
 						Self::Error::Dispatch(format!("Balance burn balance error: {:?}", e.error))
 					})?;
 					if unshield_amount > 0 {
-						calls.push(parentchain_call);
+						side_effects.push(TrustedCallSideEffect::ParentchainCall(parentchain_call));
 					}
 				}
 				Ok(())
@@ -994,6 +1049,23 @@ fn get_fee_for(tc: &TrustedCallSigned, fee_asset: Option<AssetId>) -> Fee {
 		TrustedCall::send_note(_, _, note) =>
 			one / STF_TX_FEE_UNIT_DIVIDER
 				+ (one.saturating_mul(Balance::from(note.len() as u32))) / STF_BYTE_FEE_UNIT_DIVIDER,
+		TrustedCall::send_relayed_note(_, _, _, blob) =>
+			one / STF_TX_FEE_UNIT_DIVIDER
+				+ one.saturating_mul(Balance::from(min(
+					MaxNoteSize::get(),
+					blob.encoded_size() as u32,
+				))) / STF_BYTE_FEE_UNIT_DIVIDER,
+		TrustedCall::send_relayed_note_stripped(_, _, _, retrieval_info) => {
+			let byte_fee = match retrieval_info {
+				RelayedNoteRetrievalInfo::Undeclared { .. } => 32 * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for undeclared
+				RelayedNoteRetrievalInfo::Ipfs { .. } =>
+					(46 + 32) * one / STF_BYTE_FEE_UNIT_DIVIDER, // flat fee for ipfs
+				RelayedNoteRetrievalInfo::Here { msg } =>
+					(one.saturating_mul(Balance::from(msg.len() as u32)))
+						/ STF_BYTE_FEE_UNIT_DIVIDER,
+			};
+			byte_fee + one / STF_TX_FEE_UNIT_DIVIDER
+		},
 		#[cfg(feature = "evm")]
 		TrustedCall::evm_call(..) => one / STF_TX_FEE_UNIT_DIVIDER,
 		#[cfg(feature = "evm")]

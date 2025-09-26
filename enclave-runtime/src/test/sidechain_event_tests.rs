@@ -25,7 +25,7 @@ use crate::{
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},
-	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
+	top_pool_execution::{exec_aura_on_slot, send_blocks_and_execute_side_effects},
 };
 use ita_sgx_runtime::Runtime;
 use ita_stf::{helpers::set_block_number, Getter, TrustedCallSigned};
@@ -139,7 +139,7 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	);
 
 	info!("Executing AURA on slot..");
-	let (blocks, opaque_calls) =
+	let (blocks, side_effects) =
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _, _, _>(
 			slot_info,
 			signer,
@@ -156,9 +156,9 @@ pub fn ensure_events_get_reset_upon_block_proposal() {
 	let propose_to_block_import_ocall_api =
 		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
 
-	send_blocks_and_extrinsics::<ParentchainBlock, _, _>(
+	send_blocks_and_execute_side_effects::<ParentchainBlock, _, _>(
 		blocks,
-		opaque_calls,
+		side_effects,
 		propose_to_block_import_ocall_api,
 	)
 	.unwrap();

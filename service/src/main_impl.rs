@@ -31,6 +31,7 @@ use crate::{
 use base58::ToBase58;
 use clap::{load_yaml, App, ArgMatches};
 use codec::{Decode, Encode};
+use ipfs_api_backend_hyper::{IpfsApi, TryFromUri};
 use ita_parentchain_interface::integritee::{Hash, Header};
 use itp_enclave_api::{
 	enclave_base::EnclaveBase,
@@ -189,7 +190,7 @@ pub(crate) fn main() {
 		config.integritee_rpc_endpoint(),
 		AccountKeyring::Alice.pair(),
 	));
-	let enclave = Arc::new(enclave_init(&config).unwrap());
+	let enclave = Arc::new(enclave_init(&config).expect("Failed to initialize enclave"));
 	let initialization_handler = Arc::new(InitializationHandler::default());
 	let worker = Arc::new(EnclaveWorker::new(
 		config.clone(),
@@ -222,6 +223,8 @@ pub(crate) fn main() {
 			))
 		});
 
+	let maybe_ipfs_url_and_auth = (config.ipfs_api_url(), config.ipfs_api_auth());
+
 	// initialize o-call bridge with a concrete factory implementation
 	OCallBridge::initialize(Arc::new(OCallBridgeComponentFactory::new(
 		node_api_factory.clone(),
@@ -234,6 +237,7 @@ pub(crate) fn main() {
 		peer_sidechain_block_fetcher,
 		tokio_handle.clone(),
 		enclave_metrics_receiver,
+		maybe_ipfs_url_and_auth,
 		config.data_dir().into(),
 	)));
 

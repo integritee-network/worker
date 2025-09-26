@@ -25,6 +25,7 @@ use rust_base58::base58::FromBase58;
 #[cfg(feature = "sgx")]
 use base58::FromBase58;
 
+use crate::constants::MAX_TOP_SIZE_TO_ENTER_POOL;
 use codec::{Decode, Encode};
 use itp_enclave_metrics::EnclaveMetric;
 use itp_ocall_api::EnclaveMetricsOCallApi;
@@ -154,7 +155,6 @@ where
 	G: PartialEq + Encode + Decode + Debug + Send + Sync + 'static,
 {
 	debug!("Author submit and watch trusted operation..");
-
 	let hex_encoded_params = params.parse::<Vec<String>>().map_err(|e| format!("{:?}", e))?;
 
 	let request =
@@ -162,6 +162,17 @@ where
 
 	let shard: ShardIdentifier = request.shard;
 	let encrypted_trusted_call: Vec<u8> = request.cyphertext;
+	trace!(
+		"Submitting trusted operation to TOP pool for shard: {:?}, with encrypted call size: {} bytes",
+		shard,
+		encrypted_trusted_call.len()
+	);
+	if encrypted_trusted_call.len() > MAX_TOP_SIZE_TO_ENTER_POOL {
+		let error_msg = "Trusted operation too large";
+		error!("{}", error_msg);
+		return Err(error_msg.into())
+	}
+
 	let result = async { author.watch_top(encrypted_trusted_call, shard).await };
 	let response: Result<Hash, RpcError> = executor::block_on(result);
 

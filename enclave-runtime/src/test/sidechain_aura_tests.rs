@@ -27,7 +27,7 @@ use crate::{
 		},
 		mocks::{propose_to_import_call_mock::ProposeToImportOCallApi, types::*},
 	},
-	top_pool_execution::{exec_aura_on_slot, send_blocks_and_extrinsics},
+	top_pool_execution::{exec_aura_on_slot, send_blocks_and_execute_side_effects},
 };
 use codec::Decode;
 use ita_stf::{
@@ -167,7 +167,7 @@ pub fn produce_sidechain_block_and_import_it() {
 	let state_hash_before_block_production = get_state_hash(state_handler.as_ref(), &shard_id);
 
 	info!("Executing AURA on slot..");
-	let (blocks, opaque_calls) =
+	let (blocks, side_effects) =
 		exec_aura_on_slot::<_, ParentchainBlock, SignedSidechainBlock, _, _, _, _, _>(
 			slot_info,
 			signer,
@@ -201,9 +201,9 @@ pub fn produce_sidechain_block_and_import_it() {
 	let propose_to_block_import_ocall_api =
 		Arc::new(ProposeToImportOCallApi::new(parentchain_header, block_importer));
 
-	send_blocks_and_extrinsics::<ParentchainBlock, _, _>(
+	send_blocks_and_execute_side_effects::<ParentchainBlock, _, _>(
 		blocks,
-		opaque_calls,
+		side_effects,
 		propose_to_block_import_ocall_api,
 	)
 	.unwrap();

@@ -271,6 +271,11 @@ jobs:
             demo_name: demo-direct-call
             host: test-runner-sgx
             sgx_mode: HW
+          - test: relayed-notes
+            flavor_id: sidechain
+            demo_name: demo-send-relayed-note
+            host: test-runner-sgx
+            sgx_mode: HW
           - test: Sidechain
             flavor_id: sidechain
             demo_name: demo-sidechain

@@ -225,13 +225,8 @@ enclave {
 			[out] sgx_update_info_bit_t * update_info
 		);
 
-		sgx_status_t ocall_read_ipfs(
-			[in, size = cid_size] uint8_t * cid, uint32_t cid_size
-		);
-
 		sgx_status_t ocall_write_ipfs(
-			[in, size = state_size] uint8_t * enc_state, uint32_t state_size,
-			[out, size = cid_size] uint8_t * cid, uint32_t cid_size
+			[in, size = content_size] uint8_t * content, uint32_t content_size
 		);
 
 		sgx_status_t ocall_worker_request(

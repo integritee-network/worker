@@ -69,12 +69,13 @@ FLAVOR_ID=offchain-worker docker compose -f <(envsubst < docker-compose.yml) -f 
 Build
 
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-direct-call.yml) build --build-arg WORKER_MODE_ARG=sidechain
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-direct-call.yml) build --build-arg WORKER_MODE_ARG=sidechain --build-arg ADDITIONAL_FEATURES_ARG=dcap
 ```
 
 Run
 
 ```
+export ADDITIONAL_RUNTIME_FLAGS="--skip-ra"
 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-direct-call.yml) up demo-direct-call --exit-code-from demo-direct-call
 ```
 
@@ -83,7 +84,7 @@ docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-direct-c
 Build
 
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-sidechain.yml) build --build-arg WORKER_MODE_ARG=sidechain
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < demo-sidechain.yml) build --build-arg WORKER_MODE_ARG=sidechain --build-arg ADDITIONAL_FEATURES_ARG=dcap
 ```
 
 Run
@@ -127,7 +128,7 @@ hosts, not on Windows with WSL unfortunately.
 Build the docker compose setup with
 
 ```
-COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < fork-inducer.yml) -f <(envsubst < demo-sidechain.yml) build --build-arg WORKER_MODE_ARG=sidechain
+COMPOSE_DOCKER_CLI_BUILD=1 DOCKER_BUILDKIT=1 docker compose -f <(envsubst < docker-compose.yml) -f <(envsubst < fork-inducer.yml) -f <(envsubst < demo-sidechain.yml) build --build-arg WORKER_MODE_ARG=sidechain --build-arg ADDITIONAL_FEATURES_ARG=dcap
 ```
 
 This requires the docker BuildKit (docker version >= 18.09) and support for it in docker compose (version >= 1.25.0)

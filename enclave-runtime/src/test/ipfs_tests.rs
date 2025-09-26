@@ -16,27 +16,60 @@
 
 */
 
-use crate::{ipfs::IpfsContent, ocall::OcallApi};
+#[cfg(all(not(feature = "std"), feature = "sgx"))]
+extern crate sgx_tstd as std;
+
+use crate::ocall::OcallApi;
+use itp_ipfs_cid::IpfsCid;
 use itp_ocall_api::EnclaveIpfsOCallApi;
 use log::*;
-use std::{fs::File, io::Read, vec::Vec};
+use std::{
+	fs,
+	io::Read,
+	path::{Path, PathBuf},
+	string::{String, ToString},
+	vec::Vec,
+};
 
-#[allow(unused)]
-fn test_ocall_read_write_ipfs() {
-	info!("testing IPFS read/write. Hopefully ipfs daemon is running...");
-	let enc_state: Vec<u8> = vec![20; 4 * 512 * 1024];
-
-	let cid = OcallApi.write_ipfs(enc_state.as_slice()).unwrap();
-
-	OcallApi.read_ipfs(&cid).unwrap();
-
-	let cid_str = std::str::from_utf8(&cid.0).unwrap();
-	let mut f = File::open(cid_str).unwrap();
+pub fn test_ocall_write_ipfs_fallback() {
+	let payload_size = 100; // in kB
+	info!("testing IPFS write of {}kB if api is unreachable. Expected to fallback to dump local file...", payload_size);
+	let enc_state: Vec<u8> = vec![20; payload_size * 1024];
+	let res_expected_cid = IpfsCid::from_chunk(&enc_state);
+	let result = OcallApi.write_ipfs(enc_state);
+	debug!("write_ipfs ocall result : {:?}", result);
+	debug!("expected cid details: {:?}", res_expected_cid);
+	assert!(res_expected_cid.is_ok());
+	let expected_cid = res_expected_cid.expect("known to be ok");
+	info!("expected cid: {}", expected_cid);
+	let dumpfile =
+		find_first_matching_file(expected_cid.to_string()).expect("dumped file not found");
+	info!("found dumped file: {:?}", dumpfile);
+	let mut f = fs::File::open(dumpfile).unwrap();
 	let mut content_buf = Vec::new();
 	f.read_to_end(&mut content_buf).unwrap();
-	info!("reading file {:?} of size {} bytes", f, &content_buf.len());
+	debug!("reading file {:?} of size {} bytes", f, &content_buf.len());
+	let res_file_cid = IpfsCid::from_chunk(&content_buf);
+	debug!("file cid details: {:?}", res_file_cid);
+	assert!(res_file_cid.is_ok());
+	let file_cid = res_file_cid.expect("known to be ok");
+	debug!("file cid: {}", file_cid);
+	assert_eq!(expected_cid, file_cid);
+}
 
-	let mut ipfs_content = IpfsContent::new(cid_str, content_buf);
-	let verification = ipfs_content.verify();
-	assert!(verification.is_ok());
+fn find_first_matching_file(cid_str: String) -> Option<PathBuf> {
+	let dir = Path::new("log-ipfs-failing-add");
+	let prefix = "ipfs-";
+	let suffix = format!("-{}.bin", cid_str);
+
+	for entry in fs::read_dir(dir).ok()? {
+		let entry = entry.ok()?;
+		let file_name = entry.file_name();
+		debug!("Checking file: {:?}", file_name);
+		let file_name = file_name.to_string_lossy();
+		if file_name.starts_with(prefix) && file_name.ends_with(suffix.as_str()) {
+			return Some(entry.path())
+		}
+	}
+	None
 }

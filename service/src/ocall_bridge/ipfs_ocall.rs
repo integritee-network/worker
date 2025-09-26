@@ -16,87 +16,92 @@
 
 */
 
-use crate::ocall_bridge::bridge_api::{Cid, IpfsBridge, OCallBridgeError, OCallBridgeResult};
-use futures::TryStreamExt;
-use ipfs_api::IpfsClient;
+use crate::ocall_bridge::bridge_api::{IpfsBridge, OCallBridgeError, OCallBridgeResult};
+use chrono::Local;
+use ipfs_api_backend_hyper::{IpfsApi, IpfsClient, TryFromUri};
+use itp_ipfs_cid::IpfsCid;
 use log::*;
 use std::{
-	fs::File,
-	io::{Cursor, Write},
+	fmt::Display,
+	fs::{create_dir_all, File},
+	io::{self, Cursor, Write},
+	path::{Path, PathBuf},
 	str,
-	sync::mpsc::channel,
+	sync::Arc,
 };
+use tokio::runtime::Runtime;
 
-pub struct IpfsOCall;
+pub struct IpfsOCall {
+	client: Option<Arc<IpfsClient>>,
+	log_dir: Arc<Path>,
+}
 
-impl IpfsBridge for IpfsOCall {
-	fn write_to_ipfs(&self, data: &'static [u8]) -> OCallBridgeResult<Cid> {
-		debug!("    Entering ocall_write_ipfs");
-		Ok(write_to_ipfs(data))
-	}
-
-	fn read_from_ipfs(&self, cid: Cid) -> OCallBridgeResult<()> {
-		debug!("Entering ocall_read_ipfs");
-
-		let result = read_from_ipfs(cid);
-		match result {
-			Ok(res) => {
-				let filename = str::from_utf8(&cid).unwrap();
-				create_file(filename, &res).map_err(OCallBridgeError::IpfsError)
-			},
-			Err(_) => Err(OCallBridgeError::IpfsError("failed to read from IPFS".to_string())),
+impl IpfsOCall {
+	pub fn new(maybe_url: Option<String>, maybe_auth: Option<String>, log_dir: Arc<Path>) -> Self {
+		if let Some(url) = maybe_url {
+			let client = ipfs_api_backend_hyper::IpfsClient::from_str(&url).unwrap();
+			let client = if let Some((user, pwd)) = maybe_auth
+				.and_then(|s| s.split_once(':').map(|(u, p)| (u.to_string(), p.to_string())))
+			{
+				info!("Using IPFS node at {} with credentials ******", url);
+				client.with_credentials(user, pwd)
+			} else {
+				info!("Using IPFS node at {}", url);
+				client
+			};
+			let version = tokio::runtime::Runtime::new().unwrap().block_on(client.version());
+			match version {
+				Ok(v) => info!("Connected to IPFS node version: {}", v.version),
+				Err(e) => error!("Error getting IPFS node version: {}", e),
+			}
+			Self { client: Some(Arc::new(client)), log_dir }
+		} else {
+			info!("No IPFS URL provided, disabling IPFS.");
+			Self { client: None, log_dir }
 		}
 	}
 }
 
-fn create_file(filename: &str, result: &[u8]) -> Result<(), String> {
-	match File::create(filename) {
-		Ok(mut f) => f
-			.write_all(result)
-			.map_or_else(|e| Err(format!("failed writing to file: {}", e)), |_| Ok(())),
-		Err(e) => Err(format!("failed to create file: {}", e)),
+impl IpfsBridge for IpfsOCall {
+	fn write_to_ipfs(&self, data: Vec<u8>) -> OCallBridgeResult<()> {
+		trace!("    Entering ocall_write_ipfs to write {}B", data.len());
+		if let Some(ref client) = self.client {
+			let datac = Cursor::new(data.clone());
+			let add_options = ipfs_api_backend_hyper::request::Add::builder()
+				.raw_leaves(true)
+				.cid_version(1)
+				.build();
+			let rt = Runtime::new().unwrap();
+			match rt.block_on(client.add_with_options(datac, add_options)) {
+				Ok(res) => {
+					debug!("ocall result IpfsCid {}", res.hash);
+				},
+				Err(e) => {
+					let dumpfile = log_failing_blob_to_file(data, self.log_dir.clone())
+						.unwrap_or_else(|e| e.to_string().into());
+					warn!("      write to ipfs failed late, wrote to file {}", dumpfile.display());
+				},
+			};
+		} else {
+			warn!("IPFS client not configured, writing to local file");
+			let dumpfile = log_failing_blob_to_file(data, self.log_dir.clone())
+				.unwrap_or_else(|e| e.to_string().into());
+		};
+		Ok(())
 	}
 }
 
-#[tokio::main]
-async fn write_to_ipfs(data: &'static [u8]) -> Cid {
-	// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
-	// If not found, tries to connect to `localhost:5001`.
-	let client = IpfsClient::default();
-
-	match client.version().await {
-		Ok(version) => info!("version: {:?}", version.version),
-		Err(e) => eprintln!("error getting version: {}", e),
-	}
-
-	let datac = Cursor::new(data);
-	let (tx, rx) = channel();
-
-	match client.add(datac).await {
-		Ok(res) => {
-			info!("Result Hash {}", res.hash);
-			tx.send(res.hash.into_bytes()).unwrap();
-		},
-		Err(e) => eprintln!("error adding file: {}", e),
-	}
-	let mut cid: Cid = [0; 46];
-	cid.clone_from_slice(&rx.recv().unwrap());
-	cid
-}
-
-#[tokio::main]
-pub async fn read_from_ipfs(cid: Cid) -> Result<Vec<u8>, String> {
-	// Creates an `IpfsClient` connected to the endpoint specified in ~/.ipfs/api.
-	// If not found, tries to connect to `localhost:5001`.
-	let client = IpfsClient::default();
-	let h = str::from_utf8(&cid).unwrap();
-
-	info!("Fetching content from: {}", h);
-
-	client
-		.cat(h)
-		.map_ok(|chunk| chunk.to_vec())
-		.map_err(|e| e.to_string())
-		.try_concat()
-		.await
+fn log_failing_blob_to_file(blob: Vec<u8>, log_dir: Arc<Path>) -> io::Result<PathBuf> {
+	let log_dir = log_dir.join("log-ipfs-failing-add");
+	create_dir_all(&log_dir)?;
+	let timestamp = Local::now().format("%Y%m%d-%H%M%S-%3f").to_string();
+	let cid_str = IpfsCid::from_chunk(&blob)
+		.map(|cid| format!("{}", cid))
+		.unwrap_or_else(|_| "invalid-cid".to_string());
+	let file_name = format!("ipfs-{}-{}.bin", timestamp, cid_str);
+	let file_path = log_dir.join(file_name);
+	let mut file = File::create(file_path.clone())?;
+	file.write_all(&blob)?;
+	warn!("      write to ipfs failed early, wrote to file {}", file_path.display());
+	Ok(file_path)
 }

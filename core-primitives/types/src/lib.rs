@@ -41,7 +41,6 @@ pub type Nonce = u32;
 
 pub use itp_sgx_runtime_primitives::types::*;
 
-pub type IpfsHash = [u8; 46];
 pub type MrEnclave = [u8; 32];
 
 pub type ConfirmCallFn = ([u8; 2], ShardIdentifier, H256, Vec<u8>);
@@ -57,10 +56,12 @@ pub type ShardConfig = enclave_bridge_primitives::ShardConfig<AccountId>;
 pub type UpgradableShardConfig =
 	enclave_bridge_primitives::UpgradableShardConfig<AccountId, BlockNumber>;
 
+use crate::parentchain::ParentchainCall;
 pub use enclave_bridge_primitives::Request;
 pub use teerex_primitives::{
 	EnclaveFingerprint, MultiEnclave, SgxBuildMode, SgxEnclave, SgxReportData, SgxStatus,
 };
+
 pub type Enclave = MultiEnclave<Vec<u8>>;
 
 /// Simple blob to hold an encoded call
@@ -77,6 +78,16 @@ impl OpaqueCall {
 impl Encode for OpaqueCall {
 	fn encode(&self) -> Vec<u8> {
 		self.0.clone()
+	}
+}
+
+impl Decode for OpaqueCall {
+	fn decode<I: codec::Input>(input: &mut I) -> Result<Self, codec::Error> {
+		let mut bytes = Vec::new();
+		while let Ok(byte) = input.read_byte() {
+			bytes.push(byte);
+		}
+		Ok(OpaqueCall(bytes))
 	}
 }
 
@@ -133,6 +144,12 @@ pub enum WorkerResponse<H: HeaderTrait, V: Encode + Decode> {
 	NextNonce(Option<Nonce>),
 }
 
+#[derive(Encode, Decode, Clone, Debug, PartialEq)]
+pub enum TrustedCallSideEffect {
+	ParentchainCall(ParentchainCall),
+	IpfsAdd(Vec<u8>),
+}
+
 impl<H: HeaderTrait> From<WorkerResponse<H, Vec<u8>>> for StorageEntry<Vec<u8>> {
 	fn from(response: WorkerResponse<H, Vec<u8>>) -> Self {
 		match response {
@@ -147,9 +164,12 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn opaque_call_encodes_correctly() {
+	fn opaque_call_encodes_and_decodes_correctly() {
 		let call_tuple = ([1u8, 2u8], 5u8);
 		let call = OpaqueCall::from_tuple(&call_tuple);
-		assert_eq!(call.encode(), call_tuple.encode())
+		let encoded_call = call.encode();
+		assert_eq!(encoded_call, call_tuple.encode());
+		let decoded_call = OpaqueCall::decode(&mut encoded_call.as_slice()).unwrap();
+		assert_eq!(decoded_call, call);
 	}
 }

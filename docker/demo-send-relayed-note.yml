@@ -1,0 +1,31 @@
+# Set the `ADDITIONAL_RUNTIME_FLAGS` variable to for additional flags.
+# To skip remote attestation: `export ADDITIONAL_RUNTIME_FLAGS="--skip-ra"`
+services:
+  demo-send-relayed-note:
+    image: integritee-cli:${VERSION:-dev}
+    devices:
+      - "${SGX_PROVISION:-/dev/null}:/dev/sgx/provision"
+      - "${SGX_ENCLAVE:-/dev/null}:/dev/sgx/enclave"
+    volumes:
+      - "${AESMD:-/dev/null}:/var/run/aesmd"
+      - "${SGX_QCNL:-/dev/null}:/etc/sgx_default_qcnl.conf"
+    build:
+      context: ${PWD}/..
+      dockerfile: build.Dockerfile
+      target: deployed-client
+    depends_on:
+      integritee-node-${VERSION}:
+        condition: service_healthy
+      integritee-worker-1-${VERSION}:
+        condition: service_healthy
+      ipfs-node:
+        condition: service_started
+    networks:
+      - integritee-test-network
+    entrypoint:
+      "/usr/local/worker-cli/demo_send_relayed_note.sh -p 9912 -u ws://integritee-node
+      -V wss://integritee-worker-1 -P 2011 -i http://ipfs-node:8080 -C /usr/local/bin/integritee-cli 2>&1"
+    restart: "no"
+networks:
+  integritee-test-network:
+    driver: bridge

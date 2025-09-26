@@ -17,6 +17,7 @@ substrate-api-client = { default-features = false, features = ["std", "sync-api"
 
 # local deps
 itp-api-client-types = { path = "../api-client-types" }
+itp-ipfs-cid = { path = "../../ipfs-cid" }
 itp-types = { path = "../../types" }
 
 [features]

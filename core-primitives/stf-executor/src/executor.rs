@@ -42,7 +42,7 @@ use itp_time_utils::{duration_now, now_as_millis};
 use itp_types::{
 	parentchain::{BlockNumber, Header as ParentchainHeader, ParentchainCall, ParentchainId},
 	storage::StorageEntryVerified,
-	Balance, ShardConfig, UpgradableShardConfig, H256,
+	Balance, ShardConfig, TrustedCallSideEffect, UpgradableShardConfig, H256,
 };
 use log::*;
 use sp_runtime::{traits::Header as HeaderTrait, SaturatedConversion};
@@ -124,12 +124,12 @@ where
 		}
 
 		debug!("execute on STF, call with nonce {}", trusted_call.nonce());
-		let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
+		let mut trusted_call_side_effects: Vec<TrustedCallSideEffect> = Vec::new();
 		if let Err(e) = Stf::execute_call(
 			state,
 			shard,
 			trusted_call.clone(),
-			&mut extrinsic_call_backs,
+			&mut trusted_call_side_effects,
 			self.node_metadata_repo.clone(),
 		) {
 			error!("Stf execute failed: {:?}", e);
@@ -143,23 +143,27 @@ where
 			state.prune_state_diff();
 		}
 
-		for call in extrinsic_call_backs.clone() {
-			match call {
-				ParentchainCall::Integritee { call, mortality } => trace!(
-					"trusted_call wants to send encoded call to [Integritee] parentchain: 0x{} with mortality {:?}",
-					hex::encode(call.encode()), mortality
-				),
-				ParentchainCall::TargetA { call, mortality } => trace!(
-					"trusted_call wants to send encoded call to [TargetA] parentchain: 0x{} with mortality {:?}",
-					hex::encode(call.encode()), mortality
-				),
-				ParentchainCall::TargetB { call, mortality } => trace!(
-					"trusted_call wants to send encoded call to [TargetB] parentchain: 0x{} with mortality {:?}",
-					hex::encode(call.encode()), mortality
-				),
+		for side_effect in trusted_call_side_effects.clone() {
+			match side_effect {
+				TrustedCallSideEffect::ParentchainCall(call) => match call {
+					ParentchainCall::Integritee { call, mortality } => trace!(
+						"trusted_call wants to send encoded call to [Integritee] parentchain: 0x{} with mortality {:?}",
+						hex::encode(call.encode()), mortality
+					),
+					ParentchainCall::TargetA { call, mortality } => trace!(
+						"trusted_call wants to send encoded call to [TargetA] parentchain: 0x{} with mortality {:?}",
+						hex::encode(call.encode()), mortality
+					),
+					ParentchainCall::TargetB { call, mortality } => trace!(
+						"trusted_call wants to send encoded call to [TargetB] parentchain: 0x{} with mortality {:?}",
+						hex::encode(call.encode()), mortality
+					),
+				},
+				TrustedCallSideEffect::IpfsAdd(blob) =>
+					trace!("trusted_call wants to add blob of size {} to ipfs", blob.len()),
 			}
 		}
-		Ok(ExecutedOperation::success(operation_hash, top_or_hash, extrinsic_call_backs))
+		Ok(ExecutedOperation::success(operation_hash, top_or_hash, trusted_call_side_effects))
 	}
 }
 
@@ -318,25 +322,25 @@ where
 		// the risk of overdue block production is minimal as all user calls are filtered during maintenance mode anyway
 		if maintenance_mode {
 			info!("Maintenance mode is active.");
-			let mut extrinsic_call_backs: Vec<ParentchainCall> = Vec::new();
+			let mut trusted_call_side_effects: Vec<TrustedCallSideEffect> = Vec::new();
 			Stf::maintenance_mode_tasks(
 				&mut state,
 				&shard,
 				*header.number(),
-				&mut extrinsic_call_backs,
+				&mut trusted_call_side_effects,
 				self.node_metadata_repo.clone(),
 			)
 			.map_err(|e| error!("maintenance_mode tasks failed: {:?}", e))
 			.ok();
 			info!(
 				"maintenance tasks have triggered {} parentchain calls",
-				extrinsic_call_backs.len()
+				trusted_call_side_effects.len()
 			);
 			// we're hacking our unshielding calls into the queue
 			executed_and_failed_calls.push(ExecutedOperation::success(
 				H256::default(),
 				TrustedOperationOrHash::Hash(H256::default()),
-				extrinsic_call_backs,
+				trusted_call_side_effects,
 			));
 		}
 

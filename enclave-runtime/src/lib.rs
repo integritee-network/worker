@@ -73,7 +73,6 @@ use std::{
 mod attestation;
 mod empty_impls;
 mod initialization;
-mod ipfs;
 mod ocall;
 mod shard_config;
 mod shard_creation_info;

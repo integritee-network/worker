@@ -31,7 +31,7 @@ url = "2.5.0"
 warp = "0.3"
 
 # ipfs
-ipfs-api = "0.11.0"
+ipfs-api-backend-hyper = { version = "0.6.0", features = ["with-hyper-tls", "with-builder"] }
 
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
 primitive-types = { version = "0.12.1", default-features = false, features = ["codec"] }
@@ -48,6 +48,7 @@ itc-rpc-server = { path = "../core/rpc-server" }
 itp-api-client-types = { path = "../core-primitives/node-api/api-client-types" }
 itp-enclave-api = { path = "../core-primitives/enclave-api" }
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics" }
+itp-ipfs-cid = { path = "../core-primitives/ipfs-cid" }
 itp-node-api = { path = "../core-primitives/node-api" }
 itp-settings = { path = "../core-primitives/settings" }
 itp-stf-interface = { path = "../core-primitives/stf-interface" }

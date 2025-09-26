@@ -108,6 +108,7 @@ itp-component-container = { path = "../core-primitives/component-container", def
 itp-enclave-metrics = { path = "../core-primitives/enclave-metrics", default-features = false, features = ["sgx"] }
 itp-extrinsics-factory = { path = "../core-primitives/extrinsics-factory", default-features = false, features = ["sgx"] }
 itp-import-queue = { path = "../core-primitives/import-queue", default-features = false, features = ["sgx"] }
+itp-ipfs-cid = { path = "../core-primitives/ipfs-cid", default-features = false, features = ["sgx"] }
 itp-node-api = { path = "../core-primitives/node-api", default-features = false, features = ["sgx"] }
 itp-node-api-metadata = { path = "../core-primitives/node-api/metadata", default-features = false }
 itp-nonce-cache = { path = "../core-primitives/nonce-cache", default-features = false, features = ["sgx"] }

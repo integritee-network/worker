@@ -1,0 +1,34 @@
+[package]
+name = "itp-ipfs-cid"
+version = "0.1.0"
+authors = ["Integritee AG <hello@integritee.network>"]
+edition = "2021"
+
+[dependencies]
+cid = { version = "0.10.1", default-features = false, features = ["alloc"] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
+log = { version = "0.4", default-features = false }
+multibase = { version = "0.9.1", default-features = false }
+multihash = { version = "0.18.0", default-features = false, features = ["alloc"] }
+sgx_tcrypto = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", optional = true }
+sgx_tstd = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["untrusted_fs", "net", "backtrace"], optional = true }
+sgx_types = { branch = "master", git = "https://github.com/apache/teaclave-sgx-sdk.git", features = ["extra_traits"] }
+sha2 = { version = "0.10.9", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "hex/std",
+    "log/std",
+    "sgx_tcrypto",
+    "sha2",
+]
+
+sgx = [
+    "sgx_tstd",
+    "sgx_tcrypto",
+]
+test = []
+production = []

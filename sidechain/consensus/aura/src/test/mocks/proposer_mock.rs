@@ -42,7 +42,7 @@ impl Proposer<ParentchainBlock, SignedSidechainBlock> for ProposerMock {
 				SidechainBlockBuilder::random().with_block_data(block_data).build_signed()
 			},
 
-			parentchain_effects: Default::default(),
+			side_effects: Default::default(),
 		})
 	}
 }

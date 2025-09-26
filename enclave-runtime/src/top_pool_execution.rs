@@ -49,15 +49,17 @@ use itc_parentchain::{
 use itp_component_container::ComponentGetter;
 use itp_enclave_metrics::EnclaveMetric;
 use itp_extrinsics_factory::CreateExtrinsics;
-use itp_ocall_api::{EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi};
+use itp_ocall_api::{
+	EnclaveIpfsOCallApi, EnclaveMetricsOCallApi, EnclaveOnChainOCallApi, EnclaveSidechainOCallApi,
+};
 use itp_pallet_storage::{SidechainPalletStorage, SidechainPalletStorageKeys};
 use itp_settings::sidechain::SLOT_DURATION;
 use itp_sgx_crypto::key_repository::AccessKey;
 use itp_stf_state_handler::query_shard_state::QueryShardState;
 use itp_time_utils::duration_now;
 use itp_types::{
-	parentchain::{GenericMortality, ParentchainCall, ParentchainId, SidechainBlockConfirmation},
-	Block, OpaqueCall, H256,
+	parentchain::{GenericMortality, ParentchainId, SidechainBlockConfirmation},
+	Block, OpaqueCall, TrustedCallSideEffect, H256,
 };
 use its_primitives::{
 	traits::{
@@ -233,7 +235,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 				block_composer,
 			);
 
-			let (blocks, parentchain_calls) =
+			let (blocks, side_effects) =
 				exec_aura_on_slot::<_, _, SignedSidechainBlock, _, _, _, _, _>(
 					slot.clone(),
 					authority,
@@ -252,7 +254,7 @@ fn execute_top_pool_trusted_calls_internal() -> Result<()> {
 
 			log_remaining_slot_duration(&slot, SlotStage::AfterAura);
 
-			send_blocks_and_extrinsics::<Block, _, _>(blocks, parentchain_calls, ocall_api)?;
+			send_blocks_and_execute_side_effects::<Block, _, _>(blocks, side_effects, ocall_api)?;
 
 			log_remaining_slot_duration(&slot, SlotStage::AfterBroadcastAndExtrinsics);
 		},
@@ -286,7 +288,7 @@ pub(crate) fn exec_aura_on_slot<
 	maybe_target_b_block_import_trigger: Option<Arc<TargetBBlockImportTrigger>>,
 	proposer_environment: PEnvironment,
 	shards: Vec<ShardIdentifierFor<SignedSidechainBlock>>,
-) -> Result<(Vec<SignedSidechainBlock>, Vec<ParentchainCall>)>
+) -> Result<(Vec<SignedSidechainBlock>, Vec<TrustedCallSideEffect>)>
 where
 	ParentchainBlock: BlockTrait<Hash = H256>,
 	SignedSidechainBlock:
@@ -321,33 +323,41 @@ where
 		)
 		.with_claim_strategy(SlotClaimStrategy::RoundRobin);
 
-	let (blocks, pxts): (Vec<_>, Vec<_>) =
+	let (blocks, side_effects): (Vec<_>, Vec<_>) =
 		PerShardSlotWorkerScheduler::on_slot(&mut aura, slot, shards)
 			.into_iter()
-			.map(|r| (r.block, r.parentchain_effects))
+			.map(|r| (r.block, r.side_effects))
 			.unzip();
 
-	let opaque_calls: Vec<ParentchainCall> = pxts.into_iter().flatten().collect();
+	let opaque_calls: Vec<TrustedCallSideEffect> = side_effects.into_iter().flatten().collect();
 	Ok((blocks, opaque_calls))
 }
 
 /// Broadcasts sidechain blocks to fellow peers and sends opaque calls as extrinsic to the parentchain.
-pub(crate) fn send_blocks_and_extrinsics<ParentchainBlock, SignedSidechainBlock, OCallApi>(
+pub(crate) fn send_blocks_and_execute_side_effects<
+	ParentchainBlock,
+	SignedSidechainBlock,
+	OCallApi,
+>(
 	blocks: Vec<SignedSidechainBlock>,
-	parentchain_calls: Vec<ParentchainCall>,
+	side_effects: Vec<TrustedCallSideEffect>,
 	ocall_api: Arc<OCallApi>,
 ) -> Result<()>
 where
 	ParentchainBlock: BlockTrait,
 	SignedSidechainBlock: SignedBlock + 'static,
-	OCallApi: EnclaveSidechainOCallApi,
+	OCallApi: EnclaveSidechainOCallApi + EnclaveIpfsOCallApi,
 	NumberFor<ParentchainBlock>: BlockNumberOps,
 {
 	debug!("Proposing {} sidechain block(s) (broadcasting to peers)", blocks.len());
 	ocall_api.propose_sidechain_blocks(blocks)?;
 
-	let calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_calls
+	let calls: Vec<(OpaqueCall, GenericMortality)> = side_effects
 		.iter()
+		.filter_map(|side_effect| match side_effect {
+			TrustedCallSideEffect::ParentchainCall(call) => Some(call.clone()),
+			_ => None,
+		})
 		.filter_map(|parentchain_call| parentchain_call.as_integritee())
 		.collect();
 	debug!("Enclave wants to send {} extrinsics to Integritee Parentchain", calls.len());
@@ -357,8 +367,12 @@ where
 		let validator_access = get_validator_accessor_from_integritee_solo_or_parachain()?;
 		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 	}
-	let calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_calls
+	let calls: Vec<(OpaqueCall, GenericMortality)> = side_effects
 		.iter()
+		.filter_map(|side_effect| match side_effect {
+			TrustedCallSideEffect::ParentchainCall(call) => Some(call.clone()),
+			_ => None,
+		})
 		.filter_map(|parentchain_call| parentchain_call.as_target_a())
 		.collect();
 	debug!("Enclave wants to send {} extrinsics to TargetA Parentchain", calls.len());
@@ -368,8 +382,12 @@ where
 		let validator_access = get_validator_accessor_from_target_a_solo_or_parachain()?;
 		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 	}
-	let calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_calls
+	let calls: Vec<(OpaqueCall, GenericMortality)> = side_effects
 		.iter()
+		.filter_map(|side_effect| match side_effect {
+			TrustedCallSideEffect::ParentchainCall(call) => Some(call.clone()),
+			_ => None,
+		})
 		.filter_map(|parentchain_call| parentchain_call.as_target_b())
 		.collect();
 	debug!("Enclave wants to send {} extrinsics to TargetB Parentchain", calls.len());
@@ -379,7 +397,22 @@ where
 		let validator_access = get_validator_accessor_from_target_b_solo_or_parachain()?;
 		validator_access.execute_mut_on_validator(|v| v.send_extrinsics(xts))?;
 	}
-
+	let ipfs_blobs_to_add: Vec<Vec<u8>> = side_effects
+		.iter()
+		.filter_map(|side_effect| match side_effect {
+			TrustedCallSideEffect::IpfsAdd(blob) => Some(blob.clone()),
+			_ => None,
+		})
+		.collect();
+	if !ipfs_blobs_to_add.is_empty() {
+		debug!("Enclave wants to store {} blob(s) on IPFS", ipfs_blobs_to_add.len());
+		ipfs_blobs_to_add.iter().for_each(|blob| {
+			trace!("Storing blob of size {}B on IPFS", blob.len());
+			// ignore errors here. ipfs is optimistic and a fallback is implemented.
+			// Moreover, we can't handle failures anyway
+			let _ = ocall_api.write_ipfs(blob.clone());
+		});
+	}
 	Ok(())
 }
 

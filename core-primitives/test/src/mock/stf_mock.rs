@@ -31,8 +31,8 @@ use itp_stf_primitives::{
 	types::{KeyPair, Nonce, TrustedOperation},
 };
 use itp_types::{
-	parentchain::{BlockNumber, ParentchainCall, ParentchainId},
-	AccountId, Balance, Index, Moment, ShardIdentifier, Signature,
+	parentchain::{BlockNumber, ParentchainId},
+	AccountId, Balance, Index, Moment, ShardIdentifier, Signature, TrustedCallSideEffect,
 };
 use log::*;
 use sp_core::{sr25519, Pair};
@@ -75,10 +75,10 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		state: &mut SgxExternalities,
 		shard: &ShardIdentifier,
 		call: TrustedCallSignedMock,
-		calls: &mut Vec<ParentchainCall>,
+		side_effects: &mut Vec<TrustedCallSideEffect>,
 		node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, shard, node_metadata_repo))
+		state.execute_with(|| call.execute(side_effects, shard, node_metadata_repo))
 	}
 
 	fn on_initialize(
@@ -95,7 +95,7 @@ impl StateCallInterface<TrustedCallSignedMock, SgxExternalities, NodeMetadataRep
 		_state: &mut SgxExternalities,
 		_shard: &itp_stf_primitives::types::ShardIdentifier,
 		_integritee_block_number: BlockNumber,
-		_calls: &mut Vec<ParentchainCall>,
+		_calls: &mut Vec<TrustedCallSideEffect>,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {
 		todo!()
@@ -202,7 +202,7 @@ impl ExecuteCall<NodeMetadataRepositoryMock> for TrustedCallSignedMock {
 
 	fn execute(
 		self,
-		_calls: &mut Vec<ParentchainCall>,
+		_calls: &mut Vec<TrustedCallSideEffect>,
 		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepositoryMock>,
 	) -> Result<(), Self::Error> {

@@ -29,8 +29,8 @@ use itp_node_api_metadata::metadata_mocks::NodeMetadataMock;
 use itp_node_api_metadata_provider::NodeMetadataRepository;
 use itp_stf_primitives::traits::TrustedCallVerification;
 use itp_types::{
-	parentchain::{BlockNumber, ParentchainCall, ParentchainId},
-	AccountId, Index, Moment, ShardIdentifier,
+	parentchain::{BlockNumber, ParentchainId},
+	AccountId, Index, Moment, ShardIdentifier, TrustedCallSideEffect,
 };
 
 #[derive(Default)]
@@ -71,7 +71,7 @@ where
 		_state: &mut State,
 		_shard: &ShardIdentifier,
 		_call: TCS,
-		_calls: &mut Vec<ParentchainCall>,
+		_side_effects: &mut Vec<TrustedCallSideEffect>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
 		unimplemented!()
@@ -90,7 +90,7 @@ where
 		_state: &mut State,
 		_shard: &itp_stf_primitives::types::ShardIdentifier,
 		_integritee_block_number: BlockNumber,
-		_calls: &mut Vec<ParentchainCall>,
+		_side_effects: &mut Vec<TrustedCallSideEffect>,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {
 		todo!()
@@ -138,7 +138,7 @@ impl ExecuteCall<NodeMetadataRepository<NodeMetadataMock>> for CallExecutorMock 
 
 	fn execute(
 		self,
-		_calls: &mut Vec<ParentchainCall>,
+		_side_effects: &mut Vec<TrustedCallSideEffect>,
 		_shard: &ShardIdentifier,
 		_node_metadata_repo: Arc<NodeMetadataRepository<NodeMetadataMock>>,
 	) -> Result<(), Self::Error> {

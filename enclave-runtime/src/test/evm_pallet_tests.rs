@@ -29,7 +29,7 @@ use itp_node_api::metadata::{metadata_mocks::NodeMetadataMock, provider::NodeMet
 use itp_sgx_externalities::SgxExternalitiesTrait;
 use itp_stf_interface::StateCallInterface;
 use itp_stf_primitives::{traits::TrustedCallSigning, types::KeyPair};
-use itp_types::{parentchain::ParentchainCall, AccountId, ShardIdentifier};
+use itp_types::{AccountId, ShardIdentifier, TrustedCallSideEffect};
 use primitive_types::H256;
 use sp_core::{crypto::Pair, H160, U256};
 use std::{sync::Arc, vec::Vec};
@@ -37,7 +37,7 @@ use std::{sync::Arc, vec::Vec};
 pub fn test_evm_call() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut parentchain_calls = Vec::new();
+	let mut side_effects = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -82,7 +82,7 @@ pub fn test_evm_call() {
 		&mut state,
 		&ShardIdentifier::default(),
 		trusted_call,
-		&mut parentchain_calls,
+		&mut side_effects,
 		repo,
 	)
 	.unwrap();
@@ -97,7 +97,7 @@ pub fn test_evm_call() {
 pub fn test_evm_counter() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut parentchain_calls = Vec::new();
+	let mut side_effects = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -134,7 +134,7 @@ pub fn test_evm_counter() {
 		&mut state,
 		&ShardIdentifier::default(),
 		trusted_call,
-		&mut parentchain_calls,
+		&mut side_effects,
 		repo,
 	)
 	.unwrap();
@@ -173,7 +173,7 @@ pub fn test_evm_counter() {
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut parentchain_calls,
+		&mut side_effects,
 		2,
 	);
 
@@ -189,7 +189,7 @@ pub fn test_evm_counter() {
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut parentchain_calls,
+		&mut side_effects,
 		5,
 	);
 
@@ -206,7 +206,7 @@ pub fn test_evm_counter() {
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut parentchain_calls,
+		&mut side_effects,
 		6,
 	);
 
@@ -229,7 +229,7 @@ pub fn test_evm_counter() {
 		&mrenclave,
 		&shard,
 		&mut state,
-		&mut parentchain_calls,
+		&mut side_effects,
 		8,
 	);
 }
@@ -246,7 +246,7 @@ fn execute_and_verify_evm_call(
 	mrenclave: &[u8; 32],
 	shard: &ShardIdentifier,
 	state: &mut State,
-	calls: &mut Vec<ParentchainCall>,
+	calls: &mut Vec<TrustedCallSideEffect>,
 	counter_expected: u64,
 ) {
 	let inc_call = TrustedCall::evm_call(
@@ -274,7 +274,7 @@ fn execute_and_verify_evm_call(
 pub fn test_evm_create() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut parentchain_calls = Vec::new();
+	let mut side_effects = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -313,7 +313,7 @@ pub fn test_evm_create() {
 		&mut state,
 		&ShardIdentifier::default(),
 		trusted_call,
-		&mut parentchain_calls,
+		&mut side_effects,
 		repo,
 	)
 	.unwrap();
@@ -335,7 +335,7 @@ pub fn test_evm_create() {
 pub fn test_evm_create2() {
 	// given
 	let (_, mut state, shard, mrenclave, ..) = test_setup();
-	let mut parentchain_calls = Vec::new();
+	let mut side_effects = Vec::new();
 
 	// Create the sender account.
 	let sender = funded_pair();
@@ -375,7 +375,7 @@ pub fn test_evm_create2() {
 		&mut state,
 		&ShardIdentifier::default(),
 		trusted_call,
-		&mut parentchain_calls,
+		&mut side_effects,
 		repo,
 	)
 	.unwrap();

@@ -32,6 +32,7 @@ use crate::{
 	sync_block_broadcaster::BroadcastBlocks,
 	worker_peers_updater::UpdateWorkerPeers,
 };
+use ipfs_api_backend_hyper::IpfsClient;
 use itp_api_client_types::{Config, Request};
 use itp_enclave_api::remote_attestation::RemoteAttestationCallBacks;
 use itp_node_api::node_api_factory::{CreateNodeApi, NodeApiFactory};
@@ -69,6 +70,7 @@ pub struct OCallBridgeComponentFactory<
 	peer_block_fetcher: Arc<PeerBlockFetcher>,
 	tokio_handle: Arc<TokioHandle>,
 	metrics_receiver: Arc<MetricsReceiver>,
+	maybe_ipfs_url_and_auth: (Option<String>, Option<String>),
 	log_dir: Arc<Path>,
 }
 
@@ -115,6 +117,7 @@ impl<
 		peer_block_fetcher: Arc<PeerBlockFetcher>,
 		tokio_handle: Arc<TokioHandle>,
 		metrics_receiver: Arc<MetricsReceiver>,
+		maybe_ipfs_url_and_auth: (Option<String>, Option<String>),
 		log_dir: Arc<Path>,
 	) -> Self {
 		OCallBridgeComponentFactory {
@@ -128,6 +131,7 @@ impl<
 			peer_block_fetcher,
 			tokio_handle,
 			metrics_receiver,
+			maybe_ipfs_url_and_auth,
 			log_dir,
 		}
 	}
@@ -196,7 +200,11 @@ impl<
 	}
 
 	fn get_ipfs_api(&self) -> Arc<dyn IpfsBridge> {
-		Arc::new(IpfsOCall {})
+		Arc::new(IpfsOCall::new(
+			self.maybe_ipfs_url_and_auth.0.clone(),
+			self.maybe_ipfs_url_and_auth.1.clone(),
+			self.log_dir.clone(),
+		))
 	}
 
 	fn get_metrics_api(&self) -> Arc<dyn MetricsBridge> {

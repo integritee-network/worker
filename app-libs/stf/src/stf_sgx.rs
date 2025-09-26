@@ -55,7 +55,10 @@ use itp_stf_primitives::{
 	types::{ShardIdentifier, Signature},
 };
 use itp_storage::storage_value_key;
-use itp_types::parentchain::{AccountId, BlockNumber, Hash, Index, ParentchainCall, ParentchainId};
+use itp_types::{
+	parentchain::{AccountId, BlockNumber, Hash, Index, ParentchainId},
+	TrustedCallSideEffect,
+};
 use itp_utils::{hex::hex_encode, stringify::account_id_to_string};
 use log::*;
 use sp_runtime::traits::StaticLookup;
@@ -225,10 +228,10 @@ where
 		state: &mut State,
 		shard: &ShardIdentifier,
 		call: TCS,
-		calls: &mut Vec<ParentchainCall>,
+		side_effects: &mut Vec<TrustedCallSideEffect>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
-		state.execute_with(|| call.execute(calls, shard, node_metadata_repo))
+		state.execute_with(|| call.execute(side_effects, shard, node_metadata_repo))
 	}
 
 	fn on_initialize(
@@ -269,7 +272,7 @@ where
 		state: &mut State,
 		shard: &ShardIdentifier,
 		integritee_block_number: BlockNumber,
-		calls: &mut Vec<ParentchainCall>,
+		side_effects: &mut Vec<TrustedCallSideEffect>,
 		node_metadata_repo: Arc<NodeMetadataRepository>,
 	) -> Result<(), Self::Error> {
 		state.execute_with(|| {
@@ -314,7 +317,7 @@ where
 						retire_account(
 							account,
 							&mut enclave_nonce,
-							calls,
+							side_effects,
 							shard,
 							node_metadata_repo.clone(),
 						);
@@ -342,7 +345,7 @@ where
 fn retire_account<NodeMetadataRepository>(
 	account: AccountId,
 	enclave_nonce: &mut Index,
-	calls: &mut Vec<ParentchainCall>,
+	side_effects: &mut Vec<TrustedCallSideEffect>,
 	shard: &ShardIdentifier,
 	node_metadata_repo: Arc<NodeMetadataRepository>,
 ) where
@@ -368,7 +371,7 @@ fn retire_account<NodeMetadataRepository>(
 				signature: fake_signature.clone(),
 			};
 			// Replace with `inspect_err` once it's stable.
-			tcs.execute(calls, shard, node_metadata_repo.clone())
+			tcs.execute(side_effects, shard, node_metadata_repo.clone())
 				.map_err(|e| {
 					error!(
 						"Failed to force-unshield {:?} for {}: {:?}",
@@ -390,7 +393,7 @@ fn retire_account<NodeMetadataRepository>(
 			signature: fake_signature,
 		};
 		// Replace with `inspect_err` once it's stable.
-		tcs.execute(calls, shard, node_metadata_repo)
+		tcs.execute(side_effects, shard, node_metadata_repo)
 			.map_err(|e| {
 				error!(
 					"Failed to force-unshield native for {:?}: {:?}",

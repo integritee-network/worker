@@ -27,8 +27,9 @@ use crate::{
 		get_shard_info::GetShardInfoCommand, get_shard_vault::GetShardVaultCommand,
 		get_total_issuance::GetTotalIssuanceCommand,
 		get_undistributed_fees::GetUndistributedFeesCommand, nonce::NonceCommand,
-		note_bloat::NoteBloatCommand, spam_extrinsics::SpamExtrinsicsCommand,
-		transfer::TransferCommand, unshield_funds::UnshieldFundsCommand, version::VersionCommand,
+		note_bloat::NoteBloatCommand, send_note::SendNoteCommand,
+		spam_extrinsics::SpamExtrinsicsCommand, transfer::TransferCommand,
+		unshield_funds::UnshieldFundsCommand, version::VersionCommand,
 		waste_time::WasteTimeCommand, watchdog::WatchdogCommand,
 	},
 	trusted_cli::TrustedCli,
@@ -118,6 +119,9 @@ pub enum TrustedBaseCommand {
 	/// run a chatbot service
 	Chatbot(ChatbotCommand),
 
+	/// send a private note to someone
+	SendNote(SendNoteCommand),
+
 	/// get a version string for the enclave
 	Version(VersionCommand),
 }
@@ -125,32 +129,33 @@ pub enum TrustedBaseCommand {
 impl TrustedBaseCommand {
 	pub fn run(&self, cli: &Cli, trusted_cli: &TrustedCli) -> CliResult {
 		match self {
-			TrustedBaseCommand::NewAccount => new_account(cli, trusted_cli),
-			TrustedBaseCommand::ListAccounts => list_accounts(cli, trusted_cli),
-			TrustedBaseCommand::Transfer(cmd) => cmd.run(cli, trusted_cli),
+			Self::NewAccount => new_account(cli, trusted_cli),
+			Self::ListAccounts => list_accounts(cli, trusted_cli),
+			Self::Transfer(cmd) => cmd.run(cli, trusted_cli),
 			#[cfg(feature = "test")]
-			TrustedBaseCommand::SetBalance(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::Balance(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::Nonce(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetFingerprint(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetParentchainsInfo(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetNoteBucketsInfo(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetNotes(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetShard(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetShardInfo(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetUndistributedFees(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::AddSessionProxy(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::WasteTime(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::SpamExtrinsics(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::Watchdog(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::Chatbot(cmd) => cmd.run(cli, trusted_cli),
-			TrustedBaseCommand::Version(cmd) => cmd.run(cli, trusted_cli),
+			Self::SetBalance(cmd) => cmd.run(cli, trusted_cli),
+			Self::Balance(cmd) => cmd.run(cli, trusted_cli),
+			Self::UnshieldFunds(cmd) => cmd.run(cli, trusted_cli),
+			Self::Nonce(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetFingerprint(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetParentchainsInfo(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetNoteBucketsInfo(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetNotes(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetShard(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetShardInfo(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetShardVault(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetSidechainHeader(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetTotalIssuance(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetUndistributedFees(cmd) => cmd.run(cli, trusted_cli),
+			Self::AddSessionProxy(cmd) => cmd.run(cli, trusted_cli),
+			Self::GetSessionProxies(cmd) => cmd.run(cli, trusted_cli),
+			Self::NoteBloat(cmd) => cmd.run(cli, trusted_cli),
+			Self::SendNote(cmd) => cmd.run(cli, trusted_cli),
+			Self::WasteTime(cmd) => cmd.run(cli, trusted_cli),
+			Self::SpamExtrinsics(cmd) => cmd.run(cli, trusted_cli),
+			Self::Watchdog(cmd) => cmd.run(cli, trusted_cli),
+			Self::Chatbot(cmd) => cmd.run(cli, trusted_cli),
+			Self::Version(cmd) => cmd.run(cli, trusted_cli),
 		}
 	}
 }

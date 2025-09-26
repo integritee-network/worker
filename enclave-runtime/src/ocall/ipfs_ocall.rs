@@ -15,43 +15,28 @@
 	limitations under the License.
 
 */
-
 use crate::ocall::{ffi, OcallApi};
+use alloc::vec::Vec;
 use frame_support::ensure;
-use itp_ocall_api::{EnclaveIpfsOCallApi, IpfsCid};
+use itp_ocall_api::EnclaveIpfsOCallApi;
+use log::*;
 use sgx_types::{sgx_status_t, SgxResult};
 
 impl EnclaveIpfsOCallApi for OcallApi {
-	fn write_ipfs(&self, encoded_state: &[u8]) -> SgxResult<IpfsCid> {
+	fn write_ipfs(&self, content: Vec<u8>) -> SgxResult<()> {
 		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-		let mut cid_buf = IpfsCid([0u8; 46]);
-
+		trace!("calling OCallApi::write_ipfs with {} bytes", content.len());
+		let payload = content;
 		let res = unsafe {
 			ffi::ocall_write_ipfs(
 				&mut rt as *mut sgx_status_t,
-				encoded_state.as_ptr(),
-				encoded_state.len() as u32,
-				cid_buf.0.as_mut_ptr(),
-				cid_buf.0.len() as u32,
+				payload.as_ptr(),
+				payload.len() as u32,
 			)
 		};
-
 		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
 		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-
-		Ok(cid_buf)
-	}
-
-	fn read_ipfs(&self, cid: &IpfsCid) -> SgxResult<()> {
-		let mut rt: sgx_status_t = sgx_status_t::SGX_ERROR_UNEXPECTED;
-
-		let res = unsafe {
-			ffi::ocall_read_ipfs(&mut rt as *mut sgx_status_t, cid.0.as_ptr(), cid.0.len() as u32)
-		};
-
-		ensure!(rt == sgx_status_t::SGX_SUCCESS, rt);
-		ensure!(res == sgx_status_t::SGX_SUCCESS, res);
-
+		trace!("completed OCallApi::write_ipfs");
 		Ok(())
 	}
 }

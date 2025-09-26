@@ -29,8 +29,8 @@ use itp_stf_primitives::{traits::TrustedCallVerification, types::TrustedOperatio
 use itp_stf_state_handler::{handle_state::HandleState, query_shard_state::QueryShardState};
 use itp_top_pool_author::traits::AuthorApi;
 use itp_types::{
-	parentchain::{BlockNumber, GenericMortality, ParentchainCall},
-	OpaqueCall, ShardIdentifier, H256,
+	parentchain::{BlockNumber, GenericMortality},
+	OpaqueCall, ShardIdentifier, TrustedCallSideEffect, H256,
 };
 use log::*;
 use sp_runtime::traits::{Block, Header};
@@ -118,7 +118,7 @@ impl<
 		let max_duration = Duration::from_secs(5);
 		let latest_parentchain_header = self.get_latest_parentchain_header()?;
 
-		let mut parentchain_effects: Vec<ParentchainCall> = Vec::new();
+		let mut trusted_call_side_effects: Vec<TrustedCallSideEffect> = Vec::new();
 
 		let shards = self.state_handler.list_shards()?;
 		trace!("Executing calls on {} shard(s)", shards.len());
@@ -142,7 +142,7 @@ impl<
 				},
 			)?;
 
-			parentchain_effects
+			trusted_call_side_effects
 				.append(&mut batch_execution_result.get_extrinsic_callbacks().clone());
 
 			let failed_operations = batch_execution_result.get_failed_operations();
@@ -164,8 +164,8 @@ impl<
 			// TODO: notify parentchain about executed operations? -> add to parentchain effects
 		}
 
-		if !parentchain_effects.is_empty() {
-			self.send_parentchain_effects(parentchain_effects)?;
+		if !trusted_call_side_effects.is_empty() {
+			self.execute_trusted_call_side_effects(trusted_call_side_effects)?;
 		}
 
 		Ok(())
@@ -188,18 +188,40 @@ impl<
 		Ok(())
 	}
 
-	fn send_parentchain_effects(&self, parentchain_effects: Vec<ParentchainCall>) -> Result<()> {
-		let integritee_calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_effects
+	fn execute_trusted_call_side_effects(
+		&self,
+		side_effects: Vec<TrustedCallSideEffect>,
+	) -> Result<()> {
+		let integritee_calls: Vec<(OpaqueCall, GenericMortality)> = side_effects
 			.iter()
-			.filter_map(|parentchain_call| parentchain_call.as_integritee())
+			.filter_map(|side_effect| match side_effect {
+				TrustedCallSideEffect::ParentchainCall(call) => Some(call.clone()),
+				_ => None,
+			})
+			.filter_map(|call| call.as_integritee())
 			.collect();
-		let target_a_calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_effects
+		let target_a_calls: Vec<(OpaqueCall, GenericMortality)> = side_effects
 			.iter()
-			.filter_map(|parentchain_call| parentchain_call.as_target_a())
+			.filter_map(|side_effect| match side_effect {
+				TrustedCallSideEffect::ParentchainCall(call) => Some(call.clone()),
+				_ => None,
+			})
+			.filter_map(|call| call.as_target_a())
 			.collect();
-		let target_b_calls: Vec<(OpaqueCall, GenericMortality)> = parentchain_effects
+		let target_b_calls: Vec<(OpaqueCall, GenericMortality)> = side_effects
 			.iter()
-			.filter_map(|parentchain_call| parentchain_call.as_target_b())
+			.filter_map(|side_effect| match side_effect {
+				TrustedCallSideEffect::ParentchainCall(call) => Some(call.clone()),
+				_ => None,
+			})
+			.filter_map(|call| call.as_target_b())
+			.collect();
+		let ipfs_blobs_to_add: Vec<Vec<u8>> = side_effects
+			.iter()
+			.filter_map(|side_effect| match side_effect {
+				TrustedCallSideEffect::IpfsAdd(blob) => Some(blob.clone()),
+				_ => None,
+			})
 			.collect();
 		debug!(
 			"stf wants to send calls to parentchains: Integritee: {} TargetA: {} TargetB: {}",
@@ -218,6 +240,13 @@ impl<
 			self.extrinsics_factory.create_extrinsics(integritee_calls.as_slice(), None)?;
 		self.validator_accessor
 			.execute_mut_on_validator(|v| v.send_extrinsics(extrinsics))?;
+
+		if !ipfs_blobs_to_add.is_empty() {
+			warn!(
+				"stf wants to add {} blobs to ipfs, which is unimplemented for the OCW",
+				ipfs_blobs_to_add.len()
+			)
+		}
 		Ok(())
 	}
 
