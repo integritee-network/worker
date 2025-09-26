@@ -71,9 +71,26 @@ echo "Bob received:"
 echo $RECEIVED_NOTE
 
 if echo "$RECEIVED_NOTE" | grep -qF "$NOTE"; then
-    echo "NOTE found in RECEIVED_NOTE"
+    echo "✔  NOTE found in RECEIVED_NOTE"
+else
+    echo "✗ NOTE not found in RECEIVED_NOTE"
+    exit 1
+fi
+
+echo "Alice will send an 80kB heavy note to Bob"
+
+HEAVY_NOTE_PLAINTEXT_LENGTH=81920
+HEAVY_NOTE=$(head -c ${HEAVY_NOTE_PLAINTEXT_LENGTH} /dev/zero | tr '\0' 'A')
+${TCLIENT} send-note --ipfs-proxy //Alice //Bob "${HEAVY_NOTE}"
+echo "Alice sent heavy note to Bob"
+RECEIVED_HEAVY_NOTE=$(${TCLIENT} get-notes //Bob 0 | grep "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" | tail -n 1)
+RECEIVED_HEAVY_NOTE_LENGTH=$(echo -n "$RECEIVED_HEAVY_NOTE" | wc -c)
+echo "Bob received $RECEIVED_HEAVY_NOTE_LENGTH bytes"
+
+if [ "$RECEIVED_HEAVY_NOTE_LENGTH" -gt $HEAVY_NOTE_PLAINTEXT_LENGTH ]; then
+    echo "✔ heavy note found"
     exit 0
 else
-    echo "NOTE not found in RECEIVED_NOTE"
+    echo "✗ heavy note not found"
     exit 1
 fi
