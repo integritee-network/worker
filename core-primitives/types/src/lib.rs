@@ -65,7 +65,7 @@ pub use teerex_primitives::{
 pub type Enclave = MultiEnclave<Vec<u8>>;
 
 /// Simple blob to hold an encoded call
-#[derive(Decode, Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct OpaqueCall(pub Vec<u8>);
 
 impl OpaqueCall {
@@ -78,6 +78,16 @@ impl OpaqueCall {
 impl Encode for OpaqueCall {
 	fn encode(&self) -> Vec<u8> {
 		self.0.clone()
+	}
+}
+
+impl Decode for OpaqueCall {
+	fn decode<I: codec::Input>(input: &mut I) -> Result<Self, codec::Error> {
+		let mut bytes = Vec::new();
+		while let Ok(byte) = input.read_byte() {
+			bytes.push(byte);
+		}
+		Ok(OpaqueCall(bytes))
 	}
 }
 
@@ -154,9 +164,12 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn opaque_call_encodes_correctly() {
+	fn opaque_call_encodes_and decodes_correctly() {
 		let call_tuple = ([1u8, 2u8], 5u8);
 		let call = OpaqueCall::from_tuple(&call_tuple);
-		assert_eq!(call.encode(), call_tuple.encode())
+		let encoded_call = call.encode();
+		assert_eq!(encoded_call, call_tuple.encode());
+		let decoded_call = OpaqueCall::decode(&mut encoded_call.as_slice()).unwrap();
+		assert_eq!(decoded_call, call);
 	}
 }
