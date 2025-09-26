@@ -29,9 +29,9 @@ use crate::{
 	guess_the_number,
 	guess_the_number::GuessTheNumberTrustedCall,
 	helpers::{
-		enclave_signer_account, encrypt_with_fresh_key, ensure_enclave_signer_account,
-		ensure_maintainer_account, get_mortality, shard_vault, shielding_target_genesis_hash,
-		store_note, wrap_bytes,
+		enclave_signer_account, encrypt_with_fresh_key, encrypt_with_key,
+		ensure_enclave_signer_account, ensure_maintainer_account, get_mortality, shard_vault,
+		shielding_target_genesis_hash, store_note, wrap_bytes,
 	},
 	relayed_note::{ConversationId, NoteRelayType, RelayedNoteRequest, RelayedNoteRetrievalInfo},
 	Getter, STF_BYTE_FEE_UNIT_DIVIDER, STF_SESSION_PROXY_DEPOSIT_DIVIDER,
@@ -653,7 +653,12 @@ where
 				{
 					Ok(RelayedNoteRetrievalInfo::Here { msg: request.msg })
 				} else if request.relay_type == NoteRelayType::Ipfs {
-					let (ciphertext, encryption_key) = encrypt_with_fresh_key(request.msg)?;
+					let (ciphertext, encryption_key) =
+						if let Some(key) = request.maybe_encryption_key {
+							(encrypt_with_key(request.msg, key)?, key)
+						} else {
+							encrypt_with_fresh_key(request.msg)?
+						};
 					let cid = IpfsCid::from_chunk(&ciphertext)
 						.map_err(|e| StfError::Dispatch(format!("IPFS error: {:?}", e)))?;
 					info!("storing relayed note to IPFS with CID {:?}", cid);

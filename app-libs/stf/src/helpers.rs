@@ -273,3 +273,16 @@ pub fn encrypt_with_fresh_key(mut data: Vec<u8>) -> StfResult<(Vec<u8>, [u8; 32]
 		[key.as_ref(), iv.as_ref()].concat().try_into().expect("2x16=32. q.e.d.");
 	Ok((data, full_encryption_key))
 }
+
+/// Encrypt data with AES-128-OFB with a provided key and IV.
+/// Encrypts data in-place and returns the ciphertext and the full encryption key (key + iv).
+/// The full encryption key is 32 bytes: first 16 bytes are the AES key,
+/// the last 16 bytes are the IV.
+pub fn encrypt_with_key(mut data: Vec<u8>, full_key: [u8; 32]) -> StfResult<Vec<u8>> {
+	let key: [u8; 16] = full_key[..16].try_into().expect("Slice with 16 bytes");
+	let iv: [u8; 16] = full_key[16..].try_into().expect("Slice with 16 bytes");
+	let aes = Aes::new(key, iv);
+	aes.encrypt(&mut data)
+		.map_err(|e| StfError::Dispatch(format!("AES encrypt error: {:?}", e)))?;
+	Ok(data)
+}
