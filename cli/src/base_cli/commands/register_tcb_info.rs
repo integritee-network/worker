@@ -14,11 +14,11 @@
 	limitations under the License.
 
 */
-
 use crate::{
 	command_utils::{get_chain_api, *},
 	Cli, CliResult, CliResultOk,
 };
+use codec::Encode;
 use itp_node_api::api_client::TEEREX;
 use itp_types::{parentchain::Hash, OpaqueCall};
 use itp_utils::ToHexPrefixed;
@@ -104,19 +104,22 @@ impl RegisterTcbInfoCommand {
 
 				let intel_signature = hex::decode(intel_signature_hex).unwrap();
 
-				let call = OpaqueCall::from_tuple(&compose_call!(
-					chain_api.metadata(),
-					TEEREX,
-					"register_tcb_info",
-					tcb_info,
-					intel_signature,
-					certificate_chain
-				));
+				let call = OpaqueCall::from_tuple(
+					&compose_call!(
+						chain_api.metadata(),
+						TEEREX,
+						"register_tcb_info",
+						tcb_info.to_string(),
+						intel_signature,
+						certificate_chain
+					)
+					.unwrap(),
+				);
 
 				trace!(
 					"encoded call to be sent as extrinsic with nonce {}: {}",
 					nonce,
-					call.to_hex()
+					call.encode().to_hex()
 				);
 
 				let xt = compose_extrinsic_offline!(

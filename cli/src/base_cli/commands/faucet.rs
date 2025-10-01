@@ -45,13 +45,16 @@ impl FaucetCommand {
 		let mut nonce = api.get_nonce().unwrap();
 		for account in &self.accounts {
 			let to = get_accountid_from_str(account);
-			let call = OpaqueCall::from_tuple(&compose_call!(
-				api.metadata(),
-				"Balances",
-				"transfer_keep_alive",
-				MultiAddress::<AccountId, ()>::Id(to.clone()),
-				Compact(PREFUNDING_AMOUNT)
-			));
+			let call = OpaqueCall::from_tuple(
+				&compose_call!(
+					api.metadata(),
+					"Balances",
+					"transfer_keep_alive",
+					MultiAddress::<AccountId, ()>::Id(to.clone()),
+					Compact(PREFUNDING_AMOUNT)
+				)
+				.unwrap(),
+			);
 			#[allow(clippy::redundant_clone)]
 			let xt = compose_extrinsic_offline!(api.signer().unwrap(), call, api.extrinsic_params(nonce));
 			// send and watch extrinsic until finalized
