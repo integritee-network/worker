@@ -65,7 +65,7 @@ pub use teerex_primitives::{
 pub type Enclave = MultiEnclave<Vec<u8>>;
 
 /// Simple blob to hold an encoded call
-#[derive(Debug, PartialEq, Eq, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Clone, Default, Encode, Decode)]
 pub struct OpaqueCall(pub Vec<u8>);
 
 impl OpaqueCall {
@@ -73,21 +73,10 @@ impl OpaqueCall {
 	pub fn from_tuple<C: Encode>(call: &C) -> Self {
 		OpaqueCall(call.encode())
 	}
-}
 
-impl Encode for OpaqueCall {
-	fn encode(&self) -> Vec<u8> {
-		self.0.clone()
-	}
-}
-
-impl Decode for OpaqueCall {
-	fn decode<I: codec::Input>(input: &mut I) -> Result<Self, codec::Error> {
-		let mut bytes = Vec::new();
-		while let Ok(byte) = input.read_byte() {
-			bytes.push(byte);
-		}
-		Ok(OpaqueCall(bytes))
+	/// Returns the inner encoded bytes.
+	pub fn inner(&self) -> &[u8] {
+		&self.0
 	}
 }
 
@@ -164,12 +153,40 @@ mod tests {
 	use super::*;
 
 	#[test]
+	fn opaque_call_from_tuple_stores_encoded_bytes() {
+		let call_tuple = ([1u8, 2u8], 5u8);
+		let call = OpaqueCall::from_tuple(&call_tuple);
+		// The inner bytes should match the tuple's encoding
+		assert_eq!(call.inner(), call_tuple.encode().as_slice());
+	}
+
+	#[test]
 	fn opaque_call_encodes_and_decodes_correctly() {
 		let call_tuple = ([1u8, 2u8], 5u8);
 		let call = OpaqueCall::from_tuple(&call_tuple);
 		let encoded_call = call.encode();
-		assert_eq!(encoded_call, call_tuple.encode());
+		// With derived Encode/Decode, OpaqueCall is SCALE-encoded as length-prefixed bytes
 		let decoded_call = OpaqueCall::decode(&mut encoded_call.as_slice()).unwrap();
 		assert_eq!(decoded_call, call);
+	}
+
+	#[test]
+	fn opaque_call_can_be_decoded_in_sequence() {
+		// This test verifies that OpaqueCall can now be properly decoded
+		// when part of a larger structure, unlike the previous "consume all" impl
+		let call1 = OpaqueCall::from_tuple(&(1u8, 2u8));
+		let call2 = OpaqueCall::from_tuple(&(3u8, 4u8));
+
+		// Encode both calls sequentially
+		let mut encoded = call1.encode();
+		encoded.extend(call2.encode());
+
+		// Should be able to decode both calls from the stream
+		let mut input = encoded.as_slice();
+		let decoded1 = OpaqueCall::decode(&mut input).unwrap();
+		let decoded2 = OpaqueCall::decode(&mut input).unwrap();
+
+		assert_eq!(decoded1, call1);
+		assert_eq!(decoded2, call2);
 	}
 }
