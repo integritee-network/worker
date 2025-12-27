@@ -71,21 +71,22 @@ where
 	PeerBlockFetcher: FetchBlocksFromPeer<SignedBlockType = SignedSidechainBlock>,
 	TokioHandle: GetTokioHandle,
 {
-	fn propose_sidechain_blocks(&self, signed_blocks_encoded: Vec<u8>) -> OCallBridgeResult<()> {
+	fn propose_sidechain_blocks(&self, signed_blocks_encoded: &[u8]) -> OCallBridgeResult<()> {
 		// TODO: improve error handling, using a mut status is not good design?
 		let mut status: OCallBridgeResult<()> = Ok(());
 
+		let mut slice = signed_blocks_encoded;
 		// handle blocks
-		let signed_blocks: Vec<SignedSidechainBlock> =
-			match Decode::decode(&mut signed_blocks_encoded.as_slice()) {
-				Ok(blocks) => blocks,
-				Err(_) => {
-					status = Err(OCallBridgeError::ProposeSidechainBlock(
-						"Could not decode signed blocks".to_string(),
-					));
-					vec![]
-				},
-			};
+
+		let signed_blocks: Vec<SignedSidechainBlock> = match Decode::decode(&mut slice) {
+			Ok(blocks) => blocks,
+			Err(_) => {
+				status = Err(OCallBridgeError::ProposeSidechainBlock(
+					"Could not decode signed blocks".to_string(),
+				));
+				vec![]
+			},
+		};
 
 		if signed_blocks.is_empty() {
 			debug!("Enclave did not produce sidechain blocks");
